@@ -486,8 +486,8 @@ def compare_weather_data(
         "Wind Direction": "80%",
         "Wind Speed": "80%",
         "Temperature": "80%",
-        "QNH": "70%",
-        "Overall": "70%"
+        "QNH": "80%",
+        "Overall": "80%"
     }
     
     # Append whole month and ICAO requirements to daily accuracy
