@@ -410,12 +410,12 @@
                         hideLoadingSection(); // Hide loading on success
                         console.log('METAR data processed successfully:', data);
                         
-                        totalComparisons.textContent = data.metrics.total_comparisons;
-                        accuratePredictions.textContent = data.metrics.accurate_predictions;
+                        // totalComparisons.textContent = data.metrics.total_comparisons;
+                        // accuratePredictions.textContent = data.metrics.accurate_predictions;
                         
-                        // Format accuracy as percentage with 1 decimal place
-                        const formattedAccuracy = (data.metrics.accuracy_percentage).toFixed(1) + '%';
-                        overallAccuracy.textContent = formattedAccuracy;
+                        // // Format accuracy as percentage with 1 decimal place
+                        // const formattedAccuracy = (data.metrics.accuracy_percentage).toFixed(1) + '%';
+                        // overallAccuracy.textContent = formattedAccuracy;
 
                         // Get the encoded path for the comparison CSV file
                         const encodedPath = data.file_paths.comparison_csv;

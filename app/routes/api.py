@@ -212,7 +212,8 @@ def process_metar():
         
         # Calculate metrics
         total_comparisons = len(comparison_df)
-        accurate_predictions = len(comparison_df[comparison_df['Accuracy'] == 'Accurate'])
+        #accurate_predictions = len(comparison_df[comparison_df['Accuracy'] == 'Accurate'])
+        accurate_predictions = 0
         accuracy_percentage = (accurate_predictions / total_comparisons) * 100 if total_comparisons > 0 else 0
         
         # Encode file paths for security
