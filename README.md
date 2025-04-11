@@ -292,7 +292,3 @@ Example error response:
 - Pandas: Data manipulation and analysis
 - Requests: HTTP library for API calls
 - metar: Library for parsing METAR reports
-
-## License
-
-[Specify license information here] 
