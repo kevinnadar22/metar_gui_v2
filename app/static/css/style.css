@@ -1,0 +1,201 @@
+body {
+    font-family: 'Inter', sans-serif;
+}
+.date-input {
+    display: none;
+}
+.hover-scale {
+    transition: transform 0.2s ease-in-out;
+}
+.hover-scale:hover {
+    transform: scale(1.02);
+}
+.animation-bounce {
+    animation: bounce 2s infinite;
+}
+@keyframes bounce {
+    0%, 20%, 50%, 80%, 100% {
+        transform: translateY(0);
+    }
+    40% {
+        transform: translateY(-15px);
+    }
+    60% {
+        transform: translateY(-7px);
+    }
+}
+.header-height {
+    height: 3cm; /* Specific 3cm height for header */
+}
+
+/* File upload area styles */
+.upload-container {
+    max-width: 90%;
+    margin: 0 auto;
+}
+
+.file-preview {
+    position: relative;
+    margin-top: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.preview-content {
+    font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+}
+
+.close-btn:hover {
+    background-color: #dc2626;
+}
+
+.upload-info {
+    text-align: center;
+    margin-top: 8px;
+    font-size: 0.9rem;
+    color: #6b7280;
+}
+
+/* Input container for better side-by-side layout */
+.input-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    justify-content: center;
+}
+
+.upload-box {
+    flex: 1;
+    min-width: 300px;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Ensure consistent spacing for all elements in upload box */
+.upload-box > * {
+    margin-bottom: 15px;
+}
+
+/* Reset margin for the last child to avoid extra space */
+.upload-box > *:last-child {
+    margin-bottom: 0;
+}
+
+/* Specific adjustment for horizontal rule */
+.upload-box hr {
+    margin-top: 15px;
+    margin-bottom: 15px;
+}
+
+/* Flatpickr time picker styles */
+.flatpickr-time {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+}
+
+.flatpickr-time .numInputWrapper {
+    position: relative;
+    text-align: center;
+}
+
+.time-label {
+    font-size: 11px;
+    text-align: center;
+    color: #6b7280;
+    font-weight: 500;
+    margin-top: 2px;
+    display: block;
+}
+
+/* Date and time picker container styles */
+.date-time-picker-container {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+}
+
+.date-input-group, .time-input-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.date-input-group {
+    flex: 2;
+}
+
+.time-input-group {
+    flex: 1;
+}
+
+.time-label {
+    font-size: 11px;
+    text-align: center;
+    color: #6b7280;
+    font-weight: 500;
+    margin-top: 2px;
+    display: block;
+}
+
+/* Toggle button styles - enhanced */
+.toggle-input-btn {
+    position: relative;
+    top: auto;
+    right: auto;
+    background-color: #3b82f6;
+    border: none;
+    border-radius: 0.375rem;
+    padding: 0.5rem 1.5rem;
+    font-size: 0.8rem;
+    color: white;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: inline-block;
+    box-shadow: 0 3px 5px rgba(0,0,0,0.1);
+    font-weight: 500;
+    text-align: center;
+    
+}
+
+
+
+.toggle-input-btn:hover {
+    background-color: #2563eb;
+    color: white;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    transform: translateY(-1px);
+}
+
+.toggle-input-btn:active {
+    transform: translateY(0);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+
+/* Default state highlight */
+.default-state {
+    position: relative;
+}
+
+.default-state::after {
+    content: "Default";
+    position: absolute;
+    top: -8px;
+    right: 10px;
+    background-color: #fef3c7;
+    color: #92400e;
+    font-size: 0.65rem;
+    padding: 2px 6px;
+    border-radius: 10px;
+    font-weight: 600;
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.default-active.default-state::after {
+    opacity: 1;
+}
+
+/* Standardize spacing between upload forms and previews */
+.upload-area {
+    margin-bottom: 15px !important; /* Force consistent margin */
+}
