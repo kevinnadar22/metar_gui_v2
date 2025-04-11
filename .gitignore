@@ -109,6 +109,7 @@ ENV/
 env.bak/
 venv.bak/
 *.pyc
+metar_data/
 
 # Spyder project settings
 .spyderproject
