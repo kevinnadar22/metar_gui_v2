@@ -141,15 +141,16 @@ class OgimetAPI:
             
         return file_path
 
-# example usage
-def main():
-    import os
-    
-    ins = OgimetAPI()
-    ins.save_metar_to_file(
-        begin="202504090000",
-        end="202504100000",
-        icao="VABB"
-    )
+if __name__ == "__main__":
+    # example usage
+    def main():
+        import os
+        
+        ins = OgimetAPI()
+        ins.save_metar_to_file(
+            begin="202504090000",
+            end="202504100000",
+            icao="VABB"
+        )
 
-# main()
+    # main()
