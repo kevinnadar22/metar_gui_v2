@@ -6,7 +6,7 @@ import re
 def clean_metar_inplace(file_path):
     """
     Cleans METAR data by removing trailing '=' characters and newlines.
-    
+
     Args:
         file_path (str): Path to the METAR file to clean.
     """
@@ -16,7 +16,7 @@ def clean_metar_inplace(file_path):
     with open(file_path, "w") as outfile:
         for line in lines:
             outfile.write(line.rstrip("=\n") + "\n")
-    
+
     print("METAR data cleaned in place.")
 
 
@@ -436,7 +436,7 @@ def compare_weather_data(
         speed_accuracy_flags.append(speed_accurate)
         temp_accuracy_flags.append(temp_accurate)
         qnh_accuracy_flags.append(qnh_accurate)
-        
+
         # Overall accuracy
         overall_accuracy.append(
             "Accurate"
@@ -455,20 +455,29 @@ def compare_weather_data(
     merged_df["DAY"] = merged_df["DATETIME"].str.split().str[0]  # Extract day again
 
     # Calculate daily accuracy percentages with counts
-    daily_accuracy = merged_df.groupby("DAY").agg({
-        "DIR_Accurate": lambda x: f"{round(100 * x.sum() / len(x), 1)}% ({x.sum()})",
-        "SPD_Accurate": lambda x: f"{round(100 * x.sum() / len(x), 1)}% ({x.sum()})",
-        "TEMP_Accurate": lambda x: f"{round(100 * x.sum() / len(x), 1)}% ({x.sum()})",
-        "QNH_Accurate": lambda x: f"{round(100 * x.sum() / len(x), 1)}% ({x.sum()})",
-        "Accuracy": lambda x: f"{round(100 * (x == 'Accurate').sum() / len(x), 1)}% ({(x == 'Accurate').sum()})"
-    }).rename(columns={
-        "DIR_Accurate": "Wind Direction",
-        "SPD_Accurate": "Wind Speed",
-        "TEMP_Accurate": "Temperature",
-        "QNH_Accurate": "QNH",
-        "Accuracy": "Overall"
-    }).reset_index()
-    
+    daily_accuracy = (
+        merged_df.groupby("DAY")
+        .agg(
+            {
+                "DIR_Accurate": lambda x: f"{round(100 * x.sum() / len(x), 1)}% ({x.sum()})",
+                "SPD_Accurate": lambda x: f"{round(100 * x.sum() / len(x), 1)}% ({x.sum()})",
+                "TEMP_Accurate": lambda x: f"{round(100 * x.sum() / len(x), 1)}% ({x.sum()})",
+                "QNH_Accurate": lambda x: f"{round(100 * x.sum() / len(x), 1)}% ({x.sum()})",
+                "Accuracy": lambda x: f"{round(100 * (x == 'Accurate').sum() / len(x), 1)}% ({(x == 'Accurate').sum()})",
+            }
+        )
+        .rename(
+            columns={
+                "DIR_Accurate": "Wind Direction",
+                "SPD_Accurate": "Wind Speed",
+                "TEMP_Accurate": "Temperature",
+                "QNH_Accurate": "QNH",
+                "Accuracy": "Overall",
+            }
+        )
+        .reset_index()
+    )
+
     # Calculate whole month accuracy
     total_records = len(merged_df)
     whole_month = {
@@ -477,9 +486,9 @@ def compare_weather_data(
         "Wind Speed": f"{round(100 * merged_df['SPD_Accurate'].sum() / total_records, 1)}% ({merged_df['SPD_Accurate'].sum()})",
         "Temperature": f"{round(100 * merged_df['TEMP_Accurate'].sum() / total_records, 1)}% ({merged_df['TEMP_Accurate'].sum()})",
         "QNH": f"{round(100 * merged_df['QNH_Accurate'].sum() / total_records, 1)}% ({merged_df['QNH_Accurate'].sum()})",
-        "Overall": f"{round(100 * (merged_df['Accuracy'] == 'Accurate').sum() / total_records, 1)}% ({(merged_df['Accuracy'] == 'Accurate').sum()})"
+        "Overall": f"{round(100 * (merged_df['Accuracy'] == 'Accurate').sum() / total_records, 1)}% ({(merged_df['Accuracy'] == 'Accurate').sum()})",
     }
-    
+
     # Add ICAO requirements row
     icao_requirements = {
         "DAY": "ICAO Requirement",
@@ -487,14 +496,17 @@ def compare_weather_data(
         "Wind Speed": "80%",
         "Temperature": "80%",
         "QNH": "80%",
-        "Overall": "80%"
+        "Overall": "80%",
     }
-    
+
     # Append whole month and ICAO requirements to daily accuracy
-    daily_accuracy = pd.concat([
-        daily_accuracy, 
-        pd.DataFrame([whole_month]),
-        pd.DataFrame([icao_requirements])
-    ], ignore_index=True)
-    
-    return daily_accuracy
+    daily_accuracy = pd.concat(
+        [
+            daily_accuracy,
+            pd.DataFrame([whole_month]),
+            pd.DataFrame([icao_requirements]),
+        ],
+        ignore_index=True,
+    )
+
+    return daily_accuracy, merged_df

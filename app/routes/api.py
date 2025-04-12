@@ -203,12 +203,17 @@ def process_metar():
         df_forecast = extract_data_from_file_with_day_and_wind(forecast_path)
         
         # Compare weather data
-        comparison_df = compare_weather_data(df_metar, df_forecast)
+        comparison_df, merged_df = compare_weather_data(df_metar, df_forecast)
         
         # Save comparison results to CSV with secure filename
         comparison_csv_filename = secure_filename(f"comparison_{icao}_{timestamp}.csv")
         comparison_csv_path = os.path.join(DOWNLOADS_DIR, comparison_csv_filename)
         comparison_df.to_csv(comparison_csv_path, index=False)
+
+        # Save merged data to CSV with secure filename
+        merged_csv_filename = secure_filename(f"merged_{icao}_{timestamp}.csv")
+        merged_csv_path = os.path.join(DOWNLOADS_DIR, merged_csv_filename)
+        merged_df.to_csv(merged_csv_path, index=False)
         
         # Calculate metrics
         total_comparisons = len(comparison_df)
@@ -220,7 +225,8 @@ def process_metar():
         encoded_metar_path = encode_file_path(metar_path)
         encoded_metar_csv_path = encode_file_path(metar_csv_path)
         encoded_comparison_csv_path = encode_file_path(comparison_csv_path)
-        
+        encoded_merged_csv_path = encode_file_path(merged_csv_path)
+
         # Prepare response
         response_data = {
             "status": "success",
@@ -233,7 +239,8 @@ def process_metar():
             "file_paths": {
                 "metar_file": encoded_metar_path,
                 "metar_csv": encoded_metar_csv_path,
-                "comparison_csv": encoded_comparison_csv_path
+                "comparison_csv": encoded_comparison_csv_path,
+                "merged_csv": encoded_merged_csv_path
             },
             # "comparison_data": comparison_df.to_dict(orient='records')
         }
@@ -291,12 +298,12 @@ def download_file(file_type):
         if file_type == 'metar':
             mime_type = 'text/plain'
             filename = secure_filename(os.path.basename(file_path))
-        elif file_type in ['metar_csv', 'comparison_csv']:
+        elif file_type in ['metar_csv', 'comparison_csv', 'merged_csv']:
             mime_type = 'text/csv'
             filename = secure_filename(os.path.basename(file_path))
         else:
             return jsonify({
-                "error": f"Invalid file type: {file_type}. Valid types are 'metar', 'metar_csv', and 'comparison_csv'."
+                "error": f"Invalid file type: {file_type}. Valid types are 'metar', 'metar_csv', 'comparison_csv', and 'merged_csv'."
             }), 400
         
         return send_file(

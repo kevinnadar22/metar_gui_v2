@@ -420,22 +420,99 @@ document.addEventListener('DOMContentLoaded', function () {
                     hideLoadingSection(); // Hide loading on success
                     console.log('METAR data processed successfully:', data);
 
-                    // totalComparisons.textContent = data.metrics.total_comparisons;
-                    // accuratePredictions.textContent = data.metrics.accurate_predictions;
+                    // Get the encoded paths for the CSV files
+                    const comparisonEncodedPath = data.file_paths.comparison_csv;
+                    const detailedComparisonEncodedPath = data.file_paths.merged_csv;
+                    const downloadUrl = `/api/download/comparison_csv?file_path=${comparisonEncodedPath}`;
+                    const detailedDownloadUrl = `/api/download/merged_csv?file_path=${detailedComparisonEncodedPath}`;
 
-                    // // Format accuracy as percentage with 1 decimal place
-                    // const formattedAccuracy = (data.metrics.accuracy_percentage).toFixed(1) + '%';
-                    // overallAccuracy.textContent = formattedAccuracy;
-
-                    // Get the encoded path for the comparison CSV file
-                    const encodedPath = data.file_paths.comparison_csv;
-                    const downloadUrl = `/api/download/comparison_csv?file_path=${encodedPath}`;
-
-                    // downloadCsvBtn
+                    // Set download button href
                     const downloadCsvBtn = document.getElementById('downloadCsvBtn');
                     downloadCsvBtn.href = downloadUrl;
 
-                    // Fetch the CSV file and populate the comparison table
+                    // Function to populate a table from CSV data
+                    const populateTableFromCSV = (csvText, tableElement) => {
+                        // Parse CSV and populate table
+                        const rows = csvText.split('\n');
+                        const headers = rows[0].split(',');
+
+                        // Create table container with scroll
+                        const tableContainer = document.createElement('div');
+                        tableContainer.className = 'overflow-auto max-h-[500px] border border-gray-200 rounded-lg';
+
+                        // Clear only tbody content, preserve thead
+                        const tbody = tableElement.querySelector('tbody') || document.createElement('tbody');
+                        tbody.innerHTML = '';
+
+                        // Create and update thead if it doesn't exist
+                        let thead = tableElement.querySelector('thead');
+                        if (!thead) {
+                            thead = document.createElement('thead');
+                            thead.className = 'bg-gray-100 sticky top-0 z-10';
+                        }
+
+                        // Update header content
+                        const headerRow = document.createElement('tr');
+                        headers.forEach(header => {
+                            const th = document.createElement('th');
+                            // Replace underscores with spaces and capitalize each word
+                            th.textContent = header.replace(/_/g, ' ')
+                                .replace(/\w\S*/g, txt => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase());
+                            th.className = 'px-6 py-3 text-left text-xs font-medium text-gray-800 uppercase tracking-wider';
+                            headerRow.appendChild(th);
+                        });
+                        thead.innerHTML = '';
+                        thead.appendChild(headerRow);
+
+                        // Ensure thead is in table
+                        if (!tableElement.contains(thead)) {
+                            tableElement.appendChild(thead);
+                        }
+
+                        // Create table body rows
+                        for (let i = 1; i < rows.length; i++) {
+                            if (rows[i].trim() === '') continue;
+
+                            const rowData = rows[i].split(',');
+                            const tr = document.createElement('tr');
+                            tr.className = 'transition-colors duration-150 ease-in-out';
+
+                            rowData.forEach((cell, index) => {
+                                const td = document.createElement('td');
+                                td.textContent = cell;
+                                td.className = 'px-6 py-4 text-sm border-b border-gray-200';
+                                tr.appendChild(td);
+                            });
+                            tbody.appendChild(tr);
+                        }
+
+                        // Ensure tbody is in table
+                        if (!tableElement.contains(tbody)) {
+                            tableElement.appendChild(tbody);
+                        }
+
+                        // Add border and other styling to the table
+                        tableElement.className = 'min-w-full divide-y divide-gray-200 table-fixed';
+
+                        // Wrap table in scrollable container if not already wrapped
+                        const parent = tableElement.parentElement;
+                        if (!parent.classList.contains('overflow-auto')) {
+                            // Remove table from current parent
+                            if (parent) {
+                                parent.removeChild(tableElement);
+                            }
+
+                            // Add table to container and container to original parent
+                            tableContainer.appendChild(tableElement);
+                            if (parent) {
+                                parent.appendChild(tableContainer);
+                            } else {
+                                reportSection.appendChild(tableContainer);
+                            }
+                        }
+                    };
+
+                    // Fetch and populate the comparison table
                     fetch(downloadUrl)
                         .then(response => {
                             if (!response.ok) {
@@ -444,94 +521,30 @@ document.addEventListener('DOMContentLoaded', function () {
                             return response.text();
                         })
                         .then(csvText => {
-                            // Parse CSV and populate table
-                            const rows = csvText.split('\n');
-                            const headers = rows[0].split(',');
-
-                            // Create table container with scroll
-                            const tableContainer = document.createElement('div');
-                            tableContainer.className = 'overflow-auto max-h-[500px] border border-gray-200 rounded-lg';
-
-                            // Clear only tbody content, preserve thead
-                            const tbody = comparisonTable.querySelector('tbody') || document.createElement('tbody');
-                            tbody.innerHTML = '';
-
-                            // Create and update thead if it doesn't exist
-                            let thead = comparisonTable.querySelector('thead');
-                            if (!thead) {
-                                thead = document.createElement('thead');
-                                thead.className = 'bg-gray-100 sticky top-0 z-10';
+                            populateTableFromCSV(csvText, comparisonTable);
+                            
+                            // Now fetch and populate the detailed comparison table
+                            return fetch(detailedDownloadUrl);
+                        })
+                        .then(response => {
+                            if (!response.ok) {
+                                throw new Error('Failed to download detailed comparison CSV');
                             }
-
-                            // Update header content
-                            const headerRow = document.createElement('tr');
-                            headers.forEach(header => {
-                                const th = document.createElement('th');
-                                // Replace underscores with spaces and capitalize each word
-                                th.textContent = header.replace(/_/g, ' ')
-                                    .replace(/\w\S*/g, txt => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase());
-                                th.className = 'px-6 py-3 text-left text-xs font-medium text-gray-800 uppercase tracking-wider';
-                                headerRow.appendChild(th);
-                            });
-                            thead.innerHTML = '';
-                            thead.appendChild(headerRow);
-
-                            // Ensure thead is in table
-                            if (!comparisonTable.contains(thead)) {
-                                comparisonTable.appendChild(thead);
-                            }
-
-                            // Create table body rows
-                            for (let i = 1; i < rows.length; i++) {
-                                if (rows[i].trim() === '') continue;
-
-                                const rowData = rows[i].split(',');
-                                const tr = document.createElement('tr');
-                                tr.className = 'transition-colors duration-150 ease-in-out';
-
-                                rowData.forEach((cell, index) => {
-                                    const td = document.createElement('td');
-                                    td.textContent = cell;
-                                    td.className = 'px-6 py-4 text-sm border-b border-gray-200';
-                                    tr.appendChild(td);
-                                });
-                                tbody.appendChild(tr);
-                            }
-
-                            // Ensure tbody is in table
-                            if (!comparisonTable.contains(tbody)) {
-                                comparisonTable.appendChild(tbody);
-                            }
-
-                            // Add border and other styling to the table
-                            comparisonTable.className = 'min-w-full divide-y divide-gray-200 table-fixed';
-
-                            // Wrap table in scrollable container if not already wrapped
-                            const parent = comparisonTable.parentElement;
-                            if (!parent.classList.contains('overflow-auto')) {
-                                // Remove table from current parent
-                                if (parent) {
-                                    parent.removeChild(comparisonTable);
-                                }
-
-                                // Add table to container and container to original parent
-                                tableContainer.appendChild(comparisonTable);
-                                if (parent) {
-                                    parent.appendChild(tableContainer);
-                                } else {
-                                    reportSection.appendChild(tableContainer);
-                                }
-                            }
-
-                            // show report section
+                            return response.text();
+                        })
+                        .then(csvText => {
+                            // Get the detailed comparison table
+                            const detailedComparisonTable = document.getElementById('detailedComparisonTable');
+                            populateTableFromCSV(csvText, detailedComparisonTable);
+                            
+                            // Show report section after both tables are populated
                             reportSection.style.display = 'block';
                         })
                         .catch(error => {
                             hideLoadingSection(); // Hide loading on error
-                            console.error('Error downloading comparison CSV:', error);
+                            console.error('Error downloading CSV data:', error);
                             alert('Failed to load comparison data. Please try again.');
                         });
-
                 })
                 .catch(error => {
                     hideLoadingSection(); // Hide loading on error
