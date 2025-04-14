@@ -350,6 +350,7 @@ def compare_weather_data(
     temp_accuracy_flags = []
     qnh_accuracy_flags = []
     overall_accuracy = []
+    inaccuracy_reasons = []
 
     for _, row in merged_df.iterrows():
         actual_dir = row["WIND_DIR_actual"]
@@ -365,6 +366,7 @@ def compare_weather_data(
         speed_accurate = False
         temp_accurate = False
         qnh_accurate = False
+        reasons = []
 
         # Handle direction accuracy
         if (
@@ -380,10 +382,13 @@ def compare_weather_data(
             try:
                 dir_diff = circular_difference(int(forecast_dir), int(actual_dir))
                 dir_accurate = dir_diff is not None and dir_diff <= wind_dir_threshold
+                if not dir_accurate and dir_diff is not None:
+                    reasons.append(f"Wind Direction off by {dir_diff:.1f}°")
             except (ValueError, TypeError):
                 print(
                     f"Warning: Invalid wind direction for DATETIME {row['DATETIME']}."
                 )
+                reasons.append("Wind Direction - Invalid data")
 
         # Handle speed accuracy
         if (
@@ -393,13 +398,16 @@ def compare_weather_data(
             and forecast_speed != "N/A"
         ):
             try:
-                speed_accurate = (
-                    abs(int(forecast_speed) - int(actual_speed)) <= wind_speed_threshold
-                )
+                speed_diff = abs(int(forecast_speed) - int(actual_speed))
+                speed_accurate = speed_diff <= wind_speed_threshold
+                if not speed_accurate:
+                    reasons.append(f"Wind Speed off by {speed_diff} knots")
             except (ValueError, TypeError):
                 print(f"Warning: Invalid wind speed for DATETIME {row['DATETIME']}.")
+                reasons.append("Wind Speed - Invalid data")
         else:
             print(f"Warning: Missing wind speed for DATETIME {row['DATETIME']}.")
+            reasons.append("Wind Speed - Missing data")
 
         # Handle temperature accuracy
         if (
@@ -411,10 +419,14 @@ def compare_weather_data(
             try:
                 temp_diff = abs(float(forecast_temp) - float(actual_temp))
                 temp_accurate = temp_diff <= temp_threshold
+                if not temp_accurate:
+                    reasons.append(f"Temperature off by {temp_diff:.1f}°C")
             except (ValueError, TypeError):
                 print(f"Warning: Invalid temperature for DATETIME {row['DATETIME']}.")
+                reasons.append("Temperature - Invalid data")
         else:
             print(f"Warning: Missing temperature for DATETIME {row['DATETIME']}.")
+            reasons.append("Temperature - Missing data")
 
         # Handle QNH accuracy
         if (
@@ -426,10 +438,14 @@ def compare_weather_data(
             try:
                 qnh_diff = abs(float(forecast_qnh) - float(actual_qnh))
                 qnh_accurate = qnh_diff <= qnh_threshold
+                if not qnh_accurate:
+                    reasons.append(f"QNH off by {qnh_diff:.1f} hPa")
             except (ValueError, TypeError):
                 print(f"Warning: Invalid QNH for DATETIME {row['DATETIME']}.")
+                reasons.append("QNH - Invalid data")
         else:
             print(f"Warning: Missing QNH for DATETIME {row['DATETIME']}.")
+            reasons.append("QNH - Missing data")
 
         # Store individual accuracy flags
         dir_accuracy_flags.append(dir_accurate)
@@ -443,6 +459,9 @@ def compare_weather_data(
             if all([dir_accurate, speed_accurate, temp_accurate, qnh_accurate])
             else "Not Accurate"
         )
+        
+        # Store inaccuracy reasons
+        inaccuracy_reasons.append(", ".join(reasons) if reasons else "All Accurate")
 
     # Add accuracy flags to DataFrame
     merged_df["DIR_Accurate"] = dir_accuracy_flags
@@ -450,6 +469,7 @@ def compare_weather_data(
     merged_df["TEMP_Accurate"] = temp_accuracy_flags
     merged_df["QNH_Accurate"] = qnh_accuracy_flags
     merged_df["Accuracy"] = overall_accuracy
+    merged_df["Inaccuracy_Reason"] = inaccuracy_reasons
 
     # Group-wise summary per DAY
     merged_df["DAY"] = merged_df["DATETIME"].str.split().str[0]  # Extract day again
