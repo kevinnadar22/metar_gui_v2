@@ -461,7 +461,7 @@ def compare_weather_data(
         )
         
         # Store inaccuracy reasons
-        inaccuracy_reasons.append(", ".join(reasons) if reasons else "All Accurate")
+        inaccuracy_reasons.append(" | ".join(reasons) if reasons else "All Accurate")
 
     # Add accuracy flags to DataFrame
     merged_df["DIR_Accurate"] = dir_accuracy_flags
