@@ -94,6 +94,26 @@ Form fields:
 - `forecast_file`: Text file containing forecast data
 - `observation_file`: Text file containing METAR observations (optional if start_date and end_date are provided)
 
+#### Forecast File Format
+
+The forecast file should be a text file named in the format MMYYYY.txt (e.g., 012023.txt for January 2023) with the following format:
+- Each line should contain space-separated values in the format: `YYYYMMDDHHMM WIND TEMP QFE QNH`
+- Example:
+```
+TIME 	WIND	TEMP	QFE 	QNH
+0000Z 000/00KT	28	1008	1009
+0100Z	070/04KT	28	1008	1009
+0200Z	090/04KT        29	1009	1010
+0300Z	110/05KT	29	1009	1010
+0400Z   130/05KT	29	1010	1011
+0500Z	030/05KT	30	1010	1011
+0600Z	270/10KT 	31	1009	1010
+0700Z	290/08KT	32	1008	1009
+0800Z	300/10KT	33	1007	1008
+0900Z	290/12KT	33	1007	1008
+1000Z   280/12KT	32	1006	1007
+```
+
 #### Response
 
 ```json
