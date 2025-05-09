@@ -2,6 +2,48 @@
 document.addEventListener('DOMContentLoaded', function () {
     // ===== INITIALIZATION FUNCTIONS =====
 
+    // Custom alert function
+    function showCustomAlert(message) {
+        // Create alert container if it doesn't exist
+        let alertContainer = document.getElementById('customAlertContainer');
+        if (!alertContainer) {
+            alertContainer = document.createElement('div');
+            alertContainer.id = 'customAlertContainer';
+            alertContainer.className = 'fixed top-4 right-4 z-50';
+            document.body.appendChild(alertContainer);
+        }
+
+        // Create alert element
+        const alert = document.createElement('div');
+        alert.className = 'bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4 shadow-lg';
+        alert.innerHTML = `
+            <span class="block sm:inline mr-8">${message}</span>
+            <span class="absolute top-0 bottom-0 right-0 px-4 py-3">
+                <svg class="fill-current h-6 w-6 text-red-500" role="button" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                    <title>Close</title>
+                    <path d="M14.348 14.849a1.2 1.2 0 0 1-1.697 0L10 11.819l-2.651 3.029a1.2 1.2 0 1 1-1.697-1.697l2.758-3.15-2.759-3.152a1.2 1.2 0 1 1 1.697-1.697L10 8.183l2.651-3.031a1.2 1.2 0 1 1 1.697 1.697l-2.758 3.152 2.758 3.15a1.2 1.2 0 0 1 0 1.698z"/>
+                </svg>
+            </span>
+        `;
+
+        // Update container position to bottom right
+        alertContainer.className = 'fixed bottom-4 right-4 z-50';
+        
+        // Add to container
+        alertContainer.appendChild(alert);
+
+        // Add click handler to close button
+        const closeButton = alert.querySelector('svg');
+        closeButton.addEventListener('click', () => {
+            alert.remove();
+        });
+
+        // Auto remove after 5 seconds
+        setTimeout(() => {
+            alert.remove();
+        }, 5000);
+    }
+
     // Initialize date-only pickers
     function initializeDatePickers() {
         flatpickr(".date-only-picker", {
@@ -215,6 +257,12 @@ document.addEventListener('DOMContentLoaded', function () {
             // Show the file name
             fileNameSpan.textContent = file.name;
 
+            // file name should be in the format MMYYYY.txt
+            if (!file.name.match(/^\d{2}\d{4}\.txt$/)) {
+                showCustomAlert('Please upload a file named with month and year (like 012024.txt). The first two digits are the month (01-12) and the next four digits are the year.');
+                return;
+            }
+
             // Show the file preview area and loading indicator
             previewElement.classList.remove('hidden');
             loadingIndicator.classList.remove('hidden');
@@ -359,11 +407,6 @@ document.addEventListener('DOMContentLoaded', function () {
         const endHour = endDate.querySelector('.hour-select').value;
         const endMinute = endDate.querySelector('.minute-select').value;
 
-        // get total comparisons
-        const totalComparisons = document.getElementById('totalComparisons');
-        const accuratePredictions = document.getElementById('accuratePredictions');
-        const overallAccuracy = document.getElementById('overallAccuracy');
-
         // get forecast file
         const forecastFile = document.querySelector('.forecast-file-input').files[0];
         // get observation file
@@ -371,15 +414,16 @@ document.addEventListener('DOMContentLoaded', function () {
 
         // if icao is null
         if (!isValidICAO(stationCode)) {
-            alert('Please enter a valid ICAO code.');
+            showCustomAlert('Please enter a valid ICAO code.');
             return;
         }
-        // // print which fields are not filled
-        // console.log(startDateValue, startHour, startMinute, endDateValue, endHour, endMinute);
-        // console.log(observationFile);
-        // console.log(isValidICAO(stationCode));
-        // console.log(forecastFile);
-        // check if observation file or date/time fields are filled, and forecast file is present
+
+        // check if forecast file is present and it should be in the format MMYYYY.txt
+        if (!forecastFile || !forecastFile.name.match(/^\d{2}\d{4}\.txt$/)) {
+            showCustomAlert('Please upload a valid forecast file in the format MMYYYY.txt.');
+            return;
+        }
+
         if (
             (
                 (startDateValue && startHour !== '' && startMinute !== '' &&
@@ -543,18 +587,18 @@ document.addEventListener('DOMContentLoaded', function () {
                         .catch(error => {
                             hideLoadingSection(); // Hide loading on error
                             console.error('Error downloading CSV data:', error);
-                            alert('Failed to load comparison data. Please try again.');
+                            showCustomAlert('Failed to load comparison data. Please try again.');
                         });
                 })
                 .catch(error => {
                     hideLoadingSection(); // Hide loading on error
                     console.error('Error processing METAR data:', error);
-                    alert('Error processing METAR data. Please try again.');
+                    showCustomAlert('Error processing METAR data. Please try again.');
                 });
         } else {
 
             // Show validation error message
-            alert('Please fill in all required fields and upload a forecast file.');
+            showCustomAlert('Please fill in all required fields and upload a forecast file.');
         }
     });
 });
