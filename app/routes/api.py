@@ -6,7 +6,7 @@ from datetime import datetime
 import re
 from werkzeug.utils import secure_filename
 
-from app.utils import decode_metar_to_csv, extract_data_from_file_with_day_and_wind, compare_weather_data, OgimetAPI
+from app.utils import decode_metar_to_csv, extract_data_from_file_with_day_and_wind, compare_weather_data, OgimetAPI, extract_month_year_from_filename, extract_month_year_from_date
 from app.config import METAR_DATA_DIR
 
 api_bp = Blueprint('api', __name__, url_prefix='/api')
@@ -128,7 +128,6 @@ def process_metar():
         end_date = form_data.get('end_date') 
         icao = form_data.get('icao')
 
-
         is_date_time_provided = start_date and end_date
         is_observation_file_provided = 'observation_file' in request.files
 
@@ -141,11 +140,18 @@ def process_metar():
         # Sanitize ICAO code (allow only alphanumeric characters)
         icao = re.sub(r'[^a-zA-Z0-9]', '', icao)
         
-        # Validate date formats
+        # Validate date formats and extract month/year
+        metar_month_year = None
         if is_date_time_provided:
             try:
-                datetime.strptime(start_date, "%Y%m%d%H%M")
+                # Use helper function to extract month and year from start date
+                _, _, metar_month_year = extract_month_year_from_date(start_date)
+                # Also validate end date format
                 datetime.strptime(end_date, "%Y%m%d%H%M")
+                if not metar_month_year:
+                    return jsonify({
+                        "error": "Could not extract month and year from start date."
+                    }), 400
             except ValueError:
                 return jsonify({
                     "error": "Invalid date format. Please use the format YYYYMMDDHHMM."
@@ -156,7 +162,6 @@ def process_metar():
             return jsonify({
                 "error": "No forecast file provided. Please upload a forecast file."
             }), 400
-
             
         forecast_file = request.files['forecast_file']
 
@@ -165,12 +170,25 @@ def process_metar():
                 "error": "Empty forecast file. Please upload a valid forecast file."
             }), 400
         
+        # Extract month and year from forecast filename using helper function
+        _, _, forecast_month_year = extract_month_year_from_filename(forecast_file.filename)
+        
         if is_observation_file_provided:
             observation_file = request.files['observation_file']
             if observation_file.filename == '':
                 return jsonify({
                     "error": "Empty observation file. Please upload a valid observation file."
                 }), 400
+            
+            # If using observation file, extract month/year from its filename if possible
+            if not metar_month_year:
+                _, _, metar_month_year = extract_month_year_from_filename(observation_file.filename)
+        
+        # Validate month/year match if both are available
+        if metar_month_year and forecast_month_year and metar_month_year != forecast_month_year:
+            return jsonify({
+                "error": f"Month/year mismatch between METAR data ({metar_month_year}) and forecast file ({forecast_month_year}). Please ensure both files are for the same month and year."
+            }), 400
             
         # Save forecast file with secure filename
         timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
@@ -253,6 +271,7 @@ def process_metar():
         return jsonify({
             "error": f"An error occurred while processing the METAR data: {str(e)}"
         }), 500
+    
 
 @api_bp.route('/download/<file_type>', methods=['GET'])
 def download_file(file_type):

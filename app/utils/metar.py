@@ -1,7 +1,7 @@
 import metar.Metar as mt
 import pandas as pd
 import re
-
+from datetime import datetime
 
 def clean_metar_inplace(file_path):
     """
@@ -268,6 +268,53 @@ def circular_difference(dir1, dir2):
 
     return min(abs(dir1 - dir2), 360 - (abs(dir1 - dir2)))
 
+def extract_month_year_from_filename(filename):
+    """
+    Extract month and year from a filename following pattern like 'TAKEOFF_Forecast_092023.txt'
+    
+    Args:
+        filename (str): The filename to parse
+        
+    Returns:
+        tuple: (month, year, month_year_str) where month_year_str is formatted as "MMYYYY"
+              Returns (None, None, None) if pattern not found
+    """
+    match = re.search(r'_(\d{2})(\d{4})\.txt$', filename)
+    if match:
+        month = match.group(1)
+        year = match.group(2)
+        return month, year, f"{month}{year}"
+    
+    # Try alternative pattern with month and year separated
+    match = re.search(r'_(\d{2})_(\d{4})\.txt$', filename)
+    if match:
+        month = match.group(1)
+        year = match.group(2)
+        return month, year, f"{month}{year}"
+    
+    # If no pattern matched
+    return None, None, None
+
+
+def extract_month_year_from_date(date_str, format_str="%Y%m%d%H%M"):
+    """
+    Extract month and year from a date string
+    
+    Args:
+        date_str (str): Date string to parse
+        format_str (str): Format of the date string
+        
+    Returns:
+        tuple: (month, year, month_year_str) where month_year_str is formatted as "MMYYYY"
+              Returns (None, None, None) if parsing fails
+    """
+    try:
+        date_obj = datetime.strptime(date_str, format_str)
+        month = f"{date_obj.month:02d}"
+        year = f"{date_obj.year}"
+        return month,year , f"{month}{year}"
+    except ValueError:
+        return None, None, None
 
 def compare_weather_data(
     df1,
