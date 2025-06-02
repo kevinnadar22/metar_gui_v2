@@ -6,7 +6,7 @@ from datetime import datetime
 import re
 from werkzeug.utils import secure_filename
 
-from app.utils import decode_metar_to_csv, extract_data_from_file_with_day_and_wind, compare_weather_data, OgimetAPI, extract_month_year_from_filename, extract_month_year_from_date
+from app.utils import decode_metar_to_csv, extract_data_from_file_with_day_and_wind, compare_weather_data, OgimetAPI, extract_day_month_year_from_filename,extract_month_year_from_date
 from app.config import METAR_DATA_DIR
 
 api_bp = Blueprint('api', __name__, url_prefix='/api')
@@ -145,7 +145,8 @@ def process_metar():
         if is_date_time_provided:
             try:
                 # Use helper function to extract month and year from start date
-                _, _, metar_month_year = extract_month_year_from_date(start_date)
+                _,_, _, metar_month_year = extract_month_year_from_date(start_date)
+                print(f"Extracted METAR month/year: {metar_month_year}")
                 # Also validate end date format
                 datetime.strptime(end_date, "%Y%m%d%H%M")
                 if not metar_month_year:
@@ -164,6 +165,7 @@ def process_metar():
             }), 400
             
         forecast_file = request.files['forecast_file']
+        print(f"Forecast file: {forecast_file.filename}")
 
         if forecast_file.filename == '':
             return jsonify({
@@ -171,7 +173,7 @@ def process_metar():
             }), 400
         
         # Extract month and year from forecast filename using helper function
-        _, _, forecast_month_year = extract_month_year_from_filename(forecast_file.filename)
+        _,_, _, forecast_month_year = extract_day_month_year_from_filename(forecast_file.filename)
         
         if is_observation_file_provided:
             observation_file = request.files['observation_file']
@@ -180,19 +182,20 @@ def process_metar():
                     "error": "Empty observation file. Please upload a valid observation file."
                 }), 400
             
+            print(f"Observation file: {observation_file.filename}")
             # If using observation file, extract month/year from its filename if possible
             if not metar_month_year:
-                _, _, metar_month_year = extract_month_year_from_filename(observation_file.filename)
+                _,_, _, metar_month_year = extract_day_month_year_from_filename(observation_file.filename)
         
         # Validate month/year match if both are available
         if metar_month_year and forecast_month_year and metar_month_year != forecast_month_year:
             return jsonify({
                 "error": f"Month/year mismatch between METAR data ({metar_month_year}) and forecast file ({forecast_month_year}). Please ensure both files are for the same month and year."
-            }), 400
+            }), 200
             
         # Save forecast file with secure filename
         timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
-        forecast_filename = secure_filename(f"forecast_{icao}_{timestamp}.txt")
+        forecast_filename = secure_filename(f"{forecast_month_year}.txt")
         forecast_path = os.path.join(UPLOADS_DIR, forecast_filename)
         forecast_file.save(forecast_path)
         

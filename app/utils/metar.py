@@ -129,51 +129,112 @@ def extract_wind_data(wind_str):
     return None, None  # Return None, None if no match
 
 
+# def extract_data_from_file_with_day_and_wind(file_path):
+#     """
+#     Extracts data from a file, including day, time, and separated wind direction/speed.
+
+#     Args:
+#         file_path (str): The path to the file.
+
+#     Returns:
+#         pandas.DataFrame: DataFrame with extracted data.
+#     """
+
+#     data = []
+#     day = 1
+#     try:
+#         with open(file_path, "r") as file:
+#             next(file)
+#             for line in file:
+#                 line = line.strip()
+#                 if line:
+#                     if re.match(r"^\d+$", line) and len(line) <= 2:
+#                         day = int(line)
+#                         continue
+#                     match = re.match(r"(\d{4}Z)\s+(\S+)\s+(\d+)\s+(\d+)\s+(\d+)", line)
+#                     if match:
+#                         time, wind_str, temp, qfe, qnh = match.groups()
+#                         wind_dir, wind_speed = extract_wind_data(wind_str)
+#                         data.append(
+#                             {
+#                                 "DAY": day,
+#                                 "TIME": time,
+#                                 "WIND_DIR": wind_dir,
+#                                 "WIND_SPEED": wind_speed,
+#                                 "TEMP": int(temp),
+#                                 "QFE": int(qfe),
+#                                 "QNH": int(qnh),
+#                             }
+#                         )
+#         return pd.DataFrame(data)
+#     except FileNotFoundError:
+#         print(f"Error: File not found at {file_path}")
+#         return pd.DataFrame()
+#     except Exception as e:
+#         print(f"An error occurred: {e}")
+#         return pd.DataFrame()
+
+import os
+
 def extract_data_from_file_with_day_and_wind(file_path):
     """
-    Extracts data from a file, including day, time, and separated wind direction/speed.
-
-    Args:
-        file_path (str): The path to the file.
-
-    Returns:
-        pandas.DataFrame: DataFrame with extracted data.
+    Extracts data from a file, including day (from filename or file content), time, and separated wind direction/speed.
     """
-
     data = []
-    day = 1
+
+    print(f"Processing file: {file_path}")
+
+    # Try extracting day, month, and year from filename
+    filename = os.path.basename(file_path)
+    print(f"Processing file: {filename}")
+    day_from_name, month_from_name, year_from_name, _ = extract_day_month_year_from_filename(filename)
+    print(f"Extracted from filename: Day={day_from_name}, Month={month_from_name}, Year={year_from_name}")
+    use_day_from_filename = day_from_name is not None
+    current_day = day_from_name if use_day_from_filename else 1
+
     try:
         with open(file_path, "r") as file:
-            next(file)
-            for line in file:
+            lines = file.readlines()
+
+            # Skip first line only if day is NOT taken from filename
+            if not use_day_from_filename:
+                lines = lines[1:]  # skip header
+
+            for line in lines:
                 line = line.strip()
-                if line:
-                    if re.match(r"^\d+$", line) and len(line) <= 2:
-                        day = int(line)
-                        continue
-                    match = re.match(r"(\d{4}Z)\s+(\S+)\s+(\d+)\s+(\d+)\s+(\d+)", line)
-                    if match:
-                        time, wind_str, temp, qfe, qnh = match.groups()
-                        wind_dir, wind_speed = extract_wind_data(wind_str)
-                        data.append(
-                            {
-                                "DAY": day,
-                                "TIME": time,
-                                "WIND_DIR": wind_dir,
-                                "WIND_SPEED": wind_speed,
-                                "TEMP": int(temp),
-                                "QFE": int(qfe),
-                                "QNH": int(qnh),
-                            }
-                        )
+                if not line:
+                    continue
+
+                # If using day from file content (not filename), check for numeric day lines
+                if not use_day_from_filename and re.match(r"^\d{1,2}$", line):
+                    current_day = int(line)
+                    continue
+
+                # Extract values from valid data lines
+                match = re.match(r"(\d{4}Z)\s+(\S+)\s+(\d+)\s+(\d+)\s+(\d+)", line)
+                if match:
+                    time, wind_str, temp, qfe, qnh = match.groups()
+                    wind_dir, wind_speed = extract_wind_data(wind_str)
+                    data.append({
+                        "DAY": current_day,
+                        "MONTH": month_from_name,
+                        "YEAR": year_from_name,
+                        "TIME": time,
+                        "WIND_DIR": wind_dir,
+                        "WIND_SPEED": wind_speed,
+                        "TEMP": int(temp),
+                        "QFE": int(qfe),
+                        "QNH": int(qnh),
+                    })
+
         return pd.DataFrame(data)
+
     except FileNotFoundError:
         print(f"Error: File not found at {file_path}")
         return pd.DataFrame()
     except Exception as e:
         print(f"An error occurred: {e}")
         return pd.DataFrame()
-
 
 def compare_wind_by_time(df1, df2):
     """
@@ -268,36 +329,41 @@ def circular_difference(dir1, dir2):
 
     return min(abs(dir1 - dir2), 360 - (abs(dir1 - dir2)))
 
-def extract_month_year_from_filename(filename):
+
+def extract_day_month_year_from_filename(filename):
     """
-    Extract month and year from a filename following pattern like 'TAKEOFF_Forecast_092023.txt'
+    Extract day, month, and year from a filename following pattern like 'TAKEOFF_Forecast_12092023.txt'
     
     Args:
         filename (str): The filename to parse
         
     Returns:
-        tuple: (month, year, month_year_str) where month_year_str is formatted as "MMYYYY"
-              Returns (None, None, None) if pattern not found
+        tuple: (day, month, year, day_month_year_str) where day_month_year_str is formatted as "DDMMYYYY"
+               Returns (None, None, None, None) if pattern not found
     """
-    match = re.search(r'_(\d{2})(\d{4})\.txt$', filename)
-    if match:
-        month = match.group(1)
-        year = match.group(2)
-        return month, year, f"{month}{year}"
+    # Pattern: DDMMYYYY without separators
     
-    # Try alternative pattern with month and year separated
-    match = re.search(r'_(\d{2})_(\d{4})\.txt$', filename)
+    match = re.search(r'(\d{2})(\d{2})(\d{4})\.txt$', filename)
     if match:
-        month = match.group(1)
-        year = match.group(2)
-        return month, year, f"{month}{year}"
+        day = match.group(1)
+        month = match.group(2)
+        year = match.group(3)
+        return day, month, year, f"{day}{month}{year}"
     
-    # If no pattern matched
-    return None, None, None
+    # Pattern: DD_MM_YYYY with underscores
+    match = re.search(r'(\d{2})_(\d{2})_(\d{4})\.txt$', filename)
+    if match:
+        day = match.group(1)
+        month = match.group(2)
+        year = match.group(3)
+        return day, month, year, f"{day}{month}{year}"
+    print(match)
+    # No pattern matched
+    return None, None, None, None
 
 
 def extract_month_year_from_date(date_str, format_str="%Y%m%d%H%M"):
-    """
+    """ 
     Extract month and year from a date string
     
     Args:
@@ -310,11 +376,14 @@ def extract_month_year_from_date(date_str, format_str="%Y%m%d%H%M"):
     """
     try:
         date_obj = datetime.strptime(date_str, format_str)
+        print(f"date_obj = {date_obj}")
+        day = f"{date_obj.day:02d}"
+        print(f"day = {day}")
         month = f"{date_obj.month:02d}"
         year = f"{date_obj.year}"
-        return month,year , f"{month}{year}"
+        return day,month,year,f"{day}{month}{year}"
     except ValueError:
-        return None, None, None
+        return None, None, None,None
 
 def compare_weather_data(
     df1,
