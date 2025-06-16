@@ -305,6 +305,200 @@
         </section>
     </div>
 
+   <!-- Upper Air Section -->
+<!-- Upper Air Section -->
+<section class="container mx-auto px-4 max-w-7xl mt-6 mb-8">
+    <div class="upload-container">
+
+        <!-- Upper Air Station Selection -->
+        <div class="input-container mb-8">
+            <div class="upload-box bg-white rounded-lg shadow-md p-6">
+                <h2 class="text-xl font-semibold mb-4 text-gray-700">Select Upper Air Station</h2>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">STATION ID</label>
+                    <input type="text" id="upperAirStationInput"
+                        class="w-full border border-gray-300 rounded-md p-2"
+                        placeholder="Enter Station ID (e.g. 43003)" maxlength="5">
+                    <p class="text-sm text-gray-600 mt-1">Please enter a valid station ID</p>
+                </div>
+                <div class="mt-4">
+                    <p class="text-sm text-gray-500 mb-2">Example stations:</p>
+                    <div class="flex flex-wrap gap-2">
+                        <button class="upper-air-station-example px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded-md text-gray-700 transition-colors" data-code="43003">43003 (Mumbai)</button>
+                        <button class="upper-air-station-example px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded-md text-gray-700 transition-colors" data-code="43014">43014 (Pune)</button>
+                        <button class="upper-air-station-example px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded-md text-gray-700 transition-colors" data-code="43192">43192 (Hyderabad)</button>
+                        <button class="upper-air-station-example px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded-md text-gray-700 transition-colors" data-code="43128">43128 (Chennai)</button>
+                        <button class="upper-air-station-example px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded-md text-gray-700 transition-colors" data-code="43063">43063 (Ahmedabad)</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="input-container flex flex-col md:flex-row gap-8">
+            <!-- Observation Data Upload/Fetch -->
+            <div class="upload-box bg-white rounded-lg shadow-md p-6 flex-1 relative">
+                <h2 class="text-xl font-semibold mb-4 text-gray-700">Observation Data (CSV or Fetch)</h2>
+
+                <!-- CSV Upload Area -->
+                <div id="upperAirObsUploadArea" class="upload-area border-2 border-dashed border-gray-300 rounded-lg p-4 text-center h-28 flex flex-col items-center justify-center bg-blue-100 transition-colors duration-200 mb-6">
+                    <p class="mb-2 text-gray-600">Upload an observation CSV file</p>
+                    <label class="cursor-pointer bg-blue-600 hover:bg-blue-700 text-white font-medium py-1.5 px-4 rounded-md transition duration-300">
+                        <i class="fas fa-upload mr-1"></i> Upload CSV
+                        <input type="file" class="hidden" id="upperAirObsFileInput" accept=".csv">
+                    </label>
+                    <p class="mt-2 text-xs text-gray-500">The file should be in CSV format as downloaded from the system</p>
+                </div>
+                <!-- File Preview Section for CSV -->
+                <div id="upperAirObsFilePreview" class="file-preview hidden relative">
+                    <div class="file-name-container bg-blue-50 border border-blue-100 rounded-lg p-3 mb-3">
+                        <p class="text-sm font-medium text-blue-700 flex items-center">
+                            <i class="fas fa-file-csv mr-2"></i>
+                            Uploaded File: <span class="ml-1 font-bold"></span>
+                        </p>
+                    </div>
+                    <h3 class="text-sm font-medium text-gray-700 mb-2 flex items-center">File Preview</h3>
+                    <div class="preview-content bg-gray-50 border border-gray-200 rounded-md p-4 font-mono text-sm whitespace-pre-wrap max-h-60 overflow-y-auto shadow-inner hover:shadow-md transition-shadow duration-300"></div>
+                    <div class="loading-indicator hidden flex items-center justify-center py-4">
+                        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                        <span class="ml-2 text-gray-600">Loading file content...</span>
+                    </div>
+                    <button class="close-btn absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white rounded-full w-7 h-7 flex items-center justify-center transition-colors duration-300 shadow-md">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+
+                <!-- OR Date Picker Section -->
+                <div id="upperAirDatePickerSection" class="mt-6">
+                    <h3 class="text-sm font-medium text-gray-700 mb-2">Or Fetch Observation Data by Date/Time</h3>
+                    <div class="flex gap-4 items-end">
+                        <input type="text" id="upperAirDatePicker" class="w-full border border-gray-300 rounded-md p-2" placeholder="Select Date">
+                        <select id="upperAirHourSelect" class="w-32 border border-gray-300 rounded-md p-2">
+                            <!-- Populated by JS -->
+                        </select>
+                        <button id="upperAirFetchBtn" class="bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded-md shadow transition duration-200">
+                            Fetch Data
+                        </button>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-1">Upper air data is typically available at 00:00 and 12:00 UTC</p>
+                </div>
+                <!-- Preview for fetched data -->
+                <div id="upperAirPreviewSection" class="mt-4 hidden">
+                    <h3 class="text-sm font-medium text-gray-700 mb-2">Fetched Observation Data Preview</h3>
+                    <div id="upperAirPreviewContent" class="bg-gray-50 border border-gray-200 rounded-md p-4 font-mono text-sm whitespace-pre-wrap max-h-60 overflow-y-auto"></div>
+                    <div id="upperAirLoadingIndicator" class="hidden flex items-center justify-center py-4">
+                        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                        <span class="ml-2 text-gray-600">Fetching upper air data...</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Forecast File Upload -->
+            <div class="upload-box bg-white rounded-lg shadow-md p-6 flex-1">
+                <h2 class="text-xl font-semibold mb-4 text-gray-700">Forecast File (PDF)</h2>
+                <div class="bg-blue-50 border border-blue-200 rounded-md p-3 mb-4 text-blue-700 text-sm">
+                    <p>Upload PDF forecast file containing upper winds data for verification.</p>
+                </div>
+                <div id="upperAirForecastUploadArea" class="upload-area border-2 border-dashed border-gray-300 rounded-lg p-4 text-center h-28 flex flex-col items-center justify-center bg-blue-100 transition-colors duration-200 mb-6">
+                    <p class="mb-2 text-gray-600">Upload a forecast PDF file</p>
+                    <label class="cursor-pointer bg-blue-600 hover:bg-blue-700 text-white font-medium py-1.5 px-4 rounded-md transition duration-300">
+                        <i class="fas fa-upload mr-1"></i> Upload PDF
+                        <input type="file" class="hidden" id="upperAirForecastFileInput" accept=".pdf">
+                    </label>
+                    <p class="mt-2 text-xs text-gray-500">The file should be in PDF format</p>
+                </div>
+                <!-- File Preview Section for PDF -->
+                <div id="upperAirForecastFilePreview" class="file-preview hidden relative">
+                    <div class="file-name-container bg-blue-50 border border-blue-100 rounded-lg p-3 mb-3">
+                        <p class="text-sm font-medium text-blue-700 flex items-center">
+                            <i class="fas fa-file-pdf mr-2"></i>
+                            Uploaded File: <span class="ml-1 font-bold"></span>
+                        </p>
+                    </div>
+                    <h3 class="text-sm font-medium text-gray-700 mb-2 flex items-center">PDF Processing Status</h3>
+                    <div class="preview-content bg-gray-50 border border-gray-200 rounded-md p-4 text-sm whitespace-pre-wrap max-h-60 overflow-y-auto shadow-inner hover:shadow-md transition-shadow duration-300"></div>
+                    <div class="loading-indicator hidden flex items-center justify-center py-4">
+                        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                        <span class="ml-2 text-gray-600">Processing PDF...</span>
+                    </div>
+                    <button class="close-btn absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white rounded-full w-7 h-7 flex items-center justify-center transition-colors duration-300 shadow-md">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Verify Button -->
+        <div class="text-center mt-10">
+            <button id="upperAirVerifyBtn"
+                class="bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-10 rounded-md shadow-md transition duration-300 text-lg">
+                Verify Forecast
+            </button>
+        </div>
+    </div>
+</section>
+
+    <!-- loading section -->
+    <div id="reportLoadingSection" class="flex items-center justify-center py-8" style="display: none;">
+        <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+        <span class="ml-2 text-sm text-gray-600">Processing verification...</span>
+    </div>
+
+    <div id="upperAirReportSection" style="display: none;">
+        <!-- Verification Results -->
+        <section class="container mx-auto px-4 max-w-7xl mt-6 mb-8">
+            <h2 class="text-2xl font-bold mb-6 text-gray-800 text-center">UPPER AREA FORECAST VERIFICATION RESULTS</h2>
+
+            <!-- Summary Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4">Temperature Forecast Accuracy</h3>
+                    <div class="text-3xl font-bold text-blue-600" id="tempAccuracy">--</div>
+                    <p class="text-sm text-gray-600 mt-2">Percentage of temperature forecasts within ±2°C</p>
+                </div>
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4">Wind Speed Forecast Accuracy</h3>
+                    <div class="text-3xl font-bold text-green-600" id="windAccuracy">--</div>
+                    <p class="text-sm text-gray-600 mt-2">Percentage of wind speed forecasts within ±10 knots</p>
+                </div>
+            </div>
+
+            <!-- Detailed Comparison Table -->
+            <div class="overflow-x-auto bg-white rounded-lg shadow-md">
+                <table class="min-w-full" id="verificationTable">
+                    <thead class="bg-gray-100">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-800 uppercase tracking-wider">Altitude (m)</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-800 uppercase tracking-wider">Observed Height (m)</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-800 uppercase tracking-wider">Forecast Temp (°C)</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-800 uppercase tracking-wider">Observed Temp (°C)</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-800 uppercase tracking-wider">Temp Diff</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-800 uppercase tracking-wider">Forecast Wind (kt)</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-800 uppercase tracking-wider">Observed Wind (kt)</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-800 uppercase tracking-wider">Wind Diff</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-800 uppercase tracking-wider">Temp Status</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-800 uppercase tracking-wider">Wind Status</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200">
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Download Section -->
+        <section class="container mx-auto px-4 max-w-7xl mb-16">
+            <h2 class="text-2xl font-bold mb-6 text-gray-800 text-center">Download Results</h2>
+
+            <div class="flex flex-col sm:flex-row justify-center gap-4">
+                <a href="#" id="downloadCsvBtn"
+                    class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-6 rounded-md shadow transition duration-300 flex items-center justify-center">
+                    <i class="fas fa-file-csv mr-2"></i>
+                    Download Verification Results as CSV
+                </a>
+            </div>
+        </section>
+    </div>
+
 
     <!-- Footer -->
     <footer class="bg-gray-800 text-gray-300 py-6">

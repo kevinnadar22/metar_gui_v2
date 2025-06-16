@@ -44,6 +44,8 @@ document.addEventListener('DOMContentLoaded', function () {
         }, 5000);
     }
 
+    
+
     // Initialize date-only pickers
     function initializeDatePickers() {
         flatpickr(".date-only-picker", {
@@ -247,6 +249,7 @@ document.addEventListener('DOMContentLoaded', function () {
             if (!file) return;
 
             const uploadBox = this.closest('.upload-box');
+            if (!uploadBox) return;
             const previewElement = uploadBox.querySelector('.file-preview');
             const previewContent = previewElement.querySelector('.preview-content');
             const loadingIndicator = previewElement.querySelector('.loading-indicator');
@@ -257,11 +260,30 @@ document.addEventListener('DOMContentLoaded', function () {
             // Show the file name
             fileNameSpan.textContent = file.name;
 
-            // file name should be in the format MMYYYY.txt
-            if (!file.name.match(/^\d{2}\d{4}\.txt$/)) {
-                showCustomAlert('Please upload a file named with month and year (like 012024.txt). The first two digits are the month (01-12) and the next four digits are the year.');
+            // file name should be in the format DDMMYYYY.txt
+            if (input.id === 'forecast-file-input') {
+            if (!file.name.match(/^\d{2}\d{2}\d{4}\.txt$/)) {
+                showCustomAlert('Please upload a file named with day,month and year (like 01012024.txt). The first two digits are the day and two digit for month (01-12) and the next four digits are the year.');
                 return;
             }
+        }
+
+        // For upper air observation CSV
+        if (input.id === 'upperAirObsFileInput') {
+            if (!file.name.toLowerCase().endsWith('.csv')) {
+                showCustomAlert('Please upload a CSV file for upper air observation.');
+                return;
+            }
+        }
+
+        // For upper air forecast PDF
+        if (input.id === 'upperAirForecastFileInput') {
+            if (!file.name.toLowerCase().endsWith('.pdf')) {
+                showCustomAlert('Please upload a PDF file for upper air forecast.');
+                return;
+            }
+        }
+
 
             // Show the file preview area and loading indicator
             previewElement.classList.remove('hidden');
@@ -418,9 +440,9 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
 
-        // check if forecast file is present and it should be in the format MMYYYY.txt
-        if (!forecastFile || !forecastFile.name.match(/^\d{2}\d{4}\.txt$/)) {
-            showCustomAlert('Please upload a valid forecast file in the format MMYYYY.txt.');
+        // check if forecast file is present and it should be in the format DDMMYYYY.txt
+        if (!forecastFile || !forecastFile.name.match(/^\d{2}\d{2}\d{4}\.txt$/)) {
+            showCustomAlert('Please upload a valid forecast file in the format DDMMYYYY.txt.');
             return;
         }
 
@@ -602,3 +624,326 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 });
+
+
+// Add this JavaScript code to your existing app.js file
+
+// Upper Air specific variables (add to existing element references section)
+// 
+// Element references
+const upperAirStationInput = document.getElementById('upperAirStationInput');
+const upperAirStationExamples = document.querySelectorAll('.upper-air-station-example');
+const upperAirObsFileInput = document.getElementById('upperAirObsFileInput');
+const upperAirObsUploadArea = document.getElementById('upperAirObsUploadArea');
+const upperAirObsFilePreview = document.getElementById('upperAirObsFilePreview');
+const upperAirDatePickerSection = document.getElementById('upperAirDatePickerSection');
+const upperAirDatePicker = document.getElementById('upperAirDatePicker');
+const upperAirHourSelect = document.getElementById('upperAirHourSelect');
+const upperAirFetchBtn = document.getElementById('upperAirFetchBtn');
+const upperAirPreviewSection = document.getElementById('upperAirPreviewSection');
+const upperAirPreviewContent = document.getElementById('upperAirPreviewContent');
+const upperAirLoadingIndicator = document.getElementById('upperAirLoadingIndicator');
+const upperAirForecastFileInput = document.getElementById('upperAirForecastFileInput');
+const upperAirForecastUploadArea = document.getElementById('upperAirForecastUploadArea');
+const upperAirForecastFilePreview = document.getElementById('upperAirForecastFilePreview');
+const upperAirVerifyBtn = document.getElementById('upperAirVerifyBtn');
+const upperAirReportSection = document.getElementById('upperAirReportSection');
+
+// Populate hour select
+for (let i = 0; i < 24; i++) {
+    const option = document.createElement('option');
+    option.value = i.toString().padStart(2, '0');
+    option.textContent = i.toString().padStart(2, '0');
+    upperAirHourSelect.appendChild(option);
+}
+
+// Date picker
+flatpickr(upperAirDatePicker, {
+    enableTime: false,
+    dateFormat: "Y-m-d",
+    static: true
+});
+
+// Example station buttons
+upperAirStationExamples.forEach(btn => {
+    btn.addEventListener('click', function () {
+        upperAirStationInput.value = this.getAttribute('data-code');
+    });
+});
+
+// Observation file upload
+upperAirObsFileInput.addEventListener('change', function () {
+    const file = this.files[0];
+    if (!file) return;
+    if (!file.name.endsWith('.csv')) {
+        showCustomAlert('Please upload a CSV file for upper air observation.');
+        return;
+    }
+    upperAirObsFilePreview.querySelector('.file-name-container span').textContent = file.name;
+    upperAirObsFilePreview.classList.remove('hidden');
+    const previewContent = upperAirObsFilePreview.querySelector('.preview-content');
+    const loadingIndicator = upperAirObsFilePreview.querySelector('.loading-indicator');
+    loadingIndicator.classList.remove('hidden');
+    previewContent.textContent = '';
+    const reader = new FileReader();
+    reader.onload = function (e) {
+        const lines = e.target.result.split('\n');
+        previewContent.textContent = lines.slice(0, 10).join('\n');
+        loadingIndicator.classList.add('hidden');
+    };
+    reader.onerror = function () {
+        loadingIndicator.classList.add('hidden');
+        previewContent.textContent = 'Error reading file';
+    };
+    reader.readAsText(file);
+    // Hide date picker section
+    upperAirDatePickerSection.style.display = 'none';
+});
+
+// Close button for obs preview
+upperAirObsFilePreview.querySelector('.close-btn').addEventListener('click', function () {
+    upperAirObsFilePreview.classList.add('hidden');
+    upperAirObsFileInput.value = '';
+    upperAirDatePickerSection.style.display = 'block';
+});
+
+// Forecast file upload
+upperAirForecastFileInput.addEventListener('change', function () {
+    const file = this.files[0];
+    if (!file) return;
+    if (!file.name.endsWith('.pdf')) {
+        showCustomAlert('Please upload a PDF file for upper air forecast.');
+        return;
+    }
+    upperAirForecastFilePreview.querySelector('.file-name-container span').textContent = file.name;
+    upperAirForecastFilePreview.classList.remove('hidden');
+    const previewContent = upperAirForecastFilePreview.querySelector('.preview-content');
+    const loadingIndicator = upperAirForecastFilePreview.querySelector('.loading-indicator');
+    loadingIndicator.classList.remove('hidden');
+    previewContent.textContent = '';
+    if (file.type === 'application/pdf') {
+        loadingIndicator.classList.add('hidden');
+        previewContent.innerHTML = '<p class="text-gray-600">PDF uploaded successfully. Upper winds data will be extracted for verification.</p>';
+    } else {
+        loadingIndicator.classList.add('hidden');
+        previewContent.textContent = 'Please upload a PDF file.';
+    }
+});
+
+// Close button for forecast preview
+upperAirForecastFilePreview.querySelector('.close-btn').addEventListener('click', function () {
+    upperAirForecastFilePreview.classList.add('hidden');
+    upperAirForecastFileInput.value = '';
+});
+
+// Fetch observation data from Wyoming
+upperAirFetchBtn.addEventListener('click', function () {
+    const date = upperAirDatePicker.value;
+    const hour = upperAirHourSelect.value;
+    const station = upperAirStationInput.value;
+    if (!date || !hour || !/^\d{5}$/.test(station)) {
+        if (typeof showCustomAlert === 'function') {
+            showCustomAlert('Please select date, hour, and enter a valid 5-digit station ID.');
+        } else {
+            alert('Please select date, hour, and enter a valid 5-digit station ID.');
+        }
+        return;
+    }
+    upperAirPreviewSection.classList.remove('hidden');
+    upperAirLoadingIndicator.classList.remove('hidden');
+    upperAirPreviewContent.textContent = '';
+    const dateTime = `${date} ${hour}:00:00`;
+    fetch(`/api/get_upper_air?datetime=${encodeURIComponent(dateTime)}&station_id=${station}`)
+        .then(async response => {
+            upperAirLoadingIndicator.classList.add('hidden');
+            if (!response.ok) {
+                // Try to parse error JSON
+                let errorMsg = 'Failed to fetch upper air data';
+                try {
+                    const err = await response.json();
+                    errorMsg = err.error || errorMsg;
+                } catch (e) {}
+                throw new Error(errorMsg);
+            }
+            const text = await response.text();
+            // If the response looks like HTML, show a friendly error
+            if (text.trim().toLowerCase().startsWith('<!doctype html') || text.trim().toLowerCase().startsWith('<html')) {
+                throw new Error('No data available for the selected date/time/station.');
+            }
+            upperAirPreviewContent.textContent = text;
+        })
+        .catch(error => {
+            upperAirPreviewSection.classList.add('hidden');
+            if (typeof showCustomAlert === 'function') {
+                showCustomAlert('Error fetching upper air data: ' + error.message);
+            } else {
+                alert('Error fetching upper air data: ' + error.message);
+            }
+        });
+});
+
+// Verification (submit)
+// Replace your current upperAirVerifyBtn click handler with this:
+upperAirVerifyBtn.addEventListener('click', function () {
+    const station = upperAirStationInput.value;
+    const forecastFile = upperAirForecastFileInput.files[0];
+    const obsFile = upperAirObsFileInput.files[0];
+    const date = upperAirDatePicker.value;
+    const hour = upperAirHourSelect.value;
+
+    if (!/^\d{5}$/.test(station)) {
+        alert('Please enter a valid 5-digit station ID.');
+        return;
+    }
+    if (!forecastFile || forecastFile.type !== 'application/pdf') {
+        alert('Please upload a valid PDF forecast file.');
+        return;
+    }
+    if (!obsFile && (!date || !hour)) {
+        alert('Please either upload an observation CSV or select date/time to fetch data.');
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('station_id', station);
+    formData.append('forecast_file', forecastFile);
+    if (obsFile) {
+        formData.append('observation_file', obsFile);
+    } else {
+        const dateTime = `${date} ${hour}:00:00`;
+        formData.append('datetime', dateTime);
+    }
+
+    // Show loading, hide report
+    upperAirReportSection.style.display = 'none';
+
+    fetch('/api/process_upper_air', {
+        method: 'POST',
+        body: formData
+    })
+        .then(response => {
+            if (!response.ok) return response.json().then(err => { throw new Error(err.error || 'Failed to process upper air data'); });
+            return response.json();
+        })
+        .then(data => {
+            // Show results section
+            upperAirReportSection.style.display = 'block';
+
+            // Set accuracy values
+            document.getElementById('tempAccuracy').textContent = data.temp_accuracy !== undefined ? `${data.temp_accuracy}%` : '--';
+            document.getElementById('windAccuracy').textContent = data.wind_accuracy !== undefined ? `${data.wind_accuracy}%` : '--';
+
+            // Fetch and populate the verification table
+            if (data.file_path) {
+                fetch(`/api/download/upper_air_csv?file_path=${encodeURIComponent(data.file_path)}`)
+                    .then(response => {
+                        if (!response.ok) throw new Error('Failed to download verification CSV');
+                        return response.text();
+                    })
+                    .then(csvText => {
+                        populateUpperAirVerificationTable(csvText);
+                    })
+                    .catch(error => {
+                        showCustomAlert('Failed to load verification data. Please try again.');
+                    });
+
+                // Set download button
+                const downloadBtn = document.querySelector('#upperAirReportSection #downloadCsvBtn');
+                if (downloadBtn) {
+                    downloadBtn.href = `/api/download/upper_air_csv?file_path=${encodeURIComponent(data.file_path)}`;
+                }
+            }
+        })
+        .catch(error => {
+            alert('Error processing upper air data: ' + error.message);
+        });
+});
+
+// Helper function to populate the verification table
+function populateUpperAirVerificationTable(csvText) {
+    const table = document.getElementById('verificationTable');
+    if (!table) return;
+    const rows = csvText.trim().split('\n');
+    const headers = rows[0].split(',');
+
+    // Clear thead and tbody
+    const thead = table.querySelector('thead');
+    const tbody = table.querySelector('tbody');
+    if (thead) thead.innerHTML = '';
+    if (tbody) tbody.innerHTML = '';
+
+    // Populate header
+    const headerRow = document.createElement('tr');
+    headers.forEach(header => {
+        const th = document.createElement('th');
+        th.textContent = header.replace(/_/g, ' ');
+        th.className = 'px-6 py-3 text-left text-xs font-medium text-gray-800 uppercase tracking-wider';
+        headerRow.appendChild(th);
+    });
+    if (thead) thead.appendChild(headerRow);
+
+    // Populate body
+    for (let i = 1; i < rows.length; i++) {
+        if (rows[i].trim() === '') continue;
+        const rowData = rows[i].split(',');
+        const tr = document.createElement('tr');
+        tr.className = 'transition-colors duration-150 ease-in-out';
+        rowData.forEach(cell => {
+            const td = document.createElement('td');
+            td.textContent = cell;
+            td.className = 'px-6 py-4 text-sm border-b border-gray-200';
+            tr.appendChild(td);
+        });
+        if (tbody) tbody.appendChild(tr);
+    }
+}
+
+function setupDragAndDrop(uploadAreaId, fileInputId, fileType) {
+    const uploadArea = document.getElementById(uploadAreaId);
+    const fileInput = document.getElementById(fileInputId);
+
+    if (!uploadArea || !fileInput) return;
+
+    // Highlight on drag over
+    uploadArea.addEventListener('dragover', function (e) {
+        e.preventDefault();
+        uploadArea.classList.add('border-blue-500', 'bg-blue-50');
+    });
+
+    uploadArea.addEventListener('dragleave', function (e) {
+        e.preventDefault();
+        uploadArea.classList.remove('border-blue-500', 'bg-blue-50');
+    });
+
+    uploadArea.addEventListener('drop', function (e) {
+        e.preventDefault();
+        uploadArea.classList.remove('border-blue-500', 'bg-blue-50');
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            const file = files[0];
+            // Validate file type
+            if (fileType === 'csv' && !file.name.toLowerCase().endsWith('.csv')) {
+                showCustomAlert('Please upload a CSV file for upper air observation.');
+                return;
+            }
+            if (fileType === 'pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+                showCustomAlert('Please upload a PDF file for upper air forecast.');
+                return;
+            }
+            // Set the file to the input and trigger change event
+            const dataTransfer = new DataTransfer();
+            dataTransfer.items.add(file);
+            fileInput.files = dataTransfer.files;
+            fileInput.dispatchEvent(new Event('change'));
+        }
+    });
+
+    // Optional: clicking the area opens the file dialog
+    uploadArea.addEventListener('click', function () {
+        fileInput.click();
+    });
+}
+
+// Setup drag and drop for both areas
+setupDragAndDrop('upperAirObsUploadArea', 'upperAirObsFileInput', 'csv');
+setupDragAndDrop('upperAirForecastUploadArea', 'upperAirForecastFileInput', 'pdf');

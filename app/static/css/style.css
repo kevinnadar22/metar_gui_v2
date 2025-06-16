@@ -113,6 +113,11 @@ body {
     gap: 10px;
     align-items: flex-start;
 }
+.date-picker{
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+}
 
 .date-input-group, .time-input-group {
     display: flex;

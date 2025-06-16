@@ -5,17 +5,31 @@ import base64
 from datetime import datetime
 import re
 from werkzeug.utils import secure_filename
+from app.utils import decode_metar_to_csv, extract_data_from_file_with_day_and_wind, compare_weather_data, OgimetAPI, extract_day_month_year_from_filename,extract_month_year_from_date,fetch_upper_air_data
+from app.config import METAR_DATA_DIR, UPPER_AIR_DATA_DIR
+import tempfile
+import pandas as pd
+import numpy as np
+import re
+from PyPDF2 import PdfReader
+from datetime import datetime
+import requests
+from urllib.parse import quote
 
-from app.utils import decode_metar_to_csv, extract_data_from_file_with_day_and_wind, compare_weather_data, OgimetAPI, extract_day_month_year_from_filename,extract_month_year_from_date
-from app.config import METAR_DATA_DIR
 
 api_bp = Blueprint('api', __name__, url_prefix='/api')
 
 # Create uploads and downloads subdirectories in METAR_DATA_DIR
-UPLOADS_DIR = os.path.join(METAR_DATA_DIR, 'uploads')
-DOWNLOADS_DIR = os.path.join(METAR_DATA_DIR, 'downloads')
-os.makedirs(UPLOADS_DIR, exist_ok=True)
-os.makedirs(DOWNLOADS_DIR, exist_ok=True)
+METAR_UPLOADS_DIR = os.path.join(METAR_DATA_DIR, 'uploads')
+METAR_DOWNLOADS_DIR = os.path.join(METAR_DATA_DIR, 'downloads')
+
+UPPER_AIR_UPLOADS_DIR = os.path.join(UPPER_AIR_DATA_DIR, 'uploads')
+UPPER_AIR_DOWNLOADS_DIR = os.path.join(UPPER_AIR_DATA_DIR, 'downloads')
+
+os.makedirs(METAR_UPLOADS_DIR, exist_ok=True)
+os.makedirs(METAR_DOWNLOADS_DIR, exist_ok=True)
+os.makedirs(UPPER_AIR_UPLOADS_DIR, exist_ok=True)
+os.makedirs(UPPER_AIR_DOWNLOADS_DIR, exist_ok=True)
 
 def encode_file_path(file_path):
     """Encode a file path to a secure token"""
@@ -196,7 +210,7 @@ def process_metar():
         # Save forecast file with secure filename
         timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
         forecast_filename = secure_filename(f"{forecast_month_year}.txt")
-        forecast_path = os.path.join(UPLOADS_DIR, forecast_filename)
+        forecast_path = os.path.join(METAR_UPLOADS_DIR, forecast_filename)
         forecast_file.save(forecast_path)
         
         if is_date_time_provided:   
@@ -211,13 +225,13 @@ def process_metar():
             # get observation file
             # save observation file
             observation_filename = secure_filename(f"observation_{icao}_{timestamp}.txt")
-            observation_path = os.path.join(UPLOADS_DIR, observation_filename)
+            observation_path = os.path.join(METAR_UPLOADS_DIR, observation_filename)
             observation_file.save(observation_path)
             metar_path = observation_path
         
         # Decode METAR data to CSV with secure filename
         metar_csv_filename = secure_filename(f"decoded_metar_{icao}_{timestamp}.csv")
-        metar_csv_path = os.path.join(DOWNLOADS_DIR, metar_csv_filename)
+        metar_csv_path = os.path.join(METAR_DOWNLOADS_DIR, metar_csv_filename)
         df_metar = decode_metar_to_csv(metar_path, metar_csv_path)
         
         # Extract forecast data
@@ -228,12 +242,12 @@ def process_metar():
         
         # Save comparison results to CSV with secure filename
         comparison_csv_filename = secure_filename(f"comparison_{icao}_{timestamp}.csv")
-        comparison_csv_path = os.path.join(DOWNLOADS_DIR, comparison_csv_filename)
+        comparison_csv_path = os.path.join(METAR_DOWNLOADS_DIR, comparison_csv_filename)
         comparison_df.to_csv(comparison_csv_path, index=False)
 
         # Save merged data to CSV with secure filename
         merged_csv_filename = secure_filename(f"merged_{icao}_{timestamp}.csv")
-        merged_csv_path = os.path.join(DOWNLOADS_DIR, merged_csv_filename)
+        merged_csv_path = os.path.join(METAR_DOWNLOADS_DIR, merged_csv_filename)
         merged_df.to_csv(merged_csv_path, index=False)
         
         # Calculate metrics
@@ -340,3 +354,130 @@ def download_file(file_type):
         return jsonify({
             "error": f"An error occurred while downloading the file: {str(e)}"
         }), 500
+
+def parse_forecast_pdf(pdf_path):
+    reader = PdfReader(pdf_path)
+    text = "\n".join(page.extract_text() for page in reader.pages)
+    match = re.search(r"UPPER WINDS(.*?)WEATHER", text, re.DOTALL)
+    if not match:
+        raise ValueError("Upper Winds section not found in PDF.")
+    upper_winds_text = match.group(1)
+    pattern = re.findall(r"(\d+)[Mm]\s+(\d{3})/(\d{2})\s+([+-]?\d{2})", upper_winds_text)
+    data = [(int(alt), dir, speed, temp) for alt, dir, speed, temp in pattern]
+    data.sort(reverse=True)
+    df = pd.DataFrame(data, columns=["Altitude (m)", "Wind Direction", "Wind Speed (kt)", "Temperature (°C)"])
+    return df
+
+
+@api_bp.route('/get_upper_air', methods=['GET'])
+def get_upper_air():
+    datetime_str = request.args.get('datetime')
+    print(f"[INFO] Fetching upper air data for datetime: {datetime_str}")
+    station_id = request.args.get('station_id')
+    print(f"[INFO] Station ID: {station_id}")
+    try:
+        file_path = fetch_upper_air_data(datetime_str, station_id)
+        print(f"file_path: {file_path}")
+        print(f"File exists: {os.path.exists(file_path)}")
+        if os.path.exists(file_path):
+            return send_file(
+                file_path,
+                mimetype='text/csv',
+                as_attachment=True,
+                download_name=os.path.basename(file_path)
+            )
+        else:
+            return jsonify({'error': 'File not found'}), 404
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+
+@api_bp.route('/process_upper_air', methods=['POST'])
+def process_upper_air():
+    try:
+        station_id = request.form['station_id']
+        datetime_str = request.form.get('datetime')
+
+        observation_file = request.files.get('observation_file')
+        forecast_file = request.files.get('forecast_file')
+
+        # --- Handle Forecast File ---
+        forecast_df = None
+        if forecast_file:
+            forecast_filename = secure_filename(forecast_file.filename)
+            forecast_path = os.path.join(UPPER_AIR_DATA_DIR, 'uploads', forecast_filename)
+            forecast_file.save(forecast_path)
+            forecast_df = parse_forecast_pdf(forecast_path)
+            if hasattr(forecast_df, 'columns'):
+                forecast_df.columns = forecast_df.columns.str.strip()
+                forecast_df = forecast_df.map(lambda x: x.strip() if isinstance(x, str) else x)
+        # --- Handle Observation File or Fetch ---
+        if observation_file:
+            obs_path = os.path.join(UPPER_AIR_DOWNLOADS_DIR, secure_filename(observation_file.filename))
+            observation_file.save(obs_path)
+            actual_df = pd.read_csv(obs_path, skipinitialspace=True)
+            actual_df.columns = actual_df.columns.str.strip()
+            actual_df = actual_df.applymap(lambda x: x.strip() if isinstance(x, str) else x)
+        else:
+            file_path = fetch_upper_air_data(datetime_str, station_id)
+            actual_df = pd.read_csv(file_path, skipinitialspace=True)
+            actual_df.columns = actual_df.columns.str.strip()
+            actual_df = actual_df.map(lambda x: x.strip() if isinstance(x, str) else x)
+
+        print(actual_df.head())
+
+        # --- Debug: Print columns to verify ---
+        print("actual_df columns:", actual_df.columns.tolist())
+        if forecast_df is not None:
+            print("forecast_df columns:", forecast_df.columns.tolist())
+
+        # --- Convert columns to numeric as needed ---
+        for col in ["geopotential height_m", "temperature_C", "wind speed_m/s"]:
+            if col in actual_df.columns:
+                actual_df[col] = pd.to_numeric(actual_df[col], errors="coerce")
+            else:
+                raise KeyError(f"Column '{col}' not found in observation data.")
+
+        for col in ["Altitude (m)", "Temperature (°C)", "Wind Speed (kt)"]:
+            if col in forecast_df.columns:
+                forecast_df[col] = pd.to_numeric(forecast_df[col], errors="coerce")
+            else:
+                raise KeyError(f"Column '{col}' not found in forecast data.")
+
+        # --- Merge and Calculate ---
+        actual_df["key"] = 1
+        forecast_df["key"] = 1
+
+        merged = pd.merge(actual_df, forecast_df, on="key").drop("key", axis=1)
+        merged["height_diff"] = (merged["geopotential height_m"] - merged["Altitude (m)"]).abs()
+        min_pairs = merged.loc[merged.groupby("Altitude (m)")["height_diff"].idxmin()]
+
+        min_pairs["wind speed_kt_actual"] = min_pairs["wind speed_m/s"] * 1.94384
+        min_pairs["temp_diff"] = (min_pairs["Temperature (°C)"] - min_pairs["temperature_C"]).abs()
+        min_pairs["wind_diff"] = (min_pairs["Wind Speed (kt)"] - min_pairs["wind speed_kt_actual"]).abs()
+        min_pairs["temp_correct"] = min_pairs["temp_diff"] <= 2
+        min_pairs["wind_correct"] = min_pairs["wind_diff"] <= 10
+
+        temp_accuracy = round(min_pairs["temp_correct"].mean() * 100, 2)
+        wind_accuracy = round(min_pairs["wind_correct"].mean() * 100, 2)
+
+        result_csv = os.path.join(UPPER_AIR_DOWNLOADS_DIR, f"upper_air_verification_{station_id}.csv")
+        min_pairs.to_csv(result_csv, index=False)
+
+        return jsonify({
+            'file_path': result_csv,
+            'temp_accuracy': temp_accuracy,
+            'wind_accuracy': wind_accuracy
+        })
+
+    except Exception as e:
+        print(f"[ERROR] Exception in process_upper_air: {e}")
+        return jsonify({'error': str(e)}), 500
+    
+@api_bp.route('download/upper_air_csv')
+def download_upper_air_csv():
+    file_path = request.args.get('file_path')
+    if file_path and os.path.exists(file_path):
+        return send_file(file_path, as_attachment=True)
+    return jsonify({'error': 'File not found'}), 404
