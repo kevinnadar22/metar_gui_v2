@@ -5,7 +5,7 @@ import base64
 from datetime import datetime
 import re
 from werkzeug.utils import secure_filename
-from app.utils import decode_metar_to_csv, extract_data_from_file_with_day_and_wind, compare_weather_data, OgimetAPI, extract_day_month_year_from_filename,extract_month_year_from_date,fetch_upper_air_data
+from app.utils import decode_metar_to_csv, extract_data_from_file_with_day_and_wind, compare_weather_data, OgimetAPI, extract_day_month_year_from_filename,extract_month_year_from_date,fetch_upper_air_data,circular_difference
 from app.config import METAR_DATA_DIR, UPPER_AIR_DATA_DIR
 import tempfile
 import pandas as pd
@@ -141,6 +141,7 @@ def process_metar():
         start_date = form_data.get('start_date')
         end_date = form_data.get('end_date') 
         icao = form_data.get('icao')
+        verification_type = request.form.get('verification_type', 'daily')  # default to daily
 
         is_date_time_provided = start_date and end_date
         is_observation_file_provided = 'observation_file' in request.files
@@ -411,7 +412,7 @@ def process_upper_air():
             forecast_df = parse_forecast_pdf(forecast_path)
             if hasattr(forecast_df, 'columns'):
                 forecast_df.columns = forecast_df.columns.str.strip()
-                forecast_df = forecast_df.map(lambda x: x.strip() if isinstance(x, str) else x)
+                forecast_df = forecast_df.applymap(lambda x: x.strip() if isinstance(x, str) else x)
         # --- Handle Observation File or Fetch ---
         if observation_file:
             obs_path = os.path.join(UPPER_AIR_DOWNLOADS_DIR, secure_filename(observation_file.filename))
@@ -423,7 +424,7 @@ def process_upper_air():
             file_path = fetch_upper_air_data(datetime_str, station_id)
             actual_df = pd.read_csv(file_path, skipinitialspace=True)
             actual_df.columns = actual_df.columns.str.strip()
-            actual_df = actual_df.map(lambda x: x.strip() if isinstance(x, str) else x)
+            actual_df = actual_df.applymap(lambda x: x.strip() if isinstance(x, str) else x)
 
         print(actual_df.head())
 
@@ -456,11 +457,30 @@ def process_upper_air():
         min_pairs["wind speed_kt_actual"] = min_pairs["wind speed_m/s"] * 1.94384
         min_pairs["temp_diff"] = (min_pairs["Temperature (°C)"] - min_pairs["temperature_C"]).abs()
         min_pairs["wind_diff"] = (min_pairs["Wind Speed (kt)"] - min_pairs["wind speed_kt_actual"]).abs()
+        if "wind direction_degree" in min_pairs.columns and "Wind Direction" in min_pairs.columns:
+            min_pairs["wind_dir_diff"] = min_pairs.apply(
+                lambda row: circular_difference(
+                    float(row["wind direction_degree"]),
+                    float(row["Wind Direction"])
+                ) if pd.notnull(row["wind direction_degree"]) and pd.notnull(row["Wind Direction"]) else np.nan,
+                axis=1
+            )
+
+            wind_dir_threshold = 30
+            min_pairs["wind_dir_correct"] = min_pairs["wind_dir_diff"].apply(
+                lambda diff: not pd.isnull(diff) and diff <= wind_dir_threshold
+            )       
+            wind_dir_accuracy = round(min_pairs["wind_dir_correct"].mean() * 100, 2)
+        else:
+            wind_dir_accuracy = None
+
+
         min_pairs["temp_correct"] = min_pairs["temp_diff"] <= 2
         min_pairs["wind_correct"] = min_pairs["wind_diff"] <= 10
 
         temp_accuracy = round(min_pairs["temp_correct"].mean() * 100, 2)
         wind_accuracy = round(min_pairs["wind_correct"].mean() * 100, 2)
+
 
         result_csv = os.path.join(UPPER_AIR_DOWNLOADS_DIR, f"upper_air_verification_{station_id}.csv")
         min_pairs.to_csv(result_csv, index=False)
@@ -468,7 +488,8 @@ def process_upper_air():
         return jsonify({
             'file_path': result_csv,
             'temp_accuracy': temp_accuracy,
-            'wind_accuracy': wind_accuracy
+            'wind_accuracy': wind_accuracy,
+            'wind_dir_accuracy': wind_dir_accuracy,
         })
 
     except Exception as e:

@@ -1,3 +1,3 @@
 from .ogimet import OgimetAPI
-from .metar import decode_metar_to_csv, extract_data_from_file_with_day_and_wind, compare_weather_data,extract_day_month_year_from_filename, extract_month_year_from_date
+from .metar import decode_metar_to_csv, extract_data_from_file_with_day_and_wind, compare_weather_data,extract_day_month_year_from_filename, extract_month_year_from_date,circular_difference
 from .upper_data_fetch import fetch_upper_air_data

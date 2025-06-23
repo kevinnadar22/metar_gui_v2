@@ -246,6 +246,7 @@ document.addEventListener('DOMContentLoaded', function () {
     fileInputs.forEach(input => {
         input.addEventListener('change', function (e) {
             const file = e.target.files[0];
+            console.log('File selected:', file);
             if (!file) return;
 
             const uploadBox = this.closest('.upload-box');
@@ -261,7 +262,7 @@ document.addEventListener('DOMContentLoaded', function () {
             fileNameSpan.textContent = file.name;
 
             // file name should be in the format DDMMYYYY.txt
-            if (input.id === 'forecast-file-input') {
+        if (input.id === 'forecast-file-input') {
             if (!file.name.match(/^\d{2}\d{2}\d{4}\.txt$/)) {
                 showCustomAlert('Please upload a file named with day,month and year (like 01012024.txt). The first two digits are the day and two digit for month (01-12) and the next four digits are the year.');
                 return;
@@ -441,10 +442,10 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         // check if forecast file is present and it should be in the format DDMMYYYY.txt
-        if (!forecastFile || !forecastFile.name.match(/^\d{2}\d{2}\d{4}\.txt$/)) {
-            showCustomAlert('Please upload a valid forecast file in the format DDMMYYYY.txt.');
-            return;
-        }
+    //    if (!file.name.match(/^\d{2}\d{2}\d{4}\.txt$/)) {
+    //         showCustomAlert('Please upload a valid forecast file in the format DDMMYYYY.txt.');
+    //         return;
+    //     }
 
         if (
             (
@@ -832,6 +833,7 @@ upperAirVerifyBtn.addEventListener('click', function () {
             // Set accuracy values
             document.getElementById('tempAccuracy').textContent = data.temp_accuracy !== undefined ? `${data.temp_accuracy}%` : '--';
             document.getElementById('windAccuracy').textContent = data.wind_accuracy !== undefined ? `${data.wind_accuracy}%` : '--';
+            document.getElementById('windDirAccuracy').textContent = data.wind_dir_accuracy !== undefined ? `${data.wind_dir_accuracy}%` : '--';
 
             // Fetch and populate the verification table
             if (data.file_path) {

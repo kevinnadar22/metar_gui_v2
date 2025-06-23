@@ -198,7 +198,7 @@
                     <div class="bg-blue-50 border border-blue-200 rounded-md p-3 mb-4 text-blue-700 text-sm">
                         <p>Upload TAF-based .txt files for accurate results.</p>
                         <br>
-                        <p>The name of the text file should be in the format DDMMYYYY.txt </p>
+                        <p>The name of the text file should be in the format DDMMYYYY.txt for day conversion.</p>
                     </div>
 
                     <!-- File Upload Area -->
@@ -460,6 +460,11 @@
                     <div class="text-3xl font-bold text-green-600" id="windAccuracy">--</div>
                     <p class="text-sm text-gray-600 mt-2">Percentage of wind speed forecasts within ±10 knots</p>
                 </div>
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4">Wind Direction Forecast Accuracy</h3>
+                    <div class="text-3xl font-bold text-green-600" id="windDirAccuracy">--</div>
+                    <p class="text-sm text-gray-600 mt-2">Percentage of wind direction forecasts within ±30 degrees</p>
+                </div>
             </div>
 
             <!-- Detailed Comparison Table -->
@@ -475,6 +480,7 @@
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-800 uppercase tracking-wider">Forecast Wind (kt)</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-800 uppercase tracking-wider">Observed Wind (kt)</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-800 uppercase tracking-wider">Wind Diff</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-800 uppercase tracking-wider">Wind Direction (°)</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-800 uppercase tracking-wider">Temp Status</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-800 uppercase tracking-wider">Wind Status</th>
                         </tr>
