@@ -144,3 +144,7 @@ mongodb_data/
 config.env
 test1.py
 main.ipynb
+upper_air_data/
+pdf/
+*.pdf
+test2.py
