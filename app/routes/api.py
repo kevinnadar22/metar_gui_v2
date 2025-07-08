@@ -442,6 +442,12 @@ def process_upper_air():
     try:
         station_id = request.form['station_id']
         datetime_str = request.form.get('datetime')
+        reference_temp = request.form.get('reference_temp', None)
+        print(reference_temp)
+        try:
+            reference_temp = float(reference_temp)
+        except (TypeError, ValueError):
+            reference_temp = 2.0  # Default value
 
         observation_file = request.files.get('observation_file')
         forecast_file = request.files.get('forecast_file')
@@ -518,7 +524,7 @@ def process_upper_air():
             wind_dir_accuracy = None
 
 
-        min_pairs["temp_correct"] = min_pairs["temp_diff"] <= 2
+        min_pairs["temp_correct"] = min_pairs["temp_diff"] <= reference_temp
         min_pairs["wind_correct"] = min_pairs["wind_diff"] <= 10
 
         temp_accuracy = round(min_pairs["temp_correct"].mean() * 100, 2)
