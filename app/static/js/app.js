@@ -924,6 +924,7 @@ upperAirVerifyBtn.addEventListener('click', function () {
             document.getElementById('tempAccuracy').textContent = data.temp_accuracy !== undefined ? `${data.temp_accuracy}%` : '--';
             document.getElementById('windAccuracy').textContent = data.wind_accuracy !== undefined ? `${data.wind_accuracy}%` : '--';
             document.getElementById('windDirAccuracy').textContent = data.wind_dir_accuracy !== undefined ? `${data.wind_dir_accuracy}%` : '--';
+            document.getElementById('weatherAccuracy').textContent = data.weather_accuracy !== undefined ? `${data.weather_accuracy}%` : '--';
 
             // Fetch and populate the verification table
             if (data.file_path) {

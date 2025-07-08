@@ -5,7 +5,7 @@ import base64
 from datetime import datetime
 import re
 from werkzeug.utils import secure_filename
-from app.utils import decode_metar_to_csv, extract_data_from_file_with_day_and_wind, compare_weather_data, OgimetAPI, extract_day_month_year_from_filename,extract_month_year_from_date,fetch_upper_air_data,circular_difference
+from app.utils import decode_metar_to_csv, extract_data_from_file_with_day_and_wind, compare_weather_data, OgimetAPI, extract_day_month_year_from_filename,extract_month_year_from_date,fetch_upper_air_data,circular_difference,process_weather_accuracy_helper
 from app.config import METAR_DATA_DIR, UPPER_AIR_DATA_DIR
 import tempfile
 import pandas as pd
@@ -528,11 +528,14 @@ def process_upper_air():
         result_csv = os.path.join(UPPER_AIR_DOWNLOADS_DIR, f"upper_air_verification_{station_id}.csv")
         min_pairs.to_csv(result_csv, index=False)
 
+        weather_accuracy_point = process_weather_accuracy_helper(weather, startTime, endTime, icao)
+
         return jsonify({
             'file_path': result_csv,
             'temp_accuracy': temp_accuracy,
             'wind_accuracy': wind_accuracy,
             'wind_dir_accuracy': wind_dir_accuracy,
+            'weather_accuracy': weather_accuracy_point
         })
 
     except Exception as e:
