@@ -549,7 +549,8 @@ def process_upper_air():
 
 
         result_csv = os.path.join(UPPER_AIR_DOWNLOADS_DIR, f"upper_air_verification_{station_id}.csv")
-        
+        weather_accuracy_point = process_weather_accuracy_helper(weather, startTime, endTime, icao)
+
         # Create header information with period and station details
         with open(result_csv, 'w', newline='', encoding='utf-8') as f:
             f.write(f"REPORT,")
@@ -563,10 +564,16 @@ def process_upper_air():
             f.write(f"{formatted_start} to {formatted_end},")
             f.write("\n")  # Empty line separator
             
+            # Add accuracy details
+            f.write("\n")  # Empty line
+            f.write(f"Temperature Accuracy, Wind Speed Accuracy, Wind Direction Accuracy, Weather Accuracy\n")
+            f.write(f"{temp_accuracy}, {wind_accuracy}, {wind_dir_accuracy}, {weather_accuracy_point}\n")
+            f.write(",\n")  # Empty line before data
+            f.write(",\n")
+            
         # Append the actual data to the CSV
         min_pairs.to_csv(result_csv, mode='a', index=False)
 
-        weather_accuracy_point = process_weather_accuracy_helper(weather, startTime, endTime, icao)
 
         return jsonify({
             'file_path': result_csv,
