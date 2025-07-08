@@ -360,14 +360,6 @@ def extract_day_month_year_from_filename(filename):
         year = match.group(3)
         return day, month, year, f"{day}{month}{year}"
     
-    # Pattern: MMYYYY without day (return day as 01)
-    match = re.search(r'(\d{2})(\d{4})\.txt$', filename)
-    if match:
-        day = "01"
-        month = match.group(1)
-        year = match.group(2)
-        return day, month, year, f"{day}{month}{year}"
-
     # No pattern matched
     return None, None, None, None
 
