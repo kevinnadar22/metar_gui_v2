@@ -359,16 +359,59 @@ def download_file(file_type):
 def parse_forecast_pdf(pdf_path):
     reader = PdfReader(pdf_path)
     text = "\n".join(page.extract_text() for page in reader.pages)
+
+    # Extract UPPER WINDS section
     match = re.search(r"UPPER WINDS(.*?)WEATHER", text, re.DOTALL)
     if not match:
         raise ValueError("Upper Winds section not found in PDF.")
     upper_winds_text = match.group(1)
+
+    icaoM = re.search(r"LOCAL FORECAST FOR(.*?)AND", text)
+    if not icaoM:
+        raise ValueError("ICAO code not found in PDF.")
+    icao = icaoM.group(1).strip()
+    print(f"ICAO code extracted: {icao}")
+
+    startDateTimeM = re.search(r"FROM(.*?)UTC", text,re.DOTALL)
+    if not startDateTimeM:
+        raise ValueError("Start date and time not found in PDF.")
+    
+    startDateTimeRaw = startDateTimeM.group(1).strip()
+    try:
+    # Example: if the PDF gives "01 Jan 2023 00:00"
+        dt = datetime.strptime(startDateTimeRaw, "%Y/%m/%d %H:%M")
+        startDateTime = dt.strftime("%Y%m%d%H%M")
+    except ValueError:
+    # Try another format if needed, or raise error
+        raise ValueError(f"Could not parse date/time: '{startDateTimeRaw}'")
+
+    endDateTimeM = re.search(r"TO(.*?)UTC", text,re.DOTALL)
+    if not endDateTimeM:
+        raise ValueError("Start date and time not found in PDF.")
+    
+    endDateTimeRaw = endDateTimeM.group(1).strip()
+    try:
+    # Example: if the PDF gives "01 Jan 2023 00:00"
+        dt = datetime.strptime(endDateTimeRaw, "%Y/%m/%d %H:%M")
+        endDateTime = dt.strftime("%Y%m%d%H%M")
+    except ValueError:
+    # Try another format if needed, or raise error
+        raise ValueError(f"Could not parse date/time: '{endDateTimeRaw}'")
+
+
+    
+
+    # Extract WEATHER section (from 'WEATHER' to end or next section)
+    weather_match = re.search(r"WEATHER(.*?)(?==)", text, re.DOTALL)
+    weather_text = weather_match.group(1).strip() if weather_match else ""
+
+    # Extract wind data
     pattern = re.findall(r"(\d+)[Mm]\s+(\d{3})/(\d{2})\s+([+-]?\d{2})", upper_winds_text)
     data = [(int(alt), dir, speed, temp) for alt, dir, speed, temp in pattern]
     data.sort(reverse=True)
-    df = pd.DataFrame(data, columns=["Altitude (m)", "Wind Direction", "Wind Speed (kt)", "Temperature (°C)"])
-    return df
 
+    df = pd.DataFrame(data, columns=["Altitude (m)", "Wind Direction", "Wind Speed (kt)", "Temperature (°C)"])
+    return df, weather_text,startDateTime, endDateTime,icao
 
 @api_bp.route('/get_upper_air', methods=['GET'])
 def get_upper_air():
@@ -409,7 +452,7 @@ def process_upper_air():
             forecast_filename = secure_filename(forecast_file.filename)
             forecast_path = os.path.join(UPPER_AIR_DATA_DIR, 'uploads', forecast_filename)
             forecast_file.save(forecast_path)
-            forecast_df = parse_forecast_pdf(forecast_path)
+            forecast_df,weather,startTime,endTime,icao = parse_forecast_pdf(forecast_path)
             if hasattr(forecast_df, 'columns'):
                 forecast_df.columns = forecast_df.columns.str.strip()
                 forecast_df = forecast_df.applymap(lambda x: x.strip() if isinstance(x, str) else x)
