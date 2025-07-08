@@ -189,7 +189,7 @@ def process_metar():
         
         # Extract month and year from forecast filename using helper function
         _,_, _, forecast_month_year = extract_day_month_year_from_filename(forecast_file.filename)
-        
+
         if is_observation_file_provided:
             observation_file = request.files['observation_file']
             if observation_file.filename == '':
@@ -244,7 +244,19 @@ def process_metar():
         # Save comparison results to CSV with secure filename
         comparison_csv_filename = secure_filename(f"comparison_{icao}_{timestamp}.csv")
         comparison_csv_path = os.path.join(METAR_DOWNLOADS_DIR, comparison_csv_filename)
-        comparison_df.to_csv(comparison_csv_path, index=False)
+
+        # Create header information with period and station details
+        with open(comparison_csv_path, 'w', newline='', encoding='utf-8') as f:
+            f.write(f"REPORT,")
+            f.write(f"{icao},")
+            if start_date and end_date:
+                format_date = lambda x: datetime.strptime(x, "%Y%m%d%H%M").strftime("%d/%m/%Y %H:%M UTC") if x else ""
+                f.write(f"{format_date(start_date)} to {format_date(end_date)},")
+            else:
+                f.write(f"Observation,")
+            f.write("\n")  # Empty line separator
+
+        comparison_df.to_csv(comparison_csv_path, index=False, mode='a')
 
         # Save merged data to CSV with secure filename
         merged_csv_filename = secure_filename(f"merged_{icao}_{timestamp}.csv")
@@ -277,6 +289,11 @@ def process_metar():
                 "metar_csv": encoded_metar_csv_path,
                 "comparison_csv": encoded_comparison_csv_path,
                 "merged_csv": encoded_merged_csv_path
+            },
+            "metadata": {
+                "start_time": datetime.strptime(start_date, "%Y%m%d%H%M").strftime("%d/%m/%Y %H:%M UTC") if start_date else None,
+                "end_time": datetime.strptime(end_date, "%Y%m%d%H%M").strftime("%d/%m/%Y %H:%M UTC") if end_date else None,
+                "icao": icao,
             },
             # "comparison_data": comparison_df.to_dict(orient='records')
         }
@@ -532,7 +549,22 @@ def process_upper_air():
 
 
         result_csv = os.path.join(UPPER_AIR_DOWNLOADS_DIR, f"upper_air_verification_{station_id}.csv")
-        min_pairs.to_csv(result_csv, index=False)
+        
+        # Create header information with period and station details
+        with open(result_csv, 'w', newline='', encoding='utf-8') as f:
+            f.write(f"REPORT,")
+            f.write(f"{station_id},")
+            f.write(f"{icao},")
+            # Convert startTime and endTime from YYYYMMDDHHMM to human readable format and merge
+            start_dt = datetime.strptime(startTime, "%Y%m%d%H%M")
+            formatted_start = start_dt.strftime("%d/%m/%Y %H:%M UTC")
+            end_dt = datetime.strptime(endTime, "%Y%m%d%H%M")
+            formatted_end = end_dt.strftime("%d/%m/%Y %H:%M UTC")
+            f.write(f"{formatted_start} to {formatted_end},")
+            f.write("\n")  # Empty line separator
+            
+        # Append the actual data to the CSV
+        min_pairs.to_csv(result_csv, mode='a', index=False)
 
         weather_accuracy_point = process_weather_accuracy_helper(weather, startTime, endTime, icao)
 
@@ -541,7 +573,13 @@ def process_upper_air():
             'temp_accuracy': temp_accuracy,
             'wind_accuracy': wind_accuracy,
             'wind_dir_accuracy': wind_dir_accuracy,
-            'weather_accuracy': weather_accuracy_point
+            'weather_accuracy': weather_accuracy_point,
+            'metadata': {
+                'station_id': station_id,
+                'icao': icao,
+                'start_time': formatted_start,
+                'end_time': formatted_end
+            }
         })
 
     except Exception as e:

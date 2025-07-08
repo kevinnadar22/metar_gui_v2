@@ -67,7 +67,8 @@ def decode_metar_to_csv(input_file, output_file):
                 data_list.append(data)
 
             except Exception as e:
-                print(f"Error decoding METAR: {e}\nProblematic METAR: {metar_code}")
+                pass
+                # print(f"Error decoding METAR: {e}\nProblematic METAR: {metar_code}")
 
         df = pd.DataFrame(data_list)
         df.to_csv(output_file, index=False)
@@ -333,6 +334,7 @@ def circular_difference(dir1, dir2):
 def extract_day_month_year_from_filename(filename):
     """
     Extract day, month, and year from a filename following pattern like 'TAKEOFF_Forecast_12092023.txt'
+    or 'TAKEOFF_Forecast_092023' then return day as 01
     
     Args:
         filename (str): The filename to parse
@@ -342,7 +344,7 @@ def extract_day_month_year_from_filename(filename):
                Returns (None, None, None, None) if pattern not found
     """
     # Pattern: DDMMYYYY without separators
-    
+    print(f"filename = {filename}")
     match = re.search(r'(\d{2})(\d{2})(\d{4})\.txt$', filename)
     if match:
         day = match.group(1)
@@ -357,7 +359,15 @@ def extract_day_month_year_from_filename(filename):
         month = match.group(2)
         year = match.group(3)
         return day, month, year, f"{day}{month}{year}"
-    print(match)
+    
+    # Pattern: MMYYYY without day (return day as 01)
+    match = re.search(r'(\d{2})(\d{4})\.txt$', filename)
+    if match:
+        day = "01"
+        month = match.group(1)
+        year = match.group(2)
+        return day, month, year, f"{day}{month}{year}"
+
     # No pattern matched
     return None, None, None, None
 

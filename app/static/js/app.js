@@ -493,6 +493,15 @@ document.addEventListener('DOMContentLoaded', function () {
                     const downloadUrl = `/api/download/comparison_csv?file_path=${comparisonEncodedPath}`;
                     const detailedDownloadUrl = `/api/download/merged_csv?file_path=${detailedComparisonEncodedPath}`;
 
+                    const metadata = data.metadata;
+                    const metarReportTitle = document.getElementById('metarReportTitle');
+
+                    let update_string = `VERIFICATION RESULT OF TAKE-OFF FORECAST <br> ${metadata.icao}`
+                    if (metadata.start_time && metadata.end_time) {
+                        update_string += ` <br> ${metadata.start_time} TO ${metadata.end_time}`;
+                    }
+                    metarReportTitle.innerHTML = update_string;
+
                     // Set download button href
                     const downloadCsvBtn = document.getElementById('downloadCsvBtn');
                     downloadCsvBtn.href = downloadUrl;
@@ -923,6 +932,14 @@ upperAirVerifyBtn.addEventListener('click', function () {
         .then(data => {
             // Show results section
             upperAirReportSection.style.display = 'block';
+
+            // Set metadata
+            const metaData = data.metadata;
+            const metadata_start_time = metaData.start_time;
+            const metadata_end_time = metaData.end_time;
+            const metadata_station_id = metaData.station_id;
+            const metadata_icao = metaData.icao;
+            document.getElementById('upperAirReportTitle').innerHTML = `UPPER AIR FORECAST VERIFICATION RESULTS FOR ${metadata_station_id} (${metadata_icao}) <br> FROM ${metadata_start_time} TO ${metadata_end_time}`;
 
             // Set accuracy values
             document.getElementById('tempAccuracy').textContent = data.temp_accuracy !== undefined ? `${data.temp_accuracy}%` : '--';

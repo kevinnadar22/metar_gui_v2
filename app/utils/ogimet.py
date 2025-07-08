@@ -123,13 +123,14 @@ class OgimetAPI:
             end=end,
             icao=icao
         )
-        
+
         # Generate random filename
         random_string = ''.join(random.choices(string.ascii_lowercase + string.digits, k=8))
         random_filename = f"metar_data_{random_string}.txt"
         
         # Save PARTE column values to a text file in METAR_DATA_DIR
         file_path = os.path.join(METAR_DATA_DIR, random_filename)
+
         if res and len(res) > 0:
             with open(file_path, 'w') as txtfile:
                 for item in res:
