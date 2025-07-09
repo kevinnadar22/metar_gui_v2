@@ -17,6 +17,19 @@
         ::-webkit-scrollbar{
             width: 0px;
         }
+        /* #windTable{
+            padding: 2px;
+            border: 1px solid gray;
+        }
+        #tableRow{
+            background-color: gray;
+        }
+        #tableHeading{
+            padding: 4px;
+        } */
+         table { border-collapse: collapse; width: 100%; margin-top: 10px; }
+      th, td { border: 1px solid #ccc; padding: 6px; text-align: center; }
+      th { background-color: #f4f4f4; }
     </style>
 </head>
 
@@ -442,12 +455,12 @@
                     </div>
                     <h3 class="text-sm font-medium text-gray-700 mb-2 flex items-center">PDF Processing Status</h3>
     
-                    <div class="bg-gray-50 border border-gray-200 rounded-md p-4 text-sm whitespace-pre-wrap max-h-60 overflow-y-auto shadow-inner hover:shadow-md transition-shadow duration-300">
+                    <div class="bg-gray-50 border border-gray-200 rounded-md p-2 text-sm  max-h-60 overflow-y-auto shadow-inner hover:shadow-md transition-shadow duration-300">
                         <!-- preview-content  || above class name--> 
-                        <table id="windTable" style="display:none">
+                        <table border="1px solid black" id="windTable" style="display:none;">
                             <thead>
-                            <tr>
-                            <th>Altitude 1</th>
+                            <tr id="tableRow" >
+                            <th id="tableHeading" >Altitude 1</th>
                             <th>Dir/Speed 1</th>
                             <th>Temp 1</th>
                             <th>Altitude 2</th>
@@ -459,10 +472,10 @@
                         </table>
                     </div>
 
-                    <div class="loading-indicator hidden flex items-center justify-center py-4">
+                    <!-- <div class="loading-indicator hidden flex items-center justify-center py-4">
                         <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
                         <span class="ml-2 text-gray-600">Processing PDF...</span>
-                    </div>
+                    </div> -->
                     <button class="close-btn absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white rounded-full w-7 h-7 flex items-center justify-center transition-colors duration-300 shadow-md">
                         <i class="fas fa-times"></i>
                     </button>
