@@ -286,37 +286,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
 
-            // Show the file preview area and loading indicator
-            previewElement.classList.remove('hidden');
-            loadingIndicator.classList.remove('hidden');
-            previewContent.textContent = '';
 
-            // Read the file content
-            const reader = new FileReader();
-            reader.onload = function (e) {
-                // Get the first few lines (around 10 lines)
-                const content = e.target.result;
-                const lines = content.split('\n');
-                const previewLines = lines.slice(0, 10).join('\n');
-
-                // Hide loading indicator and show content
-                loadingIndicator.classList.add('hidden');
-                previewContent.textContent = previewLines;
-            };
-
-            reader.onerror = function () {
-                loadingIndicator.classList.add('hidden');
-                previewContent.textContent = 'Error reading file';
-            };
-
-            reader.readAsText(file);
-
-            // If this is the observation file input, hide date picker and hr line
-            if (input.classList.contains('obs-file-input') && file) {
-                datePickerSection.style.display = 'none';
-                hrLine.style.display = 'none';
-                obsUploadBox.classList.add('file-upload-active');
-            }
         });
     });
 
@@ -495,6 +465,50 @@ document.addEventListener('DOMContentLoaded', function () {
 
                     const metadata = data.metadata;
                     const metarReportTitle = document.getElementById('metarReportTitle');
+ document.getElementById('upperAirForecastFileInput').addEventListener('change', async function (e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = async function () {
+          const typedarray = new Uint8Array(this.result);
+
+          const pdf = await pdfjsLib.getDocument({ data: typedarray }).promise;
+          let fullText = '';
+
+          for (let i = 1; i <= pdf.numPages; i++) {
+            const page = await pdf.getPage(i);
+            const textContent = await page.getTextContent();
+            const pageText = textContent.items.map(item => item.str).join(' ');
+            fullText += pageText + '\n';
+          }
+
+          // Extract "UPPER WINDS" block
+          const upperWindsBlock = fullText.match(/UPPER WINDS([\s\S]+?)WEATHER/i);
+          if (!upperWindsBlock) return alert("No 'Upper Winds' data found.");
+
+          const cleanedText = upperWindsBlock[1].replace(/[\=]/g, '').trim();
+          const dataArray = cleanedText.split(/\s+/);
+
+          // Convert into rows of 3 (Altitude, Dir/Speed, Temp)
+          const table = document.getElementById("windTable");
+          const tbody = table.querySelector("tbody");
+          tbody.innerHTML = "";
+          for (let i = 0; i < dataArray.length; i += 6) {
+            const row = document.createElement("tr");
+            for (let j = 0; j < 6; j++) {
+              const cell = document.createElement("td");
+              cell.textContent = dataArray[i + j] || "";
+              row.appendChild(cell);
+            }
+            tbody.appendChild(row);
+          }
+
+          table.style.display = "table";
+        };
+
+        reader.readAsArrayBuffer(file);
+      });
 
                     let update_string = `VERIFICATION RESULT OF TAKE-OFF FORECAST <br> ${metadata.icao}`
                     if (metadata.start_time && metadata.end_time) {
@@ -829,6 +843,52 @@ upperAirForecastFileInput.addEventListener('change', function () {
         previewContent.textContent = 'Please upload a PDF file.';
     }
 });
+
+ document.getElementById('upperAirForecastFileInput').addEventListener('change', async function (e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = async function () {
+          const typedarray = new Uint8Array(this.result);
+
+          const pdf = await pdfjsLib.getDocument({ data: typedarray }).promise;
+          let fullText = '';
+
+          for (let i = 1; i <= pdf.numPages; i++) {
+            const page = await pdf.getPage(i);
+            const textContent = await page.getTextContent();
+            const pageText = textContent.items.map(item => item.str).join(' ');
+            fullText += pageText + '\n';
+          }
+
+          // Extract "UPPER WINDS" block
+          const upperWindsBlock = fullText.match(/UPPER WINDS([\s\S]+?)WEATHER/i);
+          if (!upperWindsBlock) return alert("No 'Upper Winds' data found.");
+
+          const cleanedText = upperWindsBlock[1].replace(/[\=]/g, '').trim();
+          const dataArray = cleanedText.split(/\s+/);
+
+          // Convert into rows of 3 (Altitude, Dir/Speed, Temp)
+          const table = document.getElementById("windTable");
+          const tbody = table.querySelector("tbody");
+          tbody.innerHTML = "";
+          for (let i = 0; i < dataArray.length; i += 6) {
+            const row = document.createElement("tr");
+            for (let j = 0; j < 6; j++) {
+              const cell = document.createElement("td");
+              cell.textContent = dataArray[i + j] || "";
+              row.appendChild(cell);
+            }
+            tbody.appendChild(row);
+          }
+
+          table.style.display = "table";
+        };
+
+        reader.readAsArrayBuffer(file);
+      });
+
 
 // Close button for forecast preview
 upperAirForecastFilePreview.querySelector('.close-btn').addEventListener('click', function () {
