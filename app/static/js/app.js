@@ -285,7 +285,42 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         }
 
+        fileNameSpan.textContent = file.name;
+        previewElement.classList.remove('hidden');
+        loadingIndicator.classList.remove('hidden');
+        previewContent.textContent = '';
 
+         if (input.id === 'upperAirObsFileInput') {
+            // Preview first 10 lines of CSV
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                const lines = e.target.result.split('\n');
+                previewContent.textContent = lines.slice(0, 10).join('\n');
+                loadingIndicator.classList.add('hidden');
+            };
+            reader.onerror = function () {
+                loadingIndicator.classList.add('hidden');
+                previewContent.textContent = 'Error reading file';
+            };
+            reader.readAsText(file);
+        } else if (input.id === 'upperAirForecastFileInput') {
+            // For PDF, just show a message
+            loadingIndicator.classList.add('hidden');
+            previewContent.innerHTML = '<p class="text-gray-600">PDF uploaded successfully. Upper winds data will be extracted for verification.</p>';
+        } else {
+            // For other files (e.g., .txt), preview first 10 lines
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                const lines = e.target.result.split('\n');
+                previewContent.textContent = lines.slice(0, 10).join('\n');
+                loadingIndicator.classList.add('hidden');
+            };
+            reader.onerror = function () {
+                loadingIndicator.classList.add('hidden');
+                previewContent.textContent = 'Error reading file';
+            };
+            reader.readAsText(file);
+        }
 
         });
     });
@@ -688,96 +723,6 @@ flatpickr(upperAirDatePicker, {
     dateFormat: "Y-m-d",
     static: true
 });
-
-// Initialize upper air date pickers
-// flatpickr('.upper-air-date-only-picker', {
-//     enableTime: false,
-//     dateFormat: "Y-m-d",
-//     static: true
-// });
-
-// // Populate hour and minute selects for upper air
-// document.querySelectorAll('.upper-air-hour-select').forEach(select => {
-//     for (let i = 0; i < 24; i++) {
-//         const option = document.createElement('option');
-//         option.value = i.toString().padStart(2, '0');
-//         option.textContent = i.toString().padStart(2, '0');
-//         select.appendChild(option);
-//     }
-// });
-// document.querySelectorAll('.upper-air-minute-select').forEach(select => {
-//     for (let i = 0; i < 60; i++) {
-//         const option = document.createElement('option');
-//         option.value = i.toString().padStart(2, '0');
-//         option.textContent = i.toString().padStart(2, '0');
-//         select.appendChild(option);
-//     }
-// });
-
-// // Fetch and preview upper air data for selected range
-// function fetchUpperAirMetarPreview() {
-//     // Get start/end date/time and station code from the upper air section
-//     const startDateContainer = document.querySelectorAll('#upperAirDateRangeSection .date-time-picker-container')[0];
-//     const endDateContainer = document.querySelectorAll('#upperAirDateRangeSection .date-time-picker-container')[1];
-//     const stationCode = document.getElementById('upperAirStationInput').value;
-
-//     const startDateValue = startDateContainer.querySelector('.upper-air-date-only-picker').value;
-//     const startHour = startDateContainer.querySelector('.upper-air-hour-select').value;
-//     const startMinute = startDateContainer.querySelector('.upper-air-minute-select').value;
-
-//     const endDateValue = endDateContainer.querySelector('.upper-air-date-only-picker').value;
-//     const endHour = endDateContainer.querySelector('.upper-air-hour-select').value;
-//     const endMinute = endDateContainer.querySelector('.upper-air-minute-select').value;
-
-//     // Format date for API (reuse your formatDate function if available)
-//     function formatDate(date, hour, minute) {
-//         const d = new Date(date);
-//         return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}${String(hour).padStart(2, '0')}${String(minute).padStart(2, '0')}`;
-//     }
-
-//     if (
-//         startDateValue && startHour !== '' && startMinute !== '' &&
-//         endDateValue && endHour !== '' && endMinute !== '' &&
-//         stationCode
-//     ) {
-//         const startDateTime = formatDate(startDateValue, startHour, startMinute);
-//         const endDateTime = formatDate(endDateValue, endHour, endMinute);
-
-//         // Get preview elements for upper air section
-//         const upperAirPreview = document.querySelector('#upperAirDateRangeSection .upper-air-preview');
-//         const previewContent = upperAirPreview.querySelector('.preview-content');
-//         const loadingIndicator = upperAirPreview.querySelector('.loading-indicator');
-
-//         // Show preview section and loading indicator
-//         upperAirPreview.classList.remove('hidden');
-//         loadingIndicator.classList.remove('hidden');
-//         previewContent.textContent = '';
-
-//         // Make API request (same endpoint as METAR)
-//         fetch(`/api/get_metar?start_date=${startDateTime}&end_date=${endDateTime}&icao=${stationCode}`)
-//             .then(response => {
-//                 if (!response.ok) {
-//                     return response.json().then(err => {
-//                         throw new Error(err.error || 'Failed to fetch METAR data');
-//                     });
-//                 }
-//                 return response.text();
-//             })
-//             .then(data => {
-//                 // Hide loading indicator and show data
-//                 loadingIndicator.classList.add('hidden');
-//                 previewContent.textContent = data;
-//             })
-//             .catch(error => {
-//                 // Hide preview section on error
-//                 upperAirPreview.classList.add('hidden');
-//                 console.error('Error fetching METAR data:', error);
-//             });
-//     }
-// }
-
-// document.getElementById('upperAirFetchRangeBtn')?.addEventListener('click', fetchUpperAirRangePreview);
-// Example station buttons
 
 upperAirStationExamples.forEach(btn => {
     btn.addEventListener('click', function () {
