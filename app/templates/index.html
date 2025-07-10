@@ -27,9 +27,9 @@
         #tableHeading{
             padding: 4px;
         } */
-         table { border-collapse: collapse; width: 100%; margin-top: 10px; }
-      th, td { border: 1px solid #ccc; padding: 6px; text-align: center; }
-      th { background-color: #f4f4f4; }
+         #table { border-collapse: collapse; width: 100%; margin-top: 10px; }
+      #th, #td { border: 1px solid #ccc; padding: 6px; text-align: center; }
+      #th { background-color: #f4f4f4; }
     </style>
 </head>
 
@@ -457,18 +457,18 @@
     
                     <div class="bg-gray-50 border border-gray-200 rounded-md p-2 text-sm  max-h-60 overflow-y-auto shadow-inner hover:shadow-md transition-shadow duration-300">
                         <!-- preview-content  || above class name--> 
-                        <table border="1px solid black" id="windTable" style="display:none;">
-                            <thead>
-                            <tr id="tableRow" >
-                            <th id="tableHeading" >Altitude 1</th>
-                            <th>Dir/Speed 1</th>
-                            <th>Temp 1</th>
-                            <th>Altitude 2</th>
-                            <th>Dir/Speed 2</th>
-                            <th>Temp 2</th>
+                        <table  id="windTable" style="display:none;border-collapse: collapse; width: 100%; margin-top: 10px;">
+                            <thead id="thead">
+                            <tr id="tr" >
+                            <th style="border: 1px solid #ccc; background-color: #f4f4f4; padding: 6px; text-align: center;" >Altitude 1</th>
+                            <th style="border: 1px solid #ccc; background-color: #f4f4f4; padding: 6px; text-align: center;">Dir/Speed 1</th>
+                            <th style="border: 1px solid #ccc; background-color: #f4f4f4; padding: 6px; text-align: center;">Temp 1</th>
+                            <th style="border: 1px solid #ccc; background-color: #f4f4f4; padding: 6px; text-align: center;">Altitude 2</th>
+                            <th style="border: 1px solid #ccc; background-color: #f4f4f4; padding: 6px; text-align: center;">Dir/Speed 2</th>
+                            <th style="border: 1px solid #ccc; background-color: #f4f4f4; padding: 6px; text-align: center;">Temp 2</th>
                             </tr>
                             </thead>
-                        <tbody></tbody>
+                        <tbody ></tbody>
                         </table>
                     </div>
 
