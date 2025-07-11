@@ -40,10 +40,12 @@
             <div class="flex items-center h-full py-3">
                 <img src="https://mausam.imd.gov.in/responsive/img/logo/imd_logo_a.png" alt="IMD Logo"
                     class="h-full mr-6">
-                <h1 class="text-3xl font-bold text-gray-800">METAR Data Analysis Dashboard</h1>
+                <h1 class="text-3xl font-bold text-gray-800">Forecast verification Dashboard</h1>
             </div>
         </div>
     </header>
+
+    <h1 class="text-2xl font-bold text-center mt-6 mb-4 text-gray-800">TAKE-OFF Forecast verification</h1>
 
     <!-- Upload Section -->
     <section class="container mx-auto px-4 max-w-7xl mt-6 mb-8">
@@ -72,13 +74,13 @@
                                 data-code="VAPO">VAPO (Pune)</button>
                             <button
                                 class="station-example px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded-md text-gray-700 transition-colors"
-                                data-code="VAPH">VAPH (Nagpur)</button>
+                                data-code="VAPH">VANP (Nagpur)</button>
                             <button
                                 class="station-example px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded-md text-gray-700 transition-colors"
-                                data-code="VAPN">VAPN (Nashik)</button>
+                                data-code="VAPN">VASD (Shirdi)</button>
                             <button
                                 class="station-example px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded-md text-gray-700 transition-colors"
-                                data-code="VAPD">VAPD (Aurangabad)</button>
+                                data-code="VAPD">VAAU (Aurangabad)</button>
                         </div>
                     </div>
                 </div>
@@ -217,7 +219,7 @@
 
                     <!-- Upload Info -->
                     <div class="bg-blue-50 border border-blue-200 rounded-md p-3 mb-4 text-blue-700 text-sm">
-                        <p>Upload TAF-based .txt files for accurate results.</p>
+                        <p>Upload TAKE-OFF.txt files for accurate results.</p>
                         <br>
                         <p>The name of the text file should be in the format DDMMYYYY.txt for day conversion.</p>
                     </div>
@@ -328,6 +330,8 @@
     </div>
 
    <!-- Upper Air Section -->
+
+<h1 class="text-2xl font-bold text-center mt-6 mb-4 text-gray-800">Local Area Forecast verification</h1>
 <!-- Upper Air Section -->
 <section class="container mx-auto px-4 max-w-7xl mt-6 mb-8">
     <div class="upload-container">
@@ -433,7 +437,7 @@
             <div class="upload-box bg-white rounded-lg shadow-md p-6 flex-1 relative w-full">
                 <h2 class="text-xl font-semibold mb-4 text-gray-700">Forecast File (PDF)</h2>
                 <div class="bg-blue-50 border border-blue-200 rounded-md p-3 mb-4 text-blue-700 text-sm">
-                    <p>Upload PDF forecast file containing upper winds data for verification.</p>
+                    <p>Upload PDF file containing local area forecast for verification.</p>
                 </div>
                 <div id="upperAirForecastUploadArea" class="upload-area border-2 border-dashed border-gray-300 rounded-lg p-4 text-center h-28 flex flex-col items-center justify-center bg-blue-100 transition-colors duration-200 mb-6">
                     <p class="mb-2 text-gray-600">Upload a forecast PDF file</p>
