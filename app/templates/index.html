@@ -26,6 +26,7 @@
             border-radius: 8px;
             display: flex;
             justify-content: space-around;
+            box-shadow: -4px 2px 4px rgba(185, 185, 185, 0.532);
         }
         nav button{
             width: 100%;
@@ -37,6 +38,7 @@
         nav button.active{
             background-color: rgb(37 99 235 / var(--tw-bg-opacity, 1));
             color: white;
+            box-shadow: 2px 2px 2px rgba(185, 185, 185, 0.532);
         }
         .display {
             display: none;
@@ -48,6 +50,9 @@
         @media(max-width:480px){
             nav{
                 width: 350px;
+            }
+            nav button{
+                font-size: 10px;
             }
         }
 
