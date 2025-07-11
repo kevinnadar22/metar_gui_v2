@@ -1064,6 +1064,22 @@ function setupDragAndDrop(uploadAreaId, fileInputId, fileType) {
 }
 
 
+//Nav Bar
+const showDisplay = (index) => {
+            const displays = document.querySelectorAll('.display')
+            const button = document.querySelectorAll('.tab-button')
+
+            displays.forEach((display,i)=>{
+                display.classList.toggle('active', i === index)
+            })
+
+            button.forEach((btn,i)=>{
+                btn.classList.toggle('active', i===index)
+            })
+        }
+
+
+
 // Setup drag and drop for both areas
 setupDragAndDrop('upperAirObsUploadArea', 'upperAirObsFileInput', 'csv');
 setupDragAndDrop('upperAirForecastUploadArea', 'upperAirForecastFileInput', 'pdf');

@@ -17,19 +17,41 @@
         ::-webkit-scrollbar{
             width: 0px;
         }
-        /* #windTable{
-            padding: 2px;
-            border: 1px solid gray;
+        nav{
+            width: 900px;
+            margin: 20px;
+            margin-left: auto;
+            margin-right: auto;
+            background-color: white;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-around;
         }
-        #tableRow{
-            background-color: gray;
+        nav button{
+            width: 100%;
+            padding: 8px;
+            color: #333333;
+            border-radius: 8px;
+            font-weight: 500;
         }
-        #tableHeading{
-            padding: 4px;
-        } */
-         /* #table { border-collapse: collapse; width: 100%; margin-top: 10px; }
-      #th, #td { border: 1px solid #ccc; padding: 6px; text-align: center; }
-      #th { background-color: #f4f4f4; } */
+        nav button.active{
+            background-color: rgb(37 99 235 / var(--tw-bg-opacity, 1));
+            color: white;
+        }
+        .display {
+            display: none;
+            min-height: 100vh;
+        }
+        .display.active {
+        display: block;
+        }
+        @media(max-width:480px){
+            nav{
+                width: 350px;
+            }
+        }
+
+
     </style>
 </head>
 
@@ -44,6 +66,14 @@
             </div>
         </div>
     </header>
+    <nav>
+        <button class="tab-button active" onclick="showDisplay(0)" >Surface Forecast Verification</button>
+        <button class="tab-button" onclick="showDisplay(1)" >Upper Air forecast Verification</button>
+        <button class="tab-button" onclick="showDisplay(2)" >Heading for Page 3</button>
+    </nav>
+
+
+    <div class="display active">
 
     <h1 class="text-2xl font-bold text-center mt-6 mb-4 text-gray-800">TAKE-OFF Forecast verification</h1>
 
@@ -329,6 +359,10 @@
         </section>
     </div>
 
+    </div>
+
+    <div class="display ">
+
    <!-- Upper Air Section -->
 
 <h1 class="text-2xl font-bold text-center mt-6 mb-4 text-gray-800">Local Area Forecast verification</h1>
@@ -569,7 +603,11 @@
             </div>
         </section>
     </div>
+    </div>
 
+    <div class="display">
+
+        </div>
 
     <!-- Footer -->
     <footer class="bg-gray-800 text-gray-300 py-6">
