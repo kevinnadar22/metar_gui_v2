@@ -5,7 +5,7 @@ import base64
 from datetime import datetime
 import re
 from werkzeug.utils import secure_filename
-from app.utils import decode_metar_to_csv, extract_data_from_file_with_day_and_wind, compare_weather_data, OgimetAPI, extract_day_month_year_from_filename,extract_month_year_from_date,fetch_upper_air_data,circular_difference,process_weather_accuracy_helper
+from app.utils import decode_metar_to_csv, extract_data_from_file_with_day_and_wind, compare_weather_data, OgimetAPI, extract_day_month_year_from_filename,extract_month_year_from_date,fetch_upper_air_data,circular_difference,process_weather_accuracy_helper,interpolate_temperature_only
 from app.config import METAR_DATA_DIR, UPPER_AIR_DATA_DIR
 import tempfile
 import pandas as pd
@@ -416,8 +416,6 @@ def parse_forecast_pdf(pdf_path):
         raise ValueError(f"Could not parse date/time: '{endDateTimeRaw}'")
 
 
-    
-
     # Extract WEATHER section (from 'WEATHER' to end or next section)
     weather_match = re.search(r"WEATHER(.*?)(?==)", text, re.DOTALL)
     weather_text = weather_match.group(1).strip() if weather_match else ""
@@ -459,12 +457,12 @@ def process_upper_air():
     try:
         station_id = request.form['station_id']
         datetime_str = request.form.get('datetime')
-        reference_temp = request.form.get('reference_temp', None)
-        print(reference_temp)
-        try:
-            reference_temp = float(reference_temp)
-        except (TypeError, ValueError):
-            reference_temp = 2.0  # Default value
+        # reference_temp = request.form.get('reference_temp', None)
+        # print(reference_temp)
+        # try:
+        #     reference_temp = float(reference_temp)
+        # except (TypeError, ValueError):
+        #     reference_temp = 2.0  # Default value
 
         observation_file = request.files.get('observation_file')
         forecast_file = request.files.get('forecast_file')
@@ -513,35 +511,61 @@ def process_upper_air():
                 raise KeyError(f"Column '{col}' not found in forecast data.")
 
         # --- Merge and Calculate ---
-        actual_df["key"] = 1
-        forecast_df["key"] = 1
+        # actual_df["key"] = 1
+        # forecast_df["key"] = 1
 
-        merged = pd.merge(actual_df, forecast_df, on="key").drop("key", axis=1)
-        merged["height_diff"] = (merged["geopotential height_m"] - merged["Altitude (m)"]).abs()
-        min_pairs = merged.loc[merged.groupby("Altitude (m)")["height_diff"].idxmin()]
+        # merged = pd.merge(actual_df, forecast_df, on="key").drop("key", axis=1)
+        # merged["height_diff"] = (merged["geopotential height_m"] - merged["Altitude (m)"]).abs()
+        # min_pairs = merged.loc[merged.groupby("Altitude (m)")["height_diff"].idxmin()]
 
-        min_pairs["wind speed_kt_actual"] = min_pairs["wind speed_m/s"] * 1.94384
-        min_pairs["temp_diff"] = (min_pairs["Temperature (°C)"] - min_pairs["temperature_C"]).abs()
+        # min_pairs["wind speed_kt_actual"] = min_pairs["wind speed_m/s"] * 1.94384
+        # min_pairs["temp_diff"] = (min_pairs["Temperature (°C)"] - min_pairs["temperature_C"]).abs()
+        # min_pairs["wind_diff"] = (min_pairs["Wind Speed (kt)"] - min_pairs["wind speed_kt_actual"]).abs()
+        # if "wind direction_degree" in min_pairs.columns and "Wind Direction" in min_pairs.columns:
+        #     min_pairs["wind_dir_diff"] = min_pairs.apply(
+        #         lambda row: circular_difference(
+        #             float(row["wind direction_degree"]),
+        #             float(row["Wind Direction"])
+        #         ) if pd.notnull(row["wind direction_degree"]) and pd.notnull(row["Wind Direction"]) else np.nan,
+        #         axis=1
+        #     )
+
+        #     wind_dir_threshold = 30
+        #     min_pairs["wind_dir_correct"] = min_pairs["wind_dir_diff"].apply(
+        #         lambda diff: not pd.isnull(diff) and diff <= wind_dir_threshold
+        #     )       
+        #     wind_dir_accuracy = round(min_pairs["wind_dir_correct"].mean() * 100, 2)
+        # else:
+        #     wind_dir_accuracy = None
+
+        # Replaces merge + min_pairs logic
+
+        min_pairs = interpolate_temperature_only(actual_df, forecast_df)
+
+# Wind speed (converted)
+        min_pairs["wind speed_kt_actual"] = min_pairs["actual_wind_speed_m/s"] * 1.94384
+
+# Accuracy calculations
+        min_pairs["temp_diff"] = (min_pairs["Temperature (°C)"] - min_pairs["interp_temperature_C"]).abs()
         min_pairs["wind_diff"] = (min_pairs["Wind Speed (kt)"] - min_pairs["wind speed_kt_actual"]).abs()
-        if "wind direction_degree" in min_pairs.columns and "Wind Direction" in min_pairs.columns:
+
+# Wind direction difference (if both columns present)
+        if "Wind Direction" in min_pairs.columns and "actual_wind_direction" in min_pairs.columns:
             min_pairs["wind_dir_diff"] = min_pairs.apply(
                 lambda row: circular_difference(
-                    float(row["wind direction_degree"]),
+                    float(row["actual_wind_direction"]),
                     float(row["Wind Direction"])
-                ) if pd.notnull(row["wind direction_degree"]) and pd.notnull(row["Wind Direction"]) else np.nan,
+                ) if pd.notnull(row["actual_wind_direction"]) and pd.notnull(row["Wind Direction"]) else np.nan,
                 axis=1
             )
-
-            wind_dir_threshold = 30
-            min_pairs["wind_dir_correct"] = min_pairs["wind_dir_diff"].apply(
-                lambda diff: not pd.isnull(diff) and diff <= wind_dir_threshold
-            )       
+            min_pairs["wind_dir_correct"] = min_pairs["wind_dir_diff"] <= 30
             wind_dir_accuracy = round(min_pairs["wind_dir_correct"].mean() * 100, 2)
         else:
             wind_dir_accuracy = None
 
 
-        min_pairs["temp_correct"] = min_pairs["temp_diff"] <= reference_temp
+
+        min_pairs["temp_correct"] = min_pairs["temp_diff"] <= 2
         min_pairs["wind_correct"] = min_pairs["wind_diff"] <= 10
 
         temp_accuracy = round(min_pairs["temp_correct"].mean() * 100, 2)

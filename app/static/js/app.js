@@ -895,7 +895,7 @@ upperAirVerifyBtn.addEventListener('click', function () {
     const obsFile = upperAirObsFileInput.files[0];
     const date = upperAirDatePicker.value;
     const hour = upperAirHourSelect.value;
-    const tempValue = document.getElementById('upperAirTempInput').value; // <-- get temp
+    // const tempValue = document.getElementById('upperAirTempInput').value; // <-- get temp
 
     if (!/^\d{5}$/.test(station)) {
         alert('Please enter a valid 5-digit station ID.');
@@ -919,9 +919,9 @@ upperAirVerifyBtn.addEventListener('click', function () {
         const dateTime = `${date} ${hour}:00:00`;
         formData.append('datetime', dateTime);
     }
-    if (tempValue !== '') {
-        formData.append('reference_temp', tempValue); // <-- send temp to backend
-    }
+    // if (tempValue !== '') {
+    //     formData.append('reference_temp', tempValue); // <-- send temp to backend
+    // }
 
     // Show loading, hide report
     upperAirReportSection.style.display = 'none';
