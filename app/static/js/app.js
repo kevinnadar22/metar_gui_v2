@@ -1,48 +1,48 @@
+// Custom alert function - Global scope
+function showCustomAlert(message) {
+    // Create alert container if it doesn't exist
+    let alertContainer = document.getElementById('customAlertContainer');
+    if (!alertContainer) {
+        alertContainer = document.createElement('div');
+        alertContainer.id = 'customAlertContainer';
+        alertContainer.className = 'fixed top-4 right-4 z-50';
+        document.body.appendChild(alertContainer);
+    }
+
+    // Create alert element
+    const alert = document.createElement('div');
+    alert.className = 'bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4 shadow-lg';
+    alert.innerHTML = `
+        <span class="block sm:inline mr-8">${message}</span>
+        <span class="absolute top-0 bottom-0 right-0 px-4 py-3">
+            <svg class="fill-current h-6 w-6 text-red-500" role="button" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                <title>Close</title>
+                <path d="M14.348 14.849a1.2 1.2 0 0 1-1.697 0L10 11.819l-2.651 3.029a1.2 1.2 0 1 1-1.697-1.697l2.758-3.15-2.759-3.152a1.2 1.2 0 1 1 1.697-1.697L10 8.183l2.651-3.031a1.2 1.2 0 1 1 1.697 1.697l-2.758 3.152 2.758 3.15a1.2 1.2 0 0 1 0 1.698z"/>
+            </svg>
+        </span>
+    `;
+
+    // Update container position to bottom right
+    alertContainer.className = 'fixed bottom-4 right-4 z-50';
+    
+    // Add to container
+    alertContainer.appendChild(alert);
+
+    // Add click handler to close button
+    const closeButton = alert.querySelector('svg');
+    closeButton.addEventListener('click', () => {
+        alert.remove();
+    });
+
+    // Auto remove after 5 seconds
+    setTimeout(() => {
+        alert.remove();
+    }, 5000);
+}
+
 // Initialize date pickers and file upload functionality
 document.addEventListener('DOMContentLoaded', function () {
     // ===== INITIALIZATION FUNCTIONS =====
-
-    // Custom alert function
-    function showCustomAlert(message) {
-        // Create alert container if it doesn't exist
-        let alertContainer = document.getElementById('customAlertContainer');
-        if (!alertContainer) {
-            alertContainer = document.createElement('div');
-            alertContainer.id = 'customAlertContainer';
-            alertContainer.className = 'fixed top-4 right-4 z-50';
-            document.body.appendChild(alertContainer);
-        }
-
-        // Create alert element
-        const alert = document.createElement('div');
-        alert.className = 'bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4 shadow-lg';
-        alert.innerHTML = `
-            <span class="block sm:inline mr-8">${message}</span>
-            <span class="absolute top-0 bottom-0 right-0 px-4 py-3">
-                <svg class="fill-current h-6 w-6 text-red-500" role="button" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-                    <title>Close</title>
-                    <path d="M14.348 14.849a1.2 1.2 0 0 1-1.697 0L10 11.819l-2.651 3.029a1.2 1.2 0 1 1-1.697-1.697l2.758-3.15-2.759-3.152a1.2 1.2 0 1 1 1.697-1.697L10 8.183l2.651-3.031a1.2 1.2 0 1 1 1.697 1.697l-2.758 3.152 2.758 3.15a1.2 1.2 0 0 1 0 1.698z"/>
-                </svg>
-            </span>
-        `;
-
-        // Update container position to bottom right
-        alertContainer.className = 'fixed bottom-4 right-4 z-50';
-        
-        // Add to container
-        alertContainer.appendChild(alert);
-
-        // Add click handler to close button
-        const closeButton = alert.querySelector('svg');
-        closeButton.addEventListener('click', () => {
-            alert.remove();
-        });
-
-        // Auto remove after 5 seconds
-        setTimeout(() => {
-            alert.remove();
-        }, 5000);
-    }
 
     
 

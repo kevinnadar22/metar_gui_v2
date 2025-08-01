@@ -2,8 +2,17 @@ import requests
 from datetime import datetime
 import re
 import sys
+import os
 
 def fetch_all_metar(icao, start_dt, end_dt, output_file="metar.txt"):
+    # Ensure output file is saved in ad_warn_data directory
+    ad_warn_dir = os.path.join(os.getcwd(), 'ad_warn_data')
+    os.makedirs(ad_warn_dir, exist_ok=True)
+    
+    # If output_file doesn't have a path, save it in ad_warn_data directory
+    if not os.path.dirname(output_file):
+        output_file = os.path.join(ad_warn_dir, output_file)
+    
     url = (
         f"https://www.ogimet.com/display_metars2.php?lang=en&lugar={icao}&tipo=ALL&ord=DIR&nil=NO&fmt=txt"
         f"&ano={start_dt.year}&mes={start_dt.month:02}&day={start_dt.day:02}&hora={start_dt.hour:02}"
