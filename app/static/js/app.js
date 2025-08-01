@@ -1,48 +1,48 @@
-// Custom alert function - Global scope
-function showCustomAlert(message) {
-    // Create alert container if it doesn't exist
-    let alertContainer = document.getElementById('customAlertContainer');
-    if (!alertContainer) {
-        alertContainer = document.createElement('div');
-        alertContainer.id = 'customAlertContainer';
-        alertContainer.className = 'fixed top-4 right-4 z-50';
-        document.body.appendChild(alertContainer);
-    }
-
-    // Create alert element
-    const alert = document.createElement('div');
-    alert.className = 'bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4 shadow-lg';
-    alert.innerHTML = `
-        <span class="block sm:inline mr-8">${message}</span>
-        <span class="absolute top-0 bottom-0 right-0 px-4 py-3">
-            <svg class="fill-current h-6 w-6 text-red-500" role="button" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-                <title>Close</title>
-                <path d="M14.348 14.849a1.2 1.2 0 0 1-1.697 0L10 11.819l-2.651 3.029a1.2 1.2 0 1 1-1.697-1.697l2.758-3.15-2.759-3.152a1.2 1.2 0 1 1 1.697-1.697L10 8.183l2.651-3.031a1.2 1.2 0 1 1 1.697 1.697l-2.758 3.152 2.758 3.15a1.2 1.2 0 0 1 0 1.698z"/>
-            </svg>
-        </span>
-    `;
-
-    // Update container position to bottom right
-    alertContainer.className = 'fixed bottom-4 right-4 z-50';
-    
-    // Add to container
-    alertContainer.appendChild(alert);
-
-    // Add click handler to close button
-    const closeButton = alert.querySelector('svg');
-    closeButton.addEventListener('click', () => {
-        alert.remove();
-    });
-
-    // Auto remove after 5 seconds
-    setTimeout(() => {
-        alert.remove();
-    }, 5000);
-}
-
 // Initialize date pickers and file upload functionality
 document.addEventListener('DOMContentLoaded', function () {
     // ===== INITIALIZATION FUNCTIONS =====
+
+    // Custom alert function
+    function showCustomAlert(message) {
+        // Create alert container if it doesn't exist
+        let alertContainer = document.getElementById('customAlertContainer');
+        if (!alertContainer) {
+            alertContainer = document.createElement('div');
+            alertContainer.id = 'customAlertContainer';
+            alertContainer.className = 'fixed top-4 right-4 z-50';
+            document.body.appendChild(alertContainer);
+        }
+
+        // Create alert element
+        const alert = document.createElement('div');
+        alert.className = 'bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4 shadow-lg';
+        alert.innerHTML = `
+            <span class="block sm:inline mr-8">${message}</span>
+            <span class="absolute top-0 bottom-0 right-0 px-4 py-3">
+                <svg class="fill-current h-6 w-6 text-red-500" role="button" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                    <title>Close</title>
+                    <path d="M14.348 14.849a1.2 1.2 0 0 1-1.697 0L10 11.819l-2.651 3.029a1.2 1.2 0 1 1-1.697-1.697l2.758-3.15-2.759-3.152a1.2 1.2 0 1 1 1.697-1.697L10 8.183l2.651-3.031a1.2 1.2 0 1 1 1.697 1.697l-2.758 3.152 2.758 3.15a1.2 1.2 0 0 1 0 1.698z"/>
+                </svg>
+            </span>
+        `;
+
+        // Update container position to bottom right
+        alertContainer.className = 'fixed bottom-4 right-4 z-50';
+        
+        // Add to container
+        alertContainer.appendChild(alert);
+
+        // Add click handler to close button
+        const closeButton = alert.querySelector('svg');
+        closeButton.addEventListener('click', () => {
+            alert.remove();
+        });
+
+        // Auto remove after 5 seconds
+        setTimeout(() => {
+            alert.remove();
+        }, 5000);
+    }
 
     
 
@@ -1263,6 +1263,66 @@ function renderCsvToTable(csvText, tableElement) {
     });
 }
 
+// Function to download Excel report with station name, validity period, and accuracy
+function downloadExcel() {
+    const stationInput = document.getElementById('adwrn-station-input');
+    const startDateInput = document.querySelector('input[name="start_date"]');
+    const endDateInput = document.querySelector('input[name="end_date"]');
+    const accuracyElement = document.getElementById('adwrn-accuracy');
+    
+    // Get station name
+    const stationName = stationInput ? stationInput.value.toUpperCase() : 'UNKNOWN';
+    
+    // Get validity period - check if user uploaded a file or used date pickers
+    let validityPeriod = 'unknown_period';
+    const datePickerSection = document.querySelector('.date-picker-section');
+    const isDatePickerDisabled = datePickerSection && datePickerSection.classList.contains('opacity-50');
+    
+    if (!isDatePickerDisabled && startDateInput && endDateInput) {
+        const startDate = startDateInput.value;
+        const endDate = endDateInput.value;
+        if (startDate && endDate) {
+            validityPeriod = `${startDate}_to_${endDate}`;
+        }
+    } else {
+        // User uploaded a file, use current date as validity period
+        const today = new Date().toISOString().split('T')[0];
+        validityPeriod = `${today}_file_upload`;
+    }
+    
+    // Get accuracy percentage
+    let accuracyPercent = '0';
+    if (accuracyElement && accuracyElement.textContent) {
+        const accuracyMatch = accuracyElement.textContent.match(/(\d+(?:\.\d+)?)%/);
+        if (accuracyMatch) {
+            accuracyPercent = accuracyMatch[1];
+        }
+    }
+    
+    // Create filename
+    const filename = `${stationName}_Aerodrome_Warning_${validityPeriod}_${accuracyPercent}%_accuracy.csv`;
+    
+    // Fetch the CSV data and trigger download
+    fetch('/api/download/adwrn_report')
+        .then(response => {
+            if (!response.ok) throw new Error('Failed to download report');
+            return response.blob();
+        })
+        .then(blob => {
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+        })
+        .catch(error => {
+            showCustomAlert('Error downloading report: ' + error.message);
+        });
+}
+
 if (adwrnVerifyBtn && adwrnFinalReportContainer && adwrnFinalReportTable && adwrnAccuracy && adwrnReportLoadingSection) {
     adwrnVerifyBtn.addEventListener('click', function() {
         adwrnFinalReportContainer.style.display = 'none';
@@ -1270,6 +1330,13 @@ if (adwrnVerifyBtn && adwrnFinalReportContainer && adwrnFinalReportTable && adwr
         adwrnAccuracy.textContent = '';
         adwrnFinalReportTable.querySelector('thead').innerHTML = '';
         adwrnFinalReportTable.querySelector('tbody').innerHTML = '';
+        
+        // Hide download button initially
+        const downloadContainer = document.getElementById('adwrn-download-container');
+        if (downloadContainer) {
+            downloadContainer.style.display = 'none';
+        }
+        
         adwrnReportLoadingSection.style.display = 'flex';
         fetch('/api/adwrn_verify', { method: 'POST' })
             .then(response => response.json())
@@ -1285,23 +1352,11 @@ if (adwrnVerifyBtn && adwrnFinalReportContainer && adwrnFinalReportTable && adwr
                     }
                     renderCsvToTable(data.report, adwrnFinalReportTable);
                     adwrnFinalReportContainer.style.display = 'block';
-
-                    // --- Enable download button ---
-                    const downloadBtn = document.getElementById('adwrn-downloadCsvBtn');
-                    if (downloadBtn) {
-                        // Clean up any previous Blob URL
-                        if (downloadBtn._csvBlobUrl) {
-                            URL.revokeObjectURL(downloadBtn._csvBlobUrl);
-                        }
-                        const blob = new Blob([data.report], { type: 'text/csv' });
-                        const url = URL.createObjectURL(blob);
-                        downloadBtn.href = url;
-                        downloadBtn.download = 'final_warning_report.csv';
-                        downloadBtn._csvBlobUrl = url;
-                        downloadBtn.classList.remove('opacity-50', 'pointer-events-none');
-                        downloadBtn.style.display = 'inline-block'; // Show the button
+                    
+                    // Show download button after successful verification
+                    if (downloadContainer) {
+                        downloadContainer.style.display = 'block';
                     }
-                    // --- End download button logic ---
                 } else {
                     showCustomAlert(data.error || 'Verification failed.');
                 }
@@ -1312,6 +1367,14 @@ if (adwrnVerifyBtn && adwrnFinalReportContainer && adwrnFinalReportTable && adwr
             });
     });
 }
+
+// Add event listener for the download button
+document.addEventListener('DOMContentLoaded', function() {
+    const downloadBtn = document.getElementById('adwrn-download-report-btn');
+    if (downloadBtn) {
+        downloadBtn.addEventListener('click', downloadExcel);
+    }
+});
 
 // File input change handler for aerodrome warning observation file
 document.querySelector('.adwrn-obs-file-input').addEventListener('change', function(e) {

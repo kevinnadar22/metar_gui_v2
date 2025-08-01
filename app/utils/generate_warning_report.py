@@ -98,16 +98,7 @@ def generate_warning_report(ad_warn_output_path, metar_features_path):
         elif found_cb:
             elements = 'Thunderstorm warning'
 
-        # If elements is still empty, use the original warning type from ad_warn_df
-        if not elements:
-            if has_gust and has_tsra:
-                elements = 'Gust & Thunderstorm warning'
-            elif has_gust:
-                elements = 'Gust warning'
-            elif has_tsra:
-                elements = 'Thunderstorm warning'
-
-        # Logic for true/false and remarks
+        # Logic for true/false and remarks (unchanged)
         if has_gust and not has_tsra:
             if found_gust and found_dir:
                 true_false = 1
@@ -139,10 +130,18 @@ def generate_warning_report(ad_warn_output_path, metar_features_path):
                 remark = 'Missing CB or direction mismatch'
         else:
             remark = 'No significant weather matched'
+        
+        if not elements:
+            if has_gust and has_tsra:
+                elements = 'Gust & Thunderstorm warning'
+            elif has_gust:
+                elements = 'Gust warning'
+            elif has_tsra:
+                elements = 'Thunderstorm warning'
 
         results.append([sl_no, elements, issue_time, true_false, remark])
 
-    # Create final DataFrame
+    # Output report
     final_df = pd.DataFrame(results, columns=[
         'Sl. No.',
         'Elements (Thunderstorm/Surface wind & Gust)',
@@ -150,14 +149,38 @@ def generate_warning_report(ad_warn_output_path, metar_features_path):
         'true-1 / false-0',
         'Remarks'
     ])
-
+    
     # Save to a file in the same directory as the input file
     output_path = os.path.join(os.path.dirname(ad_warn_output_path), 'final_warning_report.csv')
     final_df.to_csv(output_path, index=False)
+    print('Report saved as final_warning_report.csv')
 
-    # Calculate accuracy
+    # Calculate percentage correct
     total = len(final_df)
     correct = final_df['true-1 / false-0'].sum()
-    accuracy = (correct / total) * 100 if total > 0 else 0
+    
+    try:
+        df_gust = final_df[final_df['Elements (Thunderstorm/Surface wind & Gust)'] == 'Gust warning']
+        gust = df_gust['true-1 / false-0'].sum()
+        total_gust = len(df_gust)
+        df_tsra = final_df[final_df['Elements (Thunderstorm/Surface wind & Gust)'] == 'Thunderstorm warning']
+        tsra = df_tsra['true-1 / false-0'].sum()
+        total_tsra = len(df_tsra)
 
+        if total > 0:
+            percent = (correct / total) * 100
+            print(f'Aerodrome Warning : {percent:.0f} % accurate')
+        if total_gust > 0:
+            percent_gust = (gust / total_gust) * 100
+            print(f'Gust warning : {percent_gust:.0f} % accurate')
+        if total_tsra > 0:
+            percent_tsra = (tsra / total_tsra) * 100
+            print(f'Thunderstorm warning : {percent_tsra:.0f} % accurate')
+        else:
+            print('No warnings to evaluate.')
+    except Exception as e:
+        print('Could not calculate accuracy:', e)
+
+    # Return the overall accuracy for the API
+    accuracy = (correct / total) * 100 if total > 0 else 0
     return final_df, accuracy 

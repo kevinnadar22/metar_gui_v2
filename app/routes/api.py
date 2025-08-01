@@ -735,3 +735,17 @@ def adwrn_verify():
     except Exception as e:
         print(f"[ERROR] Error in adwrn_verify: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
+
+@api_bp.route('/download_metar', methods=['GET'])
+def download_metar():
+    """Download the METAR data file"""
+    try:
+        ad_warn_dir = os.path.join(os.getcwd(), 'ad_warn_data')
+        metar_file = os.path.join(ad_warn_dir, 'metar.txt')
+        
+        if os.path.exists(metar_file):
+            return send_file(metar_file, as_attachment=True, download_name='metar.txt')
+        else:
+            return jsonify({'error': 'METAR file not found'}), 404
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
