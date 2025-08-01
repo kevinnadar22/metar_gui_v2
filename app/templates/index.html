@@ -77,7 +77,7 @@
     <nav>
         <button class="tab-button active" onclick="showDisplay(0)" >Surface Forecast Verification</button>
         <button class="tab-button" onclick="showDisplay(1)" >Upper Air forecast Verification</button>
-        <button class="tab-button" onclick="showDisplay(2)" >Heading for Page 3</button>
+        <button class="tab-button" onclick="showDisplay(2)" >Aerodrome Warning Verification</button>
     </nav>
 
 
@@ -259,8 +259,9 @@
                     <div class="bg-blue-50 border border-blue-200 rounded-md p-3 mb-4 text-blue-700 text-sm">
                         <p>Upload TAKE-OFF.txt files for accurate results.</p>
                         <br>
-                        <p>The name of the text file should be in the format DDMMYYYY.txt for day conversion.</p>
-                    </div>
+                            <p>The name of the text file should be in the format DDMMYYYY_ADWRN.txt</p>
+                       
+                        </div>
 
                     <!-- File Upload Area -->
                     <div
@@ -290,8 +291,7 @@
                            Forecast File Preview
                         </h3>
                         <div
-                            class="preview-content bg-gray-50 border border-gray-200 rounded-md p-4 font-mono text-sm whitespace-pre-wrap max-h-60 overflow-y-auto shadow-inner hover:shadow-md transition-shadow duration-300">
-                        </div>
+                            class="preview-content bg-gray-50 border border-gray-200 rounded-md p-4 font-mono text-sm whitespace-pre-wrap overflow-auto shadow-inner hover:shadow-md transition-shadow duration-300" style="max-height: 400px;"></div>
                         <div class="loading-indicator hidden flex items-center justify-center py-4">
                             <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
                             <span class="ml-2 text-gray-600">Loading file content...</span>
@@ -305,8 +305,8 @@
             </div>
 
             <!-- Compare Button -->
-            <div class="text-center mt-10">
-                <button id="compareBtn"
+                            <div class="text-center mt-10">
+                    <button id="compareBtn"
                     class="bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-10 rounded-md shadow-md transition duration-300 text-lg">
                     Verify Forecast
                 </button>
@@ -321,9 +321,6 @@
     </div>
 
     <div id="reportSection" style="display: none;">
-
-
-
         <!-- Monthly Comparison -->
         <section class="container mx-auto px-4 max-w-7xl mt-6 mb-8">
             <h2 id="metarReportTitle" class="text-2xl font-bold mb-6 text-gray-800 text-center">VERIFICATION RESULT OF TAKE-OFF 
@@ -613,9 +610,224 @@
     </div>
     </div>
 
+    <!-- BEGIN: Aerodrome Warning Verification Tab -->
     <div class="display">
+        <h1 class="text-2xl font-bold text-center mt-6 mb-4 text-gray-800">AERODROME WARNING Verification</h1>
+        <section class="container mx-auto px-4 max-w-7xl mt-6 mb-8">
+            <form id="adwrn-form" method="POST" enctype="multipart/form-data">
+            <div class="upload-container">
+                <div class="input-container mb-8">
+                    <div class="upload-box bg-white rounded-lg shadow-md p-6">
+                        <h2 class="text-xl font-semibold mb-4 text-gray-700">Select Station</h2>
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">ICAO INDEX</label>
+                            <input name= "icao" type="text" id="adwrn-station-input"
+                                class="w-full border border-gray-300 rounded-md p-2 uppercase"
+                                placeholder="Enter ICAO code (e.g. VABB)" maxlength="4">
+                            <p class="text-sm text-gray-600 mt-1">Please enter a valid 4-letter ICAO code</p>
+                        </div>
+                        <div class="mt-4">
+                            <p class="text-sm text-gray-500 mb-2">Example stations:</p>
+                            <div class="flex flex-wrap gap-2">
+                                <button class="station-example px-2 py-1 text-xs bg-blue-100 hover:bg-blue-10 rounded-md text-black-700 transition-colors" data-code="VABB">VABB (Mumbai)</button>
+                                <button class="station-example px-2 py-1 text-xs bg-blue-100 hover:bg-blue-10 rounded-md text-black-700 transition-colors" data-code="VAPO">VAPO (Pune)</button>
+                                <button class="station-example px-2 py-1 text-xs bg-blue-100 hover:bg-blue-10 rounded-md text-black-700 transition-colors" data-code="VANP">VANP (Nagpur)</button>
+                                <button class="station-example px-2 py-1 text-xs bg-blue-100 hover:bg-blue-10 rounded-md text-black-700 transition-colors" data-code="VASD">VASD (Shirdi)</button>
+                                <button class="station-example px-2 py-1 text-xs bg-blue-100 hover:bg-blue-10 rounded-md text-black-700 transition-colors" data-code="VAAU">VAAU (Aurangabad)</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="input-container">
+                    <!-- Left Div: Aerodrome Warning File -->
+                    <div class="upload-box bg-white rounded-lg shadow-md p-6 relative">
+                        <h2 class="text-xl font-semibold mb-4 text-gray-700">Aerodrome Warning File</h2>
+                        <div class="bg-blue-50 border border-blue-200 rounded-md p-3 mb-4 text-blue-700 text-sm">
+                            <p>You can either upload an aerodrome warning file or select a date range to fetch metar data.</p>
+                        </div>
+                        <div class="upload-area border-2 border-dashed border-gray-300 rounded-lg p-4 text-center h-28 flex flex-col items-center justify-center bg-blue-100 transition-colors duration-200 mb-6">
+                            <p class="mb-2 text-gray-600">Drag and drop a file or</p>
+                            <label class="cursor-pointer bg-blue-600 hover:bg-blue-700 text-white font-medium py-1.5 px-4 rounded-md transition duration-300">
+                                <i class="fas fa-upload mr-1"></i> Upload File
+                                <input type="file" name="adwrn_obs_file" class="hidden adwrn-obs-file-input" accept=".txt">
+                            </label>
+                            <p class="mt-2 text-xs text-gray-500">The File Should be in txt format</p>
+                        </div>
+                        <div class="file-preview hidden">
+                            <div class="file-name-container bg-blue-50 border border-blue-100 rounded-lg p-3 mb-3">
+                                <p class="text-sm font-medium text-blue-700 flex items-center overflow-x-scroll hide-scrollbar w-[85%]">
+                                    <i class="fas fa-file-alt mr-2"></i>
+                                    <span class="ml-1 font-bold"></span>
+                                </p>
+                            </div>
+                            <h3 class="text-sm font-medium text-gray-700 mb-2 flex items-center">File Preview</h3>
+                            <div class="preview-content bg-gray-50 border border-gray-200 rounded-md p-4 font-mono text-sm whitespace-pre-wrap max-h-60 overflow-y-auto shadow-inner hover:shadow-md transition-shadow duration-300"></div>
+                            <div class="loading-indicator hidden flex items-center justify-center py-4">
+                                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                                <span class="ml-2 text-gray-600">Loading file content...</span>
+                            </div>
+                            <button class="close-btn absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white rounded-full w-7 h-7 flex items-center justify-center transition-colors duration-300 shadow-md">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        <hr class="my-8 border-gray-600">
+                        <div class="date-picker-section">
+                            <div class="mb-4">
+                                <h3 class="text-sm font-medium text-gray-700 mb-2">Start Date and Time</h3>
+                                <div class="date-time-picker-container">
+                                    <div class="date-input-group">
+                                        <input name="start_date" type="text" class="date-only-picker w-full border border-gray-300 rounded-md p-2" placeholder="Select Date">
+                                        <span class="time-label">Date</span>
+                                    </div>
+                                    <div class="time-input-group">
+                                        <select name = "start_hour" class="hour-select w-full border border-gray-300 rounded-md p-2"></select>
+                                        <span class="time-label">Hour</span>
+                                    </div>
+                                    <div class="time-input-group">
+                                        <select name="start_min" class="minute-select w-full border border-gray-300 rounded-md p-2"></select>
+                                        <span class="time-label">Minute</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mb-4">
+                                <h3 class="text-sm font-medium text-gray-700 mb-2">End Date and Time</h3>
+                                <div class="date-time-picker-container">
+                                    <div class="date-input-group">
+                                        <input name = "end_date" type="text" class="date-only-picker w-full border border-gray-300 rounded-md p-2" placeholder="Select Date">
+                                        <span class="time-label">Date</span>
+                                    </div>
+                                    <div class="time-input-group">
+                                        <select name="end_hour" class="hour-select w-full border border-gray-300 rounded-md p-2"></select>
+                                        <span class="time-label">Hour</span>
+                                    </div>
+                                    <div class="time-input-group">
+                                        <select name="end_min" class="minute-select w-full border border-gray-300 rounded-md p-2"></select>
+                                        <span class="time-label">Minute</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- Fetch Button below date/time -->
+                            <div class="text-center mt-4">
+                                <button id="adwrn-fetch-btn" type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-10 rounded-md shadow-md transition duration-200">
+                                  Fetch
+                                </button>
+                                <div id="fetch-loading-indicator" class="hidden mt-4 flex items-center justify-center">
+                                    <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                                    <span class="ml-2 text-sm text-gray-600">Fetching data...</span>
+                                </div>
+                            </div>
+                            <!-- METAR Data Preview for Aerodrome Warning -->
+                            <div id="adwrn-metar-preview" class="bg-gray-50 border border-gray-200 rounded-md p-4 font-mono text-sm whitespace-pre-wrap max-h-60 overflow-y-auto mt-4" style="display:none;"></div>
+                            <div class="metar-preview mt-6 hidden">
+                                <h3 class="text-sm font-medium text-gray-700 mb-2">METAR Data Preview</h3>
+                                <div class="preview-content bg-gray-50 border border-gray-200 rounded-md p-4 font-mono text-sm whitespace-pre-wrap max-h-60 overflow-y-auto"></div>
+                                <div class="loading-indicator hidden flex items-center justify-center py-4">
+                                    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                                    <span class="ml-2 text-gray-600">Fetching METAR data...</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="reset-button-container text-center">
+                            <button class="toggle-input-btn bg-blue-500 hover:bg-blue-600 text-white font-medium py-2.5 px-8 rounded-md shadow-md transition duration-200" id="adwrn-toggleInputBtn" style="display: none;">
+                                <span class="toggle-to-default">Reset</span>
+                            </button>
+                        </div>
+                    </div>
+                    <!-- Right Div: Forecast File -->
+                    <div class="upload-box bg-white rounded-lg shadow-md p-6">
+                        <h2 class="text-xl font-semibold mb-4 text-gray-700">Forecast File</h2>
+                        <div class="bg-blue-50 border border-blue-200 rounded-md p-3 mb-4 text-blue-700 text-sm">
+                            <p>Upload aerodrome forecast files for accurate results.</p>
+                             </div>
+                        <div class="upload-area border-2 border-dashed border-gray-300 rounded-lg p-4 text-center h-28 flex flex-col items-center justify-center bg-blue-100 transition-colors duration-200 mb-6">
+                            <p class="mb-2 text-gray-600">Drag and drop a file or</p>
+                            <label class="cursor-pointer bg-blue-600 hover:bg-blue-700 text-white font-medium py-1.5 px-4 rounded-md transition duration-300">
+                                <i class="fas fa-upload mr-1"></i> Upload File
+                                <input type="file" class="hidden adwrn-forecast-file-input" accept=".txt">
+                            </label>
+                            <p class="mt-2 text-xs text-gray-500">The File Should be in txt format</p>
+                        </div>
+                        <div class="file-preview hidden">
+                            <div class="file-name-container bg-blue-50 border border-blue-100 rounded-lg p-3 mb-3">
+                                <p class="text-sm font-medium text-blue-700 flex items-center overflow-x-scroll hide-scrollbar w-[85%]">
+                                    <i class="fas fa-file-alt mr-2"></i>
+                                    <span class="ml-1 font-bold"></span>
+                                </p>
+                            </div>
+                            <h3 class="text-sm font-medium text-gray-700 mb-2 flex items-center">Forecast File Preview</h3>
+                            <div class="preview-content bg-gray-50 border border-gray-200 rounded-md p-4 font-mono text-sm whitespace-pre-wrap overflow-y-auto shadow-inner hover:shadow-md transition-shadow duration-300" style="height: 450px;"></div>
+                            <div class="loading-indicator hidden flex items-center justify-center py-4">
+                                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                                <span class="ml-2 text-gray-600">Loading file content...</span>
+                            </div>
+                            <button class="close-btn absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white rounded-full w-7 h-7 flex items-center justify-center transition-colors duration-300 shadow-md">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="text-center mt-10">
+                    <button id="adwrn-verifyBtn" type="button" class="bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-10 rounded-md shadow-md transition duration-300 text-lg">Verify Forecast</button>
+                </div>
+                
+                <!-- Download Button - Initially hidden -->
+                <div id="adwrn-download-container" class="text-center mt-6" style="display: none;">
+                    <button id="adwrn-download-report-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-8 rounded-md shadow-md transition duration-300 text-lg flex items-center justify-center mx-auto">
+                        <i class="fas fa-download mr-2"></i>
+                        Download Report
+                    </button>
+                </div>
+                
+                <div id="adwrn-final-report-container" class="mt-8" style="display:none;">
+                    <h3 class="text-lg font-semibold mb-2 text-gray-700">Final Warning Report</h3>
+                    <div id="adwrn-accuracy" style="display:none; font-size:1.25rem; font-weight:600; color:#256029; margin-bottom:1rem;"></div>
+                    <div class="overflow-x-auto">
+                        <table id="adwrn-final-report-table" class="min-w-full divide-y divide-gray-200 table-fixed border border-gray-300 rounded-lg">
+                            <thead class="bg-gray-100 sticky top-0 z-10"></thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
 
+                    
+                </div>
+            </div>
+            <div id="adwrn-message" class="text-center mt-4"></div>
+        </section>
+        <div id="adwrn-reportLoadingSection" class="flex items-center justify-center py-8" style="display: none;">
+            <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+            <span class="ml-2 text-sm text-gray-600">Processing...</span>
         </div>
+        <div id="adwrn-reportSection" style="display: none;">
+            <section class="container mx-auto px-4 max-w-7xl mt-6 mb-8">
+                <h2 id="adwrnReportTitle" class="text-2xl font-bold mb-6 text-gray-800 text-center">VERIFICATION RESULT OF AERODROME WARNING FORECAST</h2>
+                <div class="overflow-x-auto bg-white rounded-lg shadow-md">
+                    <table class="min-w-full" id="adwrn-comparisonTable">
+                        <thead class="bg-gray-100"></thead>
+                        <tbody class="divide-y divide-gray-200"></tbody>
+                    </table>
+                </div>
+            </section>
+            <section class="container mx-auto px-4 max-w-7xl mt-6 mb-8">
+                <h2 class="text-2xl font-bold mb-6 text-gray-800 text-center">Hourly Comparison</h2>
+                <div class="overflow-x-auto bg-white rounded-lg shadow-md">
+                    <table class="min-w-full" id="adwrn-detailedComparisonTable">
+                        <thead class="bg-gray-100"></thead>
+                        <tbody class="divide-y divide-gray-200"></tbody>
+                    </table>
+                </div>
+            </section>
+            <section class="container mx-auto px-4 max-w-7xl mb-16">
+                <h2 class="text-2xl font-bold mb-6 text-gray-800 text-center">Download Results</h2>
+                <div class="flex flex-col sm:flex-row justify-center gap-4">
+                    <a href="#" id="adwrn-downloadCsvBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-6 rounded-md shadow transition duration-300 flex items-center justify-center">
+                        <i class="fas fa-file-csv mr-2"></i>
+                        Download Comparison as CSV
+                    </a>
+                </div>
+            </section>
+        </div>
+    </div>
+    <!-- END: Aerodrome Warning Verification Tab -->
 
     <!-- Footer -->
     <footer class="bg-gray-800 text-gray-300 py-6">
@@ -628,3 +840,4 @@
 </body>
 
 </html>
+

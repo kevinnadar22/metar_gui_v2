@@ -6,16 +6,19 @@ from datetime import datetime
 import re
 from werkzeug.utils import secure_filename
 from app.utils import decode_metar_to_csv, extract_data_from_file_with_day_and_wind, compare_weather_data, OgimetAPI, extract_day_month_year_from_filename,extract_month_year_from_date,fetch_upper_air_data,circular_difference,process_weather_accuracy_helper,interpolate_temperature_only
+from app.utils.AD_warn import parse_warning_file
+from app.utils.generate_warning_report import generate_warning_report
+from app.utils.extract_metar_features import extract_metar_features
 from app.config import METAR_DATA_DIR, UPPER_AIR_DATA_DIR
 import tempfile
 import pandas as pd
 import numpy as np
 import re
 from PyPDF2 import PdfReader
-from datetime import datetime
 import requests
 from urllib.parse import quote
-
+import sys  
+import subprocess
 
 api_bp = Blueprint('api', __name__, url_prefix='/api')
 
@@ -623,3 +626,112 @@ def download_upper_air_csv():
     if file_path and os.path.exists(file_path):
         return send_file(file_path, as_attachment=True)
     return jsonify({'error': 'File not found'}), 404
+
+
+@api_bp.route('/upload_ad_warning', methods=['POST'])
+def upload_ad_warning():
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file part in the request'}), 400
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({'error': 'No selected file'}), 400
+    if not file.filename.lower().endswith('.txt'):
+        return jsonify({'error': 'Only .txt files are allowed'}), 400
+    
+    # Create a directory for AD warning files if it doesn't exist
+    ad_warn_dir = os.path.join(os.getcwd(), 'ad_warn_data')
+    os.makedirs(ad_warn_dir, exist_ok=True)
+    
+    # Save the warning file
+    warning_file = os.path.join(ad_warn_dir, 'AD_warning.txt')
+    file.save(warning_file)
+    
+    # Also copy metar.txt to ad_warn_data directory if it exists
+    metar_source = os.path.join(os.getcwd(), 'metar.txt')
+    if os.path.exists(metar_source):
+        metar_dest = os.path.join(ad_warn_dir, 'metar.txt')
+        import shutil
+        shutil.copy2(metar_source, metar_dest)
+        print(f"[DEBUG] Copied METAR file to: {metar_dest}")
+    
+    try:
+        # Parse the warning file immediately to validate it
+        df = parse_warning_file(warning_file, station_code="VABB")
+        
+        # Read the file for preview
+        with open(warning_file, 'r', encoding='utf-8') as f:
+            preview = f.read()
+            
+        return jsonify({
+            'message': 'File uploaded and parsed successfully',
+            'preview': preview
+        })
+    except Exception as e:
+        print(f"[ERROR] Failed to process warning file: {str(e)}")
+        return jsonify({'error': f'Failed to process file: {str(e)}'}), 500
+
+@api_bp.route('/adwrn_verify', methods=['POST'])
+def adwrn_verify():
+    try:
+        # Define base directory and ensure it exists
+        ad_warn_dir = os.path.join(os.getcwd(), 'ad_warn_data')
+        os.makedirs(ad_warn_dir, exist_ok=True)
+        
+        # Define input and output paths
+        warning_file = os.path.join(ad_warn_dir, 'AD_warning.txt')
+        metar_file = os.path.join(ad_warn_dir, 'metar.txt')
+        ad_warn_output = os.path.join(ad_warn_dir, 'AD_warn_output.csv')
+        metar_features = os.path.join(ad_warn_dir, 'metar_extracted_features.txt')
+        
+        print(f"[DEBUG] Checking paths:")
+        print(f"Warning file: {warning_file} (exists: {os.path.exists(warning_file)})")
+        print(f"METAR file: {metar_file} (exists: {os.path.exists(metar_file)})")
+        
+        # Check if required files exist
+        if not os.path.exists(warning_file):
+            return jsonify({'success': False, 'error': 'Warning file not found. Please upload it first.'}), 404
+            
+        if not os.path.exists(metar_file):
+            return jsonify({'success': False, 'error': 'METAR file not found. Please ensure it exists.'}), 404
+        
+        # Parse warning file
+        print("[DEBUG] Parsing warning file...")
+        df = parse_warning_file(warning_file, station_code="VABB")
+        print(f"[DEBUG] AD warn output saved to: {ad_warn_output}")
+        
+        # Extract METAR features
+        print("[DEBUG] Extracting METAR features...")
+        try:
+            extract_metar_features(ad_warn_output, metar_file, metar_features)
+            print(f"[DEBUG] METAR features saved to: {metar_features}")
+        except Exception as e:
+            print(f"[ERROR] Failed to extract METAR features: {str(e)}")
+            raise
+        
+        # Verify files exist after extraction
+        print(f"[DEBUG] Checking if files were created:")
+        print(f"AD warn output exists: {os.path.exists(ad_warn_output)}")
+        print(f"METAR features exists: {os.path.exists(metar_features)}")
+        
+        # Generate warning report
+        print("[DEBUG] Generating warning report...")
+        final_df, accuracy = generate_warning_report(ad_warn_output, metar_features)
+        
+        # Read the report content
+        report_file = os.path.join(ad_warn_dir, 'final_warning_report.csv')
+        print(f"[DEBUG] Report file: {report_file} (exists: {os.path.exists(report_file)})")
+        
+        if not os.path.exists(report_file):
+            return jsonify({'success': False, 'error': 'Failed to generate report file'}), 500
+            
+        with open(report_file, 'r', encoding='utf-8') as f:
+            report_content = f.read()
+            
+        return jsonify({
+            'success': True, 
+            'report': report_content, 
+            'accuracy': f"{accuracy:.0f}"
+        })
+    except Exception as e:
+        print(f"[ERROR] Error in adwrn_verify: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500

@@ -100,6 +100,22 @@ document.addEventListener('DOMContentLoaded', function () {
     const reportSection = document.getElementById('reportSection');
     const reportLoadingSection = document.getElementById('reportLoadingSection');
 
+    // Aerodrome Warning ICAO autofill
+    const adwrnStationInput = document.getElementById('adwrn-station-input');
+    if (adwrnStationInput) {
+        // Only target station-example buttons inside the Aerodrome Warning section
+        const adwrnSection = adwrnStationInput.closest('.upload-box');
+        if (adwrnSection) {
+            adwrnSection.querySelectorAll('.station-example').forEach(btn => {
+                btn.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    adwrnStationInput.value = this.getAttribute('data-code');
+                    adwrnStationInput.dispatchEvent(new Event('input'));
+                });
+            });
+        }
+    }
+
     // ===== UTILITY FUNCTIONS =====
 
     // Format date for API
@@ -240,7 +256,9 @@ document.addEventListener('DOMContentLoaded', function () {
     // ===== EVENT LISTENERS =====
 
     // Toggle button functionality - resets to default state
-    toggleBtn.addEventListener('click', switchToDefaultState);
+    toggleBtn.addEventListener('click', function() {
+        switchToDefaultState();
+    });
 
     // File input change handler
     fileInputs.forEach(input => {
@@ -262,12 +280,12 @@ document.addEventListener('DOMContentLoaded', function () {
             fileNameSpan.textContent = file.name;
 
             // file name should be in the format DDMMYYYY.txt
-        if (input.id === 'forecast-file-input') {
-            if (!file.name.match(/^\d{2}\d{2}\d{4}\.txt$/)) {
-                showCustomAlert('Please upload a file named with day,month and year (like 01012024.txt). The first two digits are the day and two digit for month (01-12) and the next four digits are the year.');
-                return;
+            if (input.id === 'forecast-file-input') {
+                if (!file.name.match(/^[0-9]{2}[0-9]{2}[0-9]{4}\.txt$/)) {
+                    showCustomAlert('Please upload a file named with day,month and year (like 01012024.txt). The first two digits are the day and two digit for month (01-12) and the next four digits are the year.');
+                    return;
+                }
             }
-        }
 
         // For upper air observation CSV
         if (input.id === 'upperAirObsFileInput') {
@@ -308,11 +326,10 @@ document.addEventListener('DOMContentLoaded', function () {
             loadingIndicator.classList.add('hidden');
             previewContent.innerHTML = '<p class="text-gray-600">PDF uploaded successfully. Upper winds data will be extracted for verification.</p>';
         } else {
-            // For other files (e.g., .txt), preview first 10 lines
+            // For other files (e.g., .txt), preview the whole file
             const reader = new FileReader();
             reader.onload = function (e) {
-                const lines = e.target.result.split('\n');
-                previewContent.textContent = lines.slice(0, 10).join('\n');
+                previewContent.textContent = e.target.result;
                 loadingIndicator.classList.add('hidden');
             };
             reader.onerror = function () {
@@ -1083,3 +1100,268 @@ const showDisplay = (index) => {
 // Setup drag and drop for both areas
 setupDragAndDrop('upperAirObsUploadArea', 'upperAirObsFileInput', 'csv');
 setupDragAndDrop('upperAirForecastUploadArea', 'upperAirForecastFileInput', 'pdf');
+
+// === Aerodrome Warning AJAX Fetch & Verify ===
+const adwrnForm = document.getElementById('adwrn-form');
+const adwrnMessage = document.getElementById('adwrn-message');
+const adwrnMetarPreview = document.getElementById('adwrn-metar-preview');
+const adwrnFetchBtn = document.getElementById('adwrn-fetch-btn');
+if (adwrnForm && adwrnMessage && adwrnMetarPreview && adwrnFetchBtn) {
+    let isResetMode = false;
+    adwrnForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        if (isResetMode) {
+            // Reset all date/time fields
+            adwrnForm.querySelectorAll('.date-only-picker').forEach(input => input.value = '');
+            adwrnForm.querySelectorAll('.hour-select').forEach(select => select.selectedIndex = 0);
+            adwrnForm.querySelectorAll('.minute-select').forEach(select => select.selectedIndex = 0);
+            adwrnMetarPreview.style.display = 'none';
+            adwrnMetarPreview.textContent = '';
+            adwrnMessage.textContent = '';
+            adwrnFetchBtn.textContent = 'Fetch';
+            adwrnFetchBtn.classList.remove('bg-gray-500');
+            adwrnFetchBtn.classList.add('bg-blue-600','hover:bg-blue-700');
+            
+            // Show upload area and remove disabled state
+            const uploadArea = document.querySelector('.adwrn-obs-file-input').closest('.upload-area');
+            uploadArea.classList.remove('opacity-50', 'pointer-events-none');
+            uploadArea.querySelector('input[type="file"]').disabled = false;
+            
+            isResetMode = false;
+            return;
+        }
+        adwrnMessage.textContent = '';
+        adwrnMetarPreview.style.display = 'none';
+        adwrnMetarPreview.textContent = '';
+        
+        // Show loading indicator
+        const loadingIndicator = document.getElementById('fetch-loading-indicator');
+        loadingIndicator.classList.remove('hidden');
+        adwrnFetchBtn.disabled = true;
+        adwrnFetchBtn.classList.add('opacity-50', 'cursor-not-allowed');
+        
+        const formData = new FormData(adwrnForm);
+        fetch('/', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            // Hide loading indicator
+            loadingIndicator.classList.add('hidden');
+            adwrnFetchBtn.disabled = false;
+            adwrnFetchBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            
+            adwrnMessage.innerHTML = `<span class='text-green-700'>${data.message}</span>`;
+            if (data.metar_preview) {
+                adwrnMetarPreview.textContent = data.metar_preview;
+                adwrnMetarPreview.style.display = 'block';
+                adwrnFetchBtn.textContent = 'Reset';
+                adwrnFetchBtn.classList.remove('bg-blue-600','hover:bg-blue-700');
+                adwrnFetchBtn.classList.add('bg-gray-500');
+                
+                // Disable and fade out the upload area
+                const uploadArea = document.querySelector('.adwrn-obs-file-input').closest('.upload-area');
+                uploadArea.classList.add('opacity-50', 'pointer-events-none');
+                uploadArea.querySelector('input[type="file"]').disabled = true;
+                
+                isResetMode = true;
+            }
+        })
+        .catch(error => {
+            // Hide loading indicator
+            loadingIndicator.classList.add('hidden');
+            adwrnFetchBtn.disabled = false;
+            adwrnFetchBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            
+            adwrnMessage.innerHTML = `<span class='text-red-700'>Error: ${error.message}</span>`;
+        });
+    });
+}
+
+// === ADWRN Forecast File Upload & Preview ===
+document.querySelectorAll('.adwrn-forecast-file-input').forEach(input => {
+    input.addEventListener('change', function() {
+        const file = this.files[0];
+        const uploadBox = this.closest('.upload-box');
+        const previewElement = uploadBox.querySelector('.file-preview');
+        const previewContent = previewElement.querySelector('.preview-content');
+        const loadingIndicator = previewElement.querySelector('.loading-indicator');
+        const fileNameContainer = uploadBox.querySelector('.file-name-container');
+        const fileNameSpan = fileNameContainer.querySelector('span');
+
+        if (!file) return;
+        fileNameSpan.textContent = file.name;
+        previewElement.classList.remove('hidden');
+        loadingIndicator.classList.remove('hidden');
+        previewContent.textContent = '';
+
+        // Prepare FormData and send to backend
+        const formData = new FormData();
+        formData.append('file', file);
+        fetch('/api/upload_ad_warning', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            loadingIndicator.classList.add('hidden');
+            if (data.preview) {
+                previewContent.textContent = data.preview;
+            } else if (data.error) {
+                previewContent.textContent = 'Error: ' + data.error;
+            } else {
+                previewContent.textContent = 'No preview available.';
+            }
+        })
+        .catch(err => {
+            loadingIndicator.classList.add('hidden');
+            previewContent.textContent = 'Error uploading file.';
+        });
+    });
+});
+
+// === ADWRN Final Warning Report Verification ===
+const adwrnVerifyBtn = document.getElementById('adwrn-verifyBtn');
+const adwrnFinalReportContainer = document.getElementById('adwrn-final-report-container');
+const adwrnFinalReportTable = document.getElementById('adwrn-final-report-table');
+const adwrnAccuracy = document.getElementById('adwrn-accuracy');
+const adwrnReportLoadingSection = document.getElementById('adwrn-reportLoadingSection');
+
+function renderCsvToTable(csvText, tableElement) {
+    const lines = csvText.trim().split(/\r?\n/);
+    if (lines.length === 0) return;
+    // Remove any trailing blank lines
+    while (lines.length && lines[lines.length-1].trim() === '') lines.pop();
+    // Extract header and rows
+    const header = lines[0].split(',');
+    const rows = lines.slice(1).map(line => line.split(','));
+    // Render header
+    const thead = tableElement.querySelector('thead');
+    thead.innerHTML = '';
+    const headerRow = document.createElement('tr');
+    header.forEach(h => {
+        const th = document.createElement('th');
+        th.textContent = h.trim();
+        th.className = 'px-6 py-3 text-left text-xs font-medium text-gray-800 uppercase tracking-wider';
+        headerRow.appendChild(th);
+    });
+    thead.appendChild(headerRow);
+    // Render body
+    const tbody = tableElement.querySelector('tbody');
+    tbody.innerHTML = '';
+    rows.forEach(row => {
+        if (row.length !== header.length) return;
+        const tr = document.createElement('tr');
+        row.forEach(cell => {
+            const td = document.createElement('td');
+            td.textContent = cell.trim();
+            td.className = 'px-6 py-4 text-sm border-b border-gray-200';
+            tr.appendChild(td);
+        });
+        tbody.appendChild(tr);
+    });
+}
+
+if (adwrnVerifyBtn && adwrnFinalReportContainer && adwrnFinalReportTable && adwrnAccuracy && adwrnReportLoadingSection) {
+    adwrnVerifyBtn.addEventListener('click', function() {
+        adwrnFinalReportContainer.style.display = 'none';
+        adwrnAccuracy.style.display = 'none';
+        adwrnAccuracy.textContent = '';
+        adwrnFinalReportTable.querySelector('thead').innerHTML = '';
+        adwrnFinalReportTable.querySelector('tbody').innerHTML = '';
+        adwrnReportLoadingSection.style.display = 'flex';
+        fetch('/api/adwrn_verify', { method: 'POST' })
+            .then(response => response.json())
+            .then(data => {
+                adwrnReportLoadingSection.style.display = 'none';
+                if (data.success) {
+                    // Show accuracy percentage if present
+                    if (data.accuracy) {
+                        adwrnAccuracy.textContent = `Aerodrome Warning Accuracy: ${data.accuracy}%`;
+                        adwrnAccuracy.style.display = 'block';
+                    } else {
+                        adwrnAccuracy.style.display = 'none';
+                    }
+                    renderCsvToTable(data.report, adwrnFinalReportTable);
+                    adwrnFinalReportContainer.style.display = 'block';
+
+                    // --- Enable download button ---
+                    const downloadBtn = document.getElementById('adwrn-downloadCsvBtn');
+                    if (downloadBtn) {
+                        // Clean up any previous Blob URL
+                        if (downloadBtn._csvBlobUrl) {
+                            URL.revokeObjectURL(downloadBtn._csvBlobUrl);
+                        }
+                        const blob = new Blob([data.report], { type: 'text/csv' });
+                        const url = URL.createObjectURL(blob);
+                        downloadBtn.href = url;
+                        downloadBtn.download = 'final_warning_report.csv';
+                        downloadBtn._csvBlobUrl = url;
+                        downloadBtn.classList.remove('opacity-50', 'pointer-events-none');
+                        downloadBtn.style.display = 'inline-block'; // Show the button
+                    }
+                    // --- End download button logic ---
+                } else {
+                    showCustomAlert(data.error || 'Verification failed.');
+                }
+            })
+            .catch(err => {
+                adwrnReportLoadingSection.style.display = 'none';
+                showCustomAlert('Error: ' + err.message);
+            });
+    });
+}
+
+// File input change handler for aerodrome warning observation file
+document.querySelector('.adwrn-obs-file-input').addEventListener('change', function(e) {
+    const file = this.files[0];
+    if (!file) return;
+
+    // Disable date picker section and fetch button
+    const datePickerSection = document.querySelector('.date-picker-section');
+    const fetchBtn = document.getElementById('adwrn-fetch-btn');
+    
+    datePickerSection.classList.add('opacity-50', 'pointer-events-none');
+    fetchBtn.disabled = true;
+    fetchBtn.classList.add('opacity-50', 'cursor-not-allowed');
+
+    // Clear any existing date/time values
+    document.querySelectorAll('.date-only-picker').forEach(input => input.value = '');
+    document.querySelectorAll('.hour-select').forEach(select => select.selectedIndex = 0);
+    document.querySelectorAll('.minute-select').forEach(select => select.selectedIndex = 0);
+
+    const uploadBox = this.closest('.upload-box');
+    const previewElement = uploadBox.querySelector('.file-preview');
+    const previewContent = previewElement.querySelector('.preview-content');
+    const loadingIndicator = previewElement.querySelector('.loading-indicator');
+    const fileNameContainer = uploadBox.querySelector('.file-name-container');
+    const fileNameSpan = fileNameContainer.querySelector('span');
+
+    fileNameSpan.textContent = file.name;
+    previewElement.classList.remove('hidden');
+    loadingIndicator.classList.remove('hidden');
+    previewContent.textContent = '';
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        previewContent.textContent = e.target.result;
+        loadingIndicator.classList.add('hidden');
+    };
+    reader.onerror = function() {
+        loadingIndicator.classList.add('hidden');
+        previewContent.textContent = 'Error reading file';
+    };
+    reader.readAsText(file);
+});
+
+// Add close button handler to re-enable fetch functionality
+document.querySelector('.adwrn-obs-file-input').closest('.upload-box').querySelector('.close-btn').addEventListener('click', function() {
+    const datePickerSection = document.querySelector('.date-picker-section');
+    const fetchBtn = document.getElementById('adwrn-fetch-btn');
+    
+    // Re-enable date picker section and fetch button
+    datePickerSection.classList.remove('opacity-50', 'pointer-events-none');
+    fetchBtn.disabled = false;
+    fetchBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+});
