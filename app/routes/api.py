@@ -730,6 +730,9 @@ def adwrn_verify():
         print("[DEBUG] Generating warning report...")
         final_df, accuracy = generate_warning_report(ad_warn_output, metar_features)
         
+        # Debug accuracy value
+        print(f"[DEBUG] Accuracy type: {type(accuracy)}, value: {accuracy}")
+        
         # Read the report content
         report_file = os.path.join(ad_warn_dir, 'final_warning_report.csv')
         print(f"[DEBUG] Report file: {report_file} (exists: {os.path.exists(report_file)})")
@@ -740,15 +743,88 @@ def adwrn_verify():
         with open(report_file, 'r', encoding='utf-8') as f:
             report_content = f.read()
             
-        return jsonify({
+        # Calculate detailed accuracy percentages
+        thunderstorm_accuracy = 0
+        wind_accuracy = 0
+        overall_accuracy = 0
+        
+        try:
+            # Parse the CSV to get detailed accuracy
+            import csv
+            from io import StringIO
+            
+            csv_data = StringIO(report_content)
+            csv_reader = csv.DictReader(csv_data)
+            
+            thunderstorm_count = 0
+            thunderstorm_correct = 0
+            wind_count = 0
+            wind_correct = 0
+            total_count = 0
+            total_correct = 0
+            
+            for row in csv_reader:
+                element = row.get('Elements (Thunderstorm/Surface wind & Gust)', '').lower()
+                accuracy = row.get('true-1 / false-0', '0')
+                
+                if 'thunderstorm' in element or 'गर्जन' in element:
+                    thunderstorm_count += 1
+                    total_count += 1
+                    if accuracy == '1':
+                        thunderstorm_correct += 1
+                        total_correct += 1
+                elif 'wind' in element or 'gust' in element or 'पवन' in element:
+                    wind_count += 1
+                    total_count += 1
+                    if accuracy == '1':
+                        wind_correct += 1
+                        total_correct += 1
+            
+            if thunderstorm_count > 0:
+                thunderstorm_accuracy = round((thunderstorm_correct / thunderstorm_count) * 100)
+            
+            if wind_count > 0:
+                wind_accuracy = round((wind_correct / wind_count) * 100)
+            
+            if total_count > 0:
+                overall_accuracy = round((total_correct / total_count) * 100)
+                
+            print(f"[DEBUG] Detailed accuracy calculation:")
+            print(f"  Thunderstorm: {thunderstorm_correct}/{thunderstorm_count} = {thunderstorm_accuracy}%")
+            print(f"  Wind: {wind_correct}/{wind_count} = {wind_accuracy}%")
+            print(f"  Overall: {total_correct}/{total_count} = {overall_accuracy}%")
+                
+        except Exception as e:
+            print(f"Error calculating detailed accuracy: {e}")
+        
+        # Ensure accuracy is properly formatted
+        try:
+            if isinstance(accuracy, (int, float)):
+                accuracy_str = f"{accuracy:.0f}"
+            else:
+                accuracy_str = str(accuracy)
+        except Exception as e:
+            print(f"[DEBUG] Error formatting accuracy: {e}")
+            accuracy_str = str(accuracy)
+        
+        response_data = {
             'success': True, 
             'report': report_content, 
-            'accuracy': f"{accuracy:.0f}",
+            'accuracy': f"{overall_accuracy}",
+            'detailed_accuracy': {
+                'thunderstorm': thunderstorm_accuracy,
+                'wind': wind_accuracy,
+                'overall': overall_accuracy
+            },
             'validation': {
                 'metar_code': validation_result['metar_code'],
                 'warning_code': validation_result['warning_code']
             }
-        })
+        }
+        
+        print(f"[DEBUG] Sending response with detailed accuracy: {response_data['detailed_accuracy']}")
+        
+        return jsonify(response_data)
     except Exception as e:
         print(f"[ERROR] Error in adwrn_verify: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
@@ -766,3 +842,54 @@ def download_metar():
             return jsonify({'error': 'METAR file not found'}), 404
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+@api_bp.route('/download/adwrn_report', methods=['GET'])
+def download_adwrn_report():
+    """Download the aerodrome warning report CSV file"""
+    try:
+        # Look for the generated report file - check both possible locations
+        report_file = os.path.join(METAR_DATA_DIR, 'ad_warn_data', 'final_warning_report.csv')
+        print(f"[DEBUG] Looking for report file in METAR_DATA_DIR: {report_file}")
+        print(f"[DEBUG] File exists: {os.path.exists(report_file)}")
+        
+        # If not found in METAR_DATA_DIR, check in the root ad_warn_data directory
+        if not os.path.exists(report_file):
+            # Check in the root directory
+            root_ad_warn_dir = os.path.join(os.getcwd(), 'ad_warn_data')
+            report_file = os.path.join(root_ad_warn_dir, 'final_warning_report.csv')
+            print(f"[DEBUG] Looking for report file in root: {report_file}")
+            print(f"[DEBUG] File exists: {os.path.exists(report_file)}")
+            
+            if not os.path.exists(report_file):
+                # Check for any CSV file in the root ad_warn_data directory
+                print(f"[DEBUG] Checking root ad_warn_dir: {root_ad_warn_dir}")
+                print(f"[DEBUG] Directory exists: {os.path.exists(root_ad_warn_dir)}")
+                
+                if os.path.exists(root_ad_warn_dir):
+                    csv_files = [f for f in os.listdir(root_ad_warn_dir) if f.endswith('.csv')]
+                    print(f"[DEBUG] Found CSV files in root: {csv_files}")
+                    if csv_files:
+                        # Use the most recent CSV file
+                        csv_files.sort(key=lambda x: os.path.getmtime(os.path.join(root_ad_warn_dir, x)), reverse=True)
+                        report_file = os.path.join(root_ad_warn_dir, csv_files[0])
+                        print(f"[DEBUG] Using most recent file from root: {report_file}")
+                    else:
+                        return jsonify({"error": "No aerodrome warning report found"}), 404
+                else:
+                    return jsonify({"error": "Aerodrome warning data directory not found"}), 404
+            
+            # This code is now handled above in the root directory check
+        
+        if not os.path.exists(report_file):
+            return jsonify({"error": "Aerodrome warning report not found"}), 404
+        
+        print(f"[DEBUG] Sending file: {report_file}")
+        return send_file(
+            report_file,
+            mimetype='text/csv',
+            as_attachment=True,
+            download_name='aerodrome_warning_report.csv'
+        )
+    except Exception as e:
+        print(f"Error downloading aerodrome warning report: {str(e)}")
+        return jsonify({"error": f"An error occurred while downloading the report: {str(e)}"}), 500

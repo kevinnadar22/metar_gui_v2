@@ -1272,8 +1272,254 @@ function renderCsvToTable(csvText, tableElement) {
     });
 }
 
+function renderAerodromeWarningTable(csvText, tableElement, detailedAccuracy = {}) {
+    const lines = csvText.trim().split(/\r?\n/);
+    if (lines.length === 0) return;
+    
+    // Remove any trailing blank lines
+    while (lines.length && lines[lines.length-1].trim() === '') lines.pop();
+    
+    // Extract header and rows
+    const header = lines[0].split(',');
+    const rows = lines.slice(1).map(line => line.split(','));
+    
+    // Debug: Print table structure
+    console.log("Table element:", tableElement);
+    console.log("Table thead:", tableElement.querySelector('thead'));
+    console.log("Table tbody:", tableElement.querySelector('tbody'));
+    
+    // Ensure thead is visible and has content
+    const thead = tableElement.querySelector('thead');
+    if (thead) {
+        console.log("Thead found, ensuring it's visible");
+        thead.style.display = 'table-header-group';
+        const headerRow = thead.querySelector('tr');
+        if (headerRow) {
+            console.log("Header row found with", headerRow.children.length, "columns");
+            Array.from(headerRow.children).forEach((th, index) => {
+                console.log(`Header ${index + 1}:`, th.textContent);
+            });
+        } else {
+            // If no header row exists, create one
+            console.log("No header row found, creating one");
+            const newHeaderRow = document.createElement('tr');
+            const headers = [
+                'क्र. सं. / Sr.No.',
+                'तत्त्व / Elements',
+                'विमान क्षेत्र चेतावनियों की सं. / Warning no 1 Warning no 2................ Warning no. (Issue date/Issue Time UTC)',
+                'रेंज के अंतगर्द आने वाले (पारस) मामलों की प्रतिशतता अथवा सही होने की प्रतिशतता / % of cases within range or occurrence (% correct)',
+                'वास्तविक मौसम समयावधि के साथ जिसके लिये चेतावनी जारी नहीं की गयी थी / Actual weather with duration for which no warning was issued'
+            ];
+            
+            headers.forEach(headerText => {
+                const th = document.createElement('th');
+                th.innerHTML = headerText;
+                newHeaderRow.appendChild(th);
+            });
+            thead.appendChild(newHeaderRow);
+            console.log("Created new header row with", headers.length, "columns");
+        }
+    }
+    
+    // Define the standard aerodrome warning elements
+    const warningElements = [
+        { srNo: "1.", element: "उष्णकटिबंधीय चक्रवात / Tropical cyclone" },
+        { srNo: "2.", element: "गर्जन सुनामी / Thunderstorms" },
+        { srNo: "3.", element: "ओला / Hail" },
+        { srNo: "4.", element: "बर्फ / Snow" },
+        { srNo: "5.", element: "हिमवर्षा / Freezing precipitation" },
+        { srNo: "6.", element: "पाला या शीत / Hoar Frost or rime" },
+        { srNo: "7.", element: "धूल भरी आँधी / Dust storm" },
+        { srNo: "8.", element: "रेतीली आँधी / Sandstorm" },
+        { srNo: "9.", element: "उठती रेत या धूल / Rising sand or dust" },
+        { srNo: "10.", element: "प्रबल सतही पवन तथा झोंके / Strong surface wind and gusts<br><strong>गति / Speed</strong>" },
+        { srNo: "", element: "<strong>दिशा परिवर्तन / Direction change</strong>" },
+        { srNo: "11.", element: "बवंडर / Squall<br>दिशा / Direction<br>गति / Speed" },
+        { srNo: "12.", element: "पाला / Frost" },
+        { srNo: "13.", element: "ज्वालामुखीय राख / Volcanic ash" },
+        { srNo: "14.", element: "सुनामी / Tsunami" }
+    ];
+    
+    // Render body
+    const tbody = tableElement.querySelector('tbody');
+    tbody.innerHTML = '';
+    
+    // Process the CSV data to extract relevant information
+    const thunderstormWarnings = [];
+    const windWarnings = [];
+    let thunderstormAccuracy = "-";
+    let windAccuracy = "-";
+    
+    // Parse the CSV data more carefully
+    rows.forEach(row => {
+        if (row.length >= 4) {
+            const element = row[1]?.trim() || "";
+            const issueTime = row[2]?.trim() || "";
+            const accuracy = row[3]?.trim() || "";
+            
+            // Check for thunderstorm warnings
+            if (element.toLowerCase().includes("thunderstorm") || element.toLowerCase().includes("गर्जन") || element.toLowerCase().includes("ts")) {
+                if (issueTime && issueTime !== "-" && issueTime !== "0") {
+                    thunderstormWarnings.push(issueTime);
+                }
+                if (accuracy && accuracy !== "-" && accuracy !== "0") {
+                    // Convert accuracy to percentage
+                    const accuracyNum = parseFloat(accuracy);
+                    if (!isNaN(accuracyNum)) {
+                        thunderstormAccuracy = accuracyNum === 1 ? "100%" : `${Math.round(accuracyNum * 100)}%`;
+                    } else {
+                        thunderstormAccuracy = accuracy; // Keep as is if it's already a percentage
+                    }
+                }
+            } 
+            // Check for wind/gust warnings
+            else if (element.toLowerCase().includes("wind") || element.toLowerCase().includes("gust") || element.toLowerCase().includes("पवन") || element.toLowerCase().includes("surface")) {
+                if (issueTime && issueTime !== "-" && issueTime !== "0") {
+                    windWarnings.push(issueTime);
+                }
+                if (accuracy && accuracy !== "-" && accuracy !== "0") {
+                    // Convert accuracy to percentage
+                    const accuracyNum = parseFloat(accuracy);
+                    if (!isNaN(accuracyNum)) {
+                        windAccuracy = accuracyNum === 1 ? "100%" : `${Math.round(accuracyNum * 100)}%`;
+                    } else {
+                        windAccuracy = accuracy; // Keep as is if it's already a percentage
+                    }
+                }
+            }
+        }
+    });
+    
+    // If we have the Accuracy_Percentage column (column 5), use it instead
+    if (header.length >= 5 && header[4]?.includes("Accuracy")) {
+        rows.forEach(row => {
+            if (row.length >= 5) {
+                const element = row[1]?.trim() || "";
+                const issueTime = row[2]?.trim() || "";
+                const accuracyPercentage = row[4]?.trim() || "";
+                
+                // Check for thunderstorm warnings
+                if (element.toLowerCase().includes("thunderstorm") || element.toLowerCase().includes("गर्जन") || element.toLowerCase().includes("ts")) {
+                    if (issueTime && issueTime !== "-" && issueTime !== "0") {
+                        thunderstormWarnings.push(issueTime);
+                    }
+                    if (accuracyPercentage && accuracyPercentage !== "-" && accuracyPercentage !== "0%") {
+                        thunderstormAccuracy = accuracyPercentage;
+                    }
+                } 
+                // Check for wind/gust warnings
+                else if (element.toLowerCase().includes("wind") || element.toLowerCase().includes("gust") || element.toLowerCase().includes("पवन") || element.toLowerCase().includes("surface")) {
+                    if (issueTime && issueTime !== "-" && issueTime !== "0") {
+                        windWarnings.push(issueTime);
+                    }
+                    if (accuracyPercentage && accuracyPercentage !== "-" && accuracyPercentage !== "0%") {
+                        windAccuracy = accuracyPercentage;
+                    }
+                }
+            }
+        });
+    }
+    
+    // Calculate actual percentages from the data
+    let thunderstormCount = 0;
+    let thunderstormCorrect = 0;
+    let windCount = 0;
+    let windCorrect = 0;
+    
+    rows.forEach(row => {
+        if (row.length >= 4) {
+            const element = row[1]?.trim() || "";
+            const accuracy = row[3]?.trim() || "";
+            
+            // Count thunderstorm warnings
+            if (element.toLowerCase().includes("thunderstorm") || element.toLowerCase().includes("गर्जन") || element.toLowerCase().includes("ts")) {
+                thunderstormCount++;
+                if (accuracy === "1" || accuracy === "true") {
+                    thunderstormCorrect++;
+                }
+            } 
+            // Count wind/gust warnings
+            else if (element.toLowerCase().includes("wind") || element.toLowerCase().includes("gust") || element.toLowerCase().includes("पवन") || element.toLowerCase().includes("surface")) {
+                windCount++;
+                if (accuracy === "1" || accuracy === "true") {
+                    windCorrect++;
+                }
+            }
+        }
+    });
+    
+    // Use detailed accuracy from API if available, otherwise calculate from data
+    console.log("Using detailed accuracy:", detailedAccuracy);
+    
+    if (detailedAccuracy.thunderstorm !== undefined) {
+        thunderstormAccuracy = `${detailedAccuracy.thunderstorm}%`;
+        console.log("Setting thunderstorm accuracy to:", thunderstormAccuracy);
+    } else if (thunderstormCount > 0) {
+        const thunderstormPercent = Math.round((thunderstormCorrect / thunderstormCount) * 100);
+        thunderstormAccuracy = `${thunderstormPercent}%`;
+        console.log("Calculated thunderstorm accuracy:", thunderstormAccuracy);
+    }
+    
+    if (detailedAccuracy.wind !== undefined) {
+        windAccuracy = `${detailedAccuracy.wind}%`;
+        console.log("Setting wind accuracy to:", windAccuracy);
+    } else if (windCount > 0) {
+        const windPercent = Math.round((windCorrect / windCount) * 100);
+        windAccuracy = `${windPercent}%`;
+        console.log("Calculated wind accuracy:", windAccuracy);
+    }
+    
+    // Populate the table with standard format
+    warningElements.forEach((item, index) => {
+        const tr = document.createElement('tr');
+        
+        // Sr.No.
+        const td1 = document.createElement('td');
+        td1.textContent = item.srNo;
+        tr.appendChild(td1);
+        
+        // Elements
+        const td2 = document.createElement('td');
+        td2.innerHTML = item.element;
+        tr.appendChild(td2);
+        
+        // Warning numbers and times
+        const td3 = document.createElement('td');
+        if (index === 1) { // Thunderstorms
+            td3.textContent = thunderstormWarnings.length > 0 ? thunderstormWarnings.join(',') : "-";
+        } else if (index === 9) { // Wind speed
+            td3.textContent = windWarnings.length > 0 ? windWarnings.join(',') : "-";
+            td3.style.whiteSpace = "pre-wrap";
+            td3.style.fontSize = "10px";
+        } else {
+            td3.textContent = "-";
+        }
+        tr.appendChild(td3);
+        
+        // Accuracy percentage
+        const td4 = document.createElement('td');
+        if (index === 1) { // Thunderstorms
+            td4.textContent = thunderstormAccuracy;
+        } else if (index === 9) { // Wind speed
+            td4.textContent = windAccuracy;
+        } else {
+            td4.textContent = "-";
+        }
+        tr.appendChild(td4);
+        
+        // Actual weather without warnings
+        const td5 = document.createElement('td');
+        td5.textContent = "-";
+        tr.appendChild(td5);
+        
+        tbody.appendChild(tr);
+    });
+}
+
 // Function to download Excel report with station name, validity period, and accuracy
 function downloadExcel() {
+    console.log('Download button clicked');
+    
     const stationInput = document.getElementById('adwrn-station-input');
     const startDateInput = document.querySelector('input[name="start_date"]');
     const endDateInput = document.querySelector('input[name="end_date"]');
@@ -1310,24 +1556,48 @@ function downloadExcel() {
     
     // Create filename
     const filename = `${stationName}_Aerodrome_Warning_${validityPeriod}_${accuracyPercent}%_accuracy.csv`;
+    console.log('Attempting to download:', filename);
+    
+    // Show loading state
+    const downloadBtn = document.querySelector('#adwrn-download-container button, #adwrn-download-report-btn');
+    if (downloadBtn) {
+        const originalText = downloadBtn.innerHTML;
+        downloadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Downloading...';
+        downloadBtn.disabled = true;
+        
+        // Reset button after 3 seconds regardless of outcome
+        setTimeout(() => {
+            downloadBtn.innerHTML = originalText;
+            downloadBtn.disabled = false;
+        }, 3000);
+    }
     
     // Fetch the CSV data and trigger download
     fetch('/api/download/adwrn_report')
         .then(response => {
-            if (!response.ok) throw new Error('Failed to download report');
+            console.log('Download response status:', response.status);
+            if (!response.ok) {
+                return response.json().then(errData => {
+                    throw new Error(errData.error || 'Failed to download report');
+                });
+            }
             return response.blob();
         })
         .then(blob => {
+            console.log('Download blob received, size:', blob.size);
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
             a.download = filename;
+            a.style.display = 'none';
             document.body.appendChild(a);
             a.click();
             window.URL.revokeObjectURL(url);
             document.body.removeChild(a);
+            console.log('Download completed successfully');
         })
         .catch(error => {
+            console.error('Download error:', error);
             showCustomAlert('Error downloading report: ' + error.message);
         });
 }
@@ -1339,7 +1609,7 @@ if (adwrnVerifyBtn && adwrnFinalReportContainer && adwrnFinalReportTable && adwr
         adwrnFinalReportContainer.style.display = 'none';
         adwrnAccuracy.style.display = 'none';
         adwrnAccuracy.textContent = '';
-        adwrnFinalReportTable.querySelector('thead').innerHTML = '';
+        // Don't clear thead - let the renderAerodromeWarningTable function handle it
         adwrnFinalReportTable.querySelector('tbody').innerHTML = '';
         
         // Hide download button initially
@@ -1365,8 +1635,18 @@ if (adwrnVerifyBtn && adwrnFinalReportContainer && adwrnFinalReportTable && adwr
                     } else {
                         adwrnAccuracy.style.display = 'none';
                     }
-                    renderCsvToTable(data.report, adwrnFinalReportTable);
+                    
+                    // Pass detailed accuracy data to the table rendering function
+                    const detailedAccuracy = data.detailed_accuracy || {};
+                    console.log("Detailed accuracy from API:", detailedAccuracy);
+                    renderAerodromeWarningTable(data.report, adwrnFinalReportTable, detailedAccuracy);
                     adwrnFinalReportContainer.style.display = 'block';
+                    
+                    // Debug: Check if table headers are visible
+                    console.log("Table element:", adwrnFinalReportTable);
+                    console.log("Table thead:", adwrnFinalReportTable.querySelector('thead'));
+                    console.log("Table headers:", adwrnFinalReportTable.querySelectorAll('th'));
+                    console.log("Container display style:", adwrnFinalReportContainer.style.display);
                     
                     // Show download button after successful verification
                     if (downloadContainer) {

@@ -779,16 +779,136 @@
                 </div>
                 
                 <div id="adwrn-final-report-container" class="mt-8" style="display:none;">
-                    <h3 class="text-lg font-semibold mb-2 text-gray-700">Final Warning Report</h3>
                     <div id="adwrn-accuracy" style="display:none; font-size:1.25rem; font-weight:600; color:#256029; margin-bottom:1rem;"></div>
-                    <div class="overflow-x-auto">
-                        <table id="adwrn-final-report-table" class="min-w-full divide-y divide-gray-200 table-fixed border border-gray-300 rounded-lg">
-                            <thead class="bg-gray-100 sticky top-0 z-10"></thead>
-                            <tbody></tbody>
+                    
+                    <style>
+                        .warning-table {
+                          width: 100%;
+                          border-collapse: collapse;
+                          margin-top: 30px;
+                          font-size: 12px;
+                          table-layout: fixed;
+                        }
+                      
+                        .warning-table th, .warning-table td {
+                          border: 1px solid #999;
+                          padding: 4px 6px;
+                          vertical-align: top;
+                          word-break: break-word;
+                          overflow-wrap: break-word;
+                        }
+                      
+                        .warning-table th {
+                          background-color: #f2f2f2;
+                          text-align: center;
+                          font-weight: bold;
+                          font-size: 11px;
+                          color: #000;
+                          border: 1px solid #999;
+                          padding: 4px 6px;
+                          position: relative;
+                          z-index: 10;
+                        }
+                      
+                        .warning-table td {
+                          text-align: center;
+                          font-size: 11px;
+                        }
+                      
+                        .heading {
+                          font-size: 18px;
+                          margin-top: 40px;
+                          font-weight: bold;
+                          text-align: center;
+                        }
+                        
+                        /* Responsive design for smaller screens */
+                        @media (max-width: 768px) {
+                          .warning-table {
+                            font-size: 10px;
+                          }
+                          .warning-table th, .warning-table td {
+                            padding: 2px 4px;
+                            font-size: 9px;
+                          }
+                          .warning-table th {
+                            font-size: 9px;
+                          }
+                          .heading {
+                            font-size: 16px;
+                          }
+                        }
+                        
+                        /* Container for horizontal scrolling on very small screens */
+                        .table-container {
+                          overflow-x: auto;
+                          max-width: 100%;
+                          margin: 0 auto;
+                        }
+                        
+                        /* Column widths for better fit */
+                        .warning-table th:nth-child(1), .warning-table td:nth-child(1) {
+                          width: 8%;
+                        }
+                        .warning-table th:nth-child(2), .warning-table td:nth-child(2) {
+                          width: 25%;
+                        }
+                        .warning-table th:nth-child(3), .warning-table td:nth-child(3) {
+                          width: 35%;
+                        }
+                        .warning-table th:nth-child(4), .warning-table td:nth-child(4) {
+                          width: 12%;
+                        }
+                        .warning-table th:nth-child(5), .warning-table td:nth-child(5) {
+                          width: 20%;
+                        }
+                        
+                        /* Handle very long warning lists */
+                        .warning-table td:nth-child(3) {
+                          max-width: 0;
+                          overflow: hidden;
+                          text-overflow: ellipsis;
+                        }
+                        
+                        /* Show full content on hover for long warning lists */
+                        .warning-table td:nth-child(3):hover {
+                          overflow: visible;
+                          white-space: normal;
+                          word-break: break-all;
+                          position: relative;
+                          z-index: 10;
+                          background: white;
+                          box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+                        }
+                    </style>
+                    
+                    <h2 class="heading">Aerodrome Warning Section</h2>
+                    
+                    <div class="table-container">
+                        <table class="warning-table" id="adwrn-final-report-table">
+                            <thead>
+                                <tr>
+                                  <th>क्र. सं. /<br>Sr.No.</th>
+                                  <th>तत्त्व /<br>Elements</th>
+                                  <th>
+                                    विमान क्षेत्र चेतावनियों की सं. /<br>
+                                    Warning no 1 Warning no 2................ Warning no.<br>
+                                    (Issue date/Issue Time UTC)
+                                  </th>
+                                  <th>
+                                    रेंज के अंतगर्द आने वाले (पारस) मामलों की प्रतिशतता अथवा सही होने की प्रतिशतता /<br>
+                                    % of cases within range or occurrence<br>
+                                    (% correct)
+                                  </th>
+                                  <th>
+                                    वास्तविक मौसम समयावधि के साथ जिसके लिये चेतावनी जारी नहीं की गयी थी /<br>
+                                    Actual weather with duration for which no warning was issued
+                                  </th>
+                                </tr>
+                              </thead>
+                              <tbody></tbody>
                         </table>
                     </div>
-
-                    
                 </div>
             </div>
             <div id="adwrn-message" class="text-center mt-4"></div>

@@ -150,6 +150,13 @@ def generate_warning_report(ad_warn_output_path, metar_features_path):
         'Remarks'
     ])
     
+    # Add additional columns for better parsing
+    final_df['Accuracy_Percentage'] = final_df['true-1 / false-0'].apply(lambda x: f"{x*100}%" if x == 1 else "0%")
+    final_df['Warning_Type'] = final_df['Elements (Thunderstorm/Surface wind & Gust)'].apply(
+        lambda x: 'Thunderstorm' if 'thunderstorm' in x.lower() else 
+                  'Wind' if 'wind' in x.lower() or 'gust' in x.lower() else 'Other'
+    )
+    
     # Save to a file in the same directory as the input file
     output_path = os.path.join(os.path.dirname(ad_warn_output_path), 'final_warning_report.csv')
     final_df.to_csv(output_path, index=False)
