@@ -9,6 +9,7 @@ from app.utils import decode_metar_to_csv, extract_data_from_file_with_day_and_w
 from app.utils.AD_warn import parse_warning_file
 from app.utils.generate_warning_report import generate_warning_report
 from app.utils.extract_metar_features import extract_metar_features
+from app.utils.validation import validate_files
 from app.config import METAR_DATA_DIR, UPPER_AIR_DATA_DIR
 import tempfile
 import pandas as pd
@@ -694,9 +695,21 @@ def adwrn_verify():
         if not os.path.exists(metar_file):
             return jsonify({'success': False, 'error': 'METAR file not found. Please ensure it exists.'}), 404
         
+        # Perform validation before processing
+        validation_result = validate_files(metar_file, warning_file)
+        
+        if not validation_result['success']:
+            return jsonify({
+                'success': False, 
+                'error': validation_result['error'],
+                'validation_failed': True,
+                'metar_code': validation_result.get('metar_code'),
+                'warning_code': validation_result.get('warning_code')
+            }), 400
+        
         # Parse warning file
         print("[DEBUG] Parsing warning file...")
-        df = parse_warning_file(warning_file, station_code="VABB")
+        df = parse_warning_file(warning_file, station_code=validation_result['metar_code'])
         print(f"[DEBUG] AD warn output saved to: {ad_warn_output}")
         
         # Extract METAR features
@@ -730,7 +743,11 @@ def adwrn_verify():
         return jsonify({
             'success': True, 
             'report': report_content, 
-            'accuracy': f"{accuracy:.0f}"
+            'accuracy': f"{accuracy:.0f}",
+            'validation': {
+                'metar_code': validation_result['metar_code'],
+                'warning_code': validation_result['warning_code']
+            }
         })
     except Exception as e:
         print(f"[ERROR] Error in adwrn_verify: {str(e)}")

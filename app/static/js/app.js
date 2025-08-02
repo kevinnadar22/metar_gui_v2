@@ -1,21 +1,20 @@
-// Initialize date pickers and file upload functionality
-document.addEventListener('DOMContentLoaded', function () {
-    // ===== INITIALIZATION FUNCTIONS =====
-
-    // Custom alert function
-    function showCustomAlert(message) {
+// Global custom alert function
+function showCustomAlert(message) {
+    console.log('showCustomAlert called with:', message); // Debug log
+    
+    try {
         // Create alert container if it doesn't exist
         let alertContainer = document.getElementById('customAlertContainer');
         if (!alertContainer) {
             alertContainer = document.createElement('div');
             alertContainer.id = 'customAlertContainer';
-            alertContainer.className = 'fixed top-4 right-4 z-50';
+            alertContainer.className = 'fixed bottom-4 right-4 z-50';
             document.body.appendChild(alertContainer);
         }
 
         // Create alert element
         const alert = document.createElement('div');
-        alert.className = 'bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4 shadow-lg';
+        alert.className = 'bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4 shadow-lg max-w-md';
         alert.innerHTML = `
             <span class="block sm:inline mr-8">${message}</span>
             <span class="absolute top-0 bottom-0 right-0 px-4 py-3">
@@ -26,9 +25,6 @@ document.addEventListener('DOMContentLoaded', function () {
             </span>
         `;
 
-        // Update container position to bottom right
-        alertContainer.className = 'fixed bottom-4 right-4 z-50';
-        
         // Add to container
         alertContainer.appendChild(alert);
 
@@ -38,11 +34,24 @@ document.addEventListener('DOMContentLoaded', function () {
             alert.remove();
         });
 
-        // Auto remove after 5 seconds
+        // Auto remove after 8 seconds (longer for validation errors)
         setTimeout(() => {
-            alert.remove();
-        }, 5000);
+            if (alert.parentNode) {
+                alert.remove();
+            }
+        }, 8000);
+        
+        console.log('Custom alert created successfully');
+    } catch (error) {
+        console.error('Error creating custom alert:', error);
+        // Fallback to browser alert
+        alert(message);
     }
+}
+
+// Initialize date pickers and file upload functionality
+document.addEventListener('DOMContentLoaded', function () {
+    // ===== INITIALIZATION FUNCTIONS =====
 
     
 
@@ -1325,6 +1334,8 @@ function downloadExcel() {
 
 if (adwrnVerifyBtn && adwrnFinalReportContainer && adwrnFinalReportTable && adwrnAccuracy && adwrnReportLoadingSection) {
     adwrnVerifyBtn.addEventListener('click', function() {
+        console.log('Verify button clicked'); // Debug log
+        
         adwrnFinalReportContainer.style.display = 'none';
         adwrnAccuracy.style.display = 'none';
         adwrnAccuracy.textContent = '';
@@ -1339,8 +1350,12 @@ if (adwrnVerifyBtn && adwrnFinalReportContainer && adwrnFinalReportTable && adwr
         
         adwrnReportLoadingSection.style.display = 'flex';
         fetch('/api/adwrn_verify', { method: 'POST' })
-            .then(response => response.json())
+            .then(response => {
+                console.log('Response status:', response.status); // Debug log
+                return response.json();
+            })
             .then(data => {
+                console.log('Response data:', data); // Debug log
                 adwrnReportLoadingSection.style.display = 'none';
                 if (data.success) {
                     // Show accuracy percentage if present
@@ -1358,10 +1373,31 @@ if (adwrnVerifyBtn && adwrnFinalReportContainer && adwrnFinalReportTable && adwr
                         downloadContainer.style.display = 'block';
                     }
                 } else {
-                    showCustomAlert(data.error || 'Verification failed.');
+                    console.log('Validation failed:', data); // Debug log
+                    // Handle validation errors with more specific messaging
+                    if (data.validation_failed) {
+                        let errorMessage = data.error;
+                        
+                        // Add more context for station code mismatch
+                        if (data.error && data.error.includes('Station code mismatch')) {
+                            errorMessage = `${data.error}\n\nPlease ensure both files are for the same station.`;
+                        }
+                        
+                        // Add more context for date range issues
+                        if (data.error && data.error.includes('No METAR data falls within the valid warning period')) {
+                            errorMessage = `${data.error}\n\nPlease check that the METAR data covers the warning period and that the warning file contains a valid issue date.`;
+                        }
+                        
+                        console.log('Showing validation error:', errorMessage); // Debug log
+                        showCustomAlert(errorMessage);
+                    } else {
+                        console.log('Showing general error:', data.error); // Debug log
+                        showCustomAlert(data.error || 'Verification failed.');
+                    }
                 }
             })
             .catch(err => {
+                console.log('Fetch error:', err); // Debug log
                 adwrnReportLoadingSection.style.display = 'none';
                 showCustomAlert('Error: ' + err.message);
             });
@@ -1374,6 +1410,8 @@ document.addEventListener('DOMContentLoaded', function() {
     if (downloadBtn) {
         downloadBtn.addEventListener('click', downloadExcel);
     }
+    
+
 });
 
 // File input change handler for aerodrome warning observation file
