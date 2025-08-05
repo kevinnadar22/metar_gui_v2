@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify, send_file
+from flask import Blueprint, request, jsonify, send_file, render_template
 import os
 import uuid
 import base64
@@ -7,7 +7,7 @@ import re
 from werkzeug.utils import secure_filename
 from app.utils import decode_metar_to_csv, extract_data_from_file_with_day_and_wind, compare_weather_data, OgimetAPI, extract_day_month_year_from_filename,extract_month_year_from_date,fetch_upper_air_data,circular_difference,process_weather_accuracy_helper,interpolate_temperature_only
 from app.utils.AD_warn import parse_warning_file
-from app.utils.generate_warning_report import generate_warning_report
+from app.utils.generate_warning_report import generate_warning_report, generate_excel_warning_report
 from app.utils.extract_metar_features import extract_metar_features
 from app.utils.validation import validate_files
 from app.config import METAR_DATA_DIR, UPPER_AIR_DATA_DIR
@@ -20,6 +20,13 @@ import requests
 from urllib.parse import quote
 import sys  
 import subprocess
+from reportlab.lib.pagesizes import letter, A4
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.units import inch
+from reportlab.lib import colors
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
 
 api_bp = Blueprint('api', __name__, url_prefix='/api')
 
@@ -52,6 +59,293 @@ def decode_file_path(encoded_path):
         _, file_path = decoded.split(':', 1)
         return file_path
     except Exception:
+        return None
+
+def parse_validity_to_month_year(validity_str):
+    """Parse validity string like '202506010000' to month and year format"""
+    try:
+        # Remove 'Z' suffix if present
+        validity_str = validity_str.rstrip('Z')
+        
+        # Check if it's a 12-digit format (YYYYMMDDHHMM)
+        if len(validity_str) == 12:
+            year = int(validity_str[:4])
+            month = int(validity_str[4:6])
+            day = int(validity_str[6:8])
+            hour = int(validity_str[8:10])
+            minute = int(validity_str[10:12])
+            
+            from datetime import datetime
+            date_obj = datetime(year, month, day, hour, minute)
+            
+        # Check if it's a 6-digit format (DDHHMM) - legacy format
+        elif len(validity_str) == 6:
+            day = int(validity_str[:2])
+            hour = int(validity_str[2:4])
+            minute = int(validity_str[4:6])
+            
+            # For 6-digit format, we need to determine the month and year
+            from datetime import datetime
+            year = 2024  # Based on the data context
+            month = 1  # January
+            
+            try:
+                date_obj = datetime(year, month, day, hour, minute)
+            except ValueError:
+                # If day is invalid for January, try February
+                month = 2
+                date_obj = datetime(year, month, day, hour, minute)
+            
+        # Check if it's an 8-digit format (DDHHMMYY)
+        elif len(validity_str) == 8:
+            day = int(validity_str[:2])
+            hour = int(validity_str[2:4])
+            minute = int(validity_str[4:6])
+            year = int(validity_str[6:8])
+            
+            # Convert 2-digit year to 4-digit year
+            if year < 50:  # Assume 20xx for years 00-49
+                year += 2000
+            else:  # Assume 19xx for years 50-99
+                year += 1900
+            
+            # Use current month as default, adjust if needed
+            from datetime import datetime
+            current_date = datetime.now()
+            date_obj = datetime(year, current_date.month, day, hour, minute)
+            
+        # Check if it's a 10-digit format (DDHHMMYYYY)
+        elif len(validity_str) == 10:
+            day = int(validity_str[:2])
+            hour = int(validity_str[2:4])
+            minute = int(validity_str[4:6])
+            year = int(validity_str[6:10])
+            
+            from datetime import datetime
+            current_date = datetime.now()
+            date_obj = datetime(year, current_date.month, day, hour, minute)
+            
+        else:
+            # If format is not recognized, return the original string
+            return validity_str
+        
+        # Format as "Month Year"
+        month_names = [
+            "January", "February", "March", "April", "May", "June",
+            "July", "August", "September", "October", "November", "December"
+        ]
+        
+        month_name = month_names[date_obj.month - 1]
+        year = date_obj.year
+        
+        return f"{month_name} {year}"
+        
+    except Exception as e:
+        print(f"Error parsing validity string '{validity_str}': {e}")
+        return validity_str
+
+def extract_date_from_metar_file(metar_file_path):
+    """Extract date information from METAR file to determine month and year"""
+    try:
+        if not os.path.exists(metar_file_path):
+            return None
+            
+        with open(metar_file_path, 'r', encoding='utf-8') as f:
+            lines = f.readlines()
+            
+        if not lines:
+            return None
+            
+        # Look for the first line with date information
+        for line in lines:
+            line = line.strip()
+            if line and len(line) >= 12:
+                # Check if the line starts with a date format (YYYYMMDDHHMM)
+                if line[:12].isdigit():
+                    date_str = line[:12]
+                    return parse_validity_to_month_year(date_str)
+                    
+        # If no date found in first 12 characters, try to find date in the line
+        for line in lines:
+            line = line.strip()
+            if line and 'METAR' in line:
+                # Look for date patterns in the METAR line
+                import re
+                # Look for patterns like YYYYMMDDHHMM
+                date_match = re.search(r'(\d{12})', line)
+                if date_match:
+                    date_str = date_match.group(1)
+                    return parse_validity_to_month_year(date_str)
+                    
+        return None
+        
+    except Exception as e:
+        print(f"Error extracting date from METAR file: {e}")
+        return None
+
+def generate_aerodrome_warning_pdf(report_data, station_info=""):
+    """Generate a PDF report for aerodrome warning data"""
+    try:
+        # Create a temporary file for the PDF
+        pdf_path = os.path.join(os.getcwd(), 'ad_warn_data', 'aerodrome_warning_report.pdf')
+        
+        # Create the PDF document
+        doc = SimpleDocTemplate(pdf_path, pagesize=A4)
+        story = []
+        
+        # Get styles
+        styles = getSampleStyleSheet()
+        title_style = ParagraphStyle(
+            'CustomTitle',
+            parent=styles['Heading1'],
+            fontSize=16,
+            spaceAfter=30,
+            alignment=1  # Center alignment
+        )
+        
+        # Add title
+        title = Paragraph("Aerodrome Warning Report", title_style)
+        story.append(title)
+        
+        # Add station information if available
+        if station_info:
+            station_style = ParagraphStyle(
+                'StationInfo',
+                parent=styles['Normal'],
+                fontSize=12,
+                spaceAfter=20,
+                alignment=1  # Center alignment
+            )
+            station_para = Paragraph(station_info, station_style)
+            story.append(station_para)
+        
+        # Add spacing
+        story.append(Spacer(1, 20))
+        
+        # Create the exact table structure as shown in the image
+        headers = [
+            "क्र. सं. / Sr.No.",
+            "तत्त्व / Elements", 
+            "विमान क्षेत्र चेतावनियों की सं. / Warning no 1 Warning no 2...",
+            "रेंज के अंतगर्द आने वाले (पारस) मामलों की प्रतिशतता अथवा सही होने की प्रतिशतता / % of cases within range or occurrence (% correct)",
+            "वास्तविक मौसम समयावधि के साथ जिसके लिये चेतावनी जारी नहीं की गयी थी । Actual weather with duration for which no warning was issued"
+        ]
+        
+        # Parse the CSV data to extract warning information
+        import csv
+        from io import StringIO
+        
+        csv_data = StringIO(report_data)
+        csv_reader = csv.DictReader(csv_data)
+        
+        # Extract warning data and calculate accuracy
+        thunderstorm_warnings = []
+        wind_warnings = []
+        thunderstorm_correct = 0
+        wind_correct = 0
+        thunderstorm_total = 0
+        wind_total = 0
+        
+        for row in csv_reader:
+            element = row.get('Elements (Thunderstorm/Surface wind & Gust)', '').lower()
+            issue_time = row.get('Warning issue Time', '')
+            accuracy = row.get('true-1 / false-0', '0')
+            
+            if 'thunderstorm' in element and issue_time:
+                thunderstorm_warnings.append(issue_time)
+                thunderstorm_total += 1
+                if accuracy == '1':
+                    thunderstorm_correct += 1
+            elif ('wind' in element or 'gust' in element) and issue_time:
+                wind_warnings.append(issue_time)
+                wind_total += 1
+                if accuracy == '1':
+                    wind_correct += 1
+        
+        # Calculate accuracy percentages
+        thunderstorm_accuracy = round((thunderstorm_correct / thunderstorm_total * 100)) if thunderstorm_total > 0 else 0
+        wind_accuracy = round((wind_correct / wind_total * 100)) if wind_total > 0 else 0
+        
+        # Create table data with the exact structure
+        table_data = [headers]
+        
+        # Define the weather elements exactly as shown
+        weather_elements = [
+            "Tropical cyclone",
+            "Thunderstorms", 
+            "Hail",
+            "Snow",
+            "Freezing precipitation",
+            "Hoar Frost or rime",
+            "Dust storm",
+            "Sandstorm",
+            "Rising sand or dust",
+            "Strong surface wind and gusts / Speed",
+            "Direction change",
+            "Squall / Direction / Speed",
+            "Frost",
+            "Volcanic ash",
+            "Tsunami"
+        ]
+        
+        # Populate table data
+        for i, element in enumerate(weather_elements, 1):
+            row = [str(i), element, "-", "-", "-"]
+            
+            # Add specific data for thunderstorms
+            if element == "Thunderstorms":
+                if thunderstorm_warnings:
+                    warnings_str = ",".join(thunderstorm_warnings)
+                    row[2] = warnings_str
+                    row[3] = f"{thunderstorm_accuracy}%"
+                else:
+                    row[2] = "-"
+                    row[3] = "-"
+            
+            # Add specific data for wind/gusts
+            elif element == "Strong surface wind and gusts / Speed":
+                if wind_warnings:
+                    warnings_str = ",".join(wind_warnings)
+                    row[2] = warnings_str
+                    row[3] = f"{wind_accuracy}%"
+                else:
+                    row[2] = "-"
+                    row[3] = "-"
+            
+            table_data.append(row)
+        
+        # Create table with specific column widths
+        table = Table(table_data, colWidths=[0.8*inch, 2.5*inch, 2.2*inch, 1.5*inch, 1.5*inch])
+        
+        # Style the table to match the exact format
+        table_style = TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 8),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.white),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black),
+            ('FONTSIZE', (0, 1), (-1, -1), 7),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('WORDWRAP', (0, 0), (-1, -1), True),
+            ('LEFTPADDING', (0, 0), (-1, -1), 3),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 3),
+            ('TOPPADDING', (0, 0), (-1, -1), 6),
+            ('BOTTOMPADDING', (0, 1), (-1, -1), 6),
+        ])
+        
+        table.setStyle(table_style)
+        story.append(table)
+        
+        # Build the PDF
+        doc.build(story)
+        
+        return pdf_path
+        
+    except Exception as e:
+        print(f"Error generating PDF: {e}")
         return None
 
 @api_bp.route('/get_metar', methods=['GET'])
@@ -807,6 +1101,26 @@ def adwrn_verify():
             print(f"[DEBUG] Error formatting accuracy: {e}")
             accuracy_str = str(accuracy)
         
+        # Extract station and date information from METAR file
+        station_info = ""
+        validity_info = ""
+        try:
+            # Get station code from validation result
+            station = validation_result.get('metar_code', 'VABB')
+            
+            # Extract date information from METAR file
+            month_year = extract_date_from_metar_file(metar_file)
+            
+            if station and month_year:
+                station_info = f"Aerodrome warning for station {station} for {month_year}"
+            elif station:
+                station_info = f"Aerodrome warning for station {station}"
+                
+            print(f"[DEBUG] Extracted station info: {station_info}")
+            
+        except Exception as e:
+            print(f"[DEBUG] Error extracting station info: {e}")
+        
         response_data = {
             'success': True, 
             'report': report_content, 
@@ -819,7 +1133,9 @@ def adwrn_verify():
             'validation': {
                 'metar_code': validation_result['metar_code'],
                 'warning_code': validation_result['warning_code']
-            }
+            },
+            'station_info': station_info,
+            'validity_info': validity_info
         }
         
         print(f"[DEBUG] Sending response with detailed accuracy: {response_data['detailed_accuracy']}")
@@ -893,3 +1209,97 @@ def download_adwrn_report():
     except Exception as e:
         print(f"Error downloading aerodrome warning report: {str(e)}")
         return jsonify({"error": f"An error occurred while downloading the report: {str(e)}"}), 500
+
+@api_bp.route('/download/adwrn_pdf_report', methods=['GET'])
+def download_adwrn_pdf_report():
+    """Download the aerodrome warning report PDF file"""
+    try:
+        # Define base directory and ensure it exists
+        ad_warn_dir = os.path.join(os.getcwd(), 'ad_warn_data')
+        
+        # Look for the generated report file
+        report_file = os.path.join(ad_warn_dir, 'final_warning_report.csv')
+        
+        if not os.path.exists(report_file):
+            return jsonify({"error": "Aerodrome warning report not found"}), 404
+        
+        # Read the report content
+        with open(report_file, 'r', encoding='utf-8') as f:
+            report_content = f.read()
+        
+        # Extract station information from METAR file
+        station_info = ""
+        try:
+            # Get station code from the report data
+            import csv
+            from io import StringIO
+            
+            csv_data = StringIO(report_content)
+            csv_reader = csv.DictReader(csv_data)
+            first_row = next(csv_reader, None)
+            
+            if first_row:
+                station = first_row.get('Station', 'VABB')
+                
+                # Extract date information from METAR file
+                metar_file = os.path.join(ad_warn_dir, 'metar.txt')
+                month_year = extract_date_from_metar_file(metar_file)
+                
+                if station and month_year:
+                    station_info = f"Aerodrome warning for station {station} for {month_year}"
+                elif station:
+                    station_info = f"Aerodrome warning for station {station}"
+        except Exception as e:
+            print(f"[DEBUG] Error extracting station info for PDF: {e}")
+        
+        # Generate PDF
+        pdf_path = generate_aerodrome_warning_pdf(report_content, station_info)
+        
+        if pdf_path and os.path.exists(pdf_path):
+            return send_file(
+                pdf_path,
+                mimetype='application/pdf',
+                as_attachment=True,
+                download_name='aerodrome_warning_report.pdf'
+            )
+        else:
+            return jsonify({"error": "Failed to generate PDF report"}), 500
+            
+    except Exception as e:
+        print(f"Error downloading aerodrome warning PDF report: {str(e)}")
+        return jsonify({"error": f"An error occurred while downloading the PDF report: {str(e)}"}), 500
+
+@api_bp.route('/download/adwrn_excel_report', methods=['GET'])
+def download_adwrn_excel_report():
+    """Download the aerodrome warning report Excel file"""
+    try:
+        # Define base directory and ensure it exists
+        ad_warn_dir = os.path.join(os.getcwd(), 'ad_warn_data')
+        
+        # Define input and output paths
+        ad_warn_output = os.path.join(ad_warn_dir, 'AD_warn_output.csv')
+        metar_features = os.path.join(ad_warn_dir, 'metar_extracted_features.txt')
+        
+        # Check if required files exist
+        if not os.path.exists(ad_warn_output):
+            return jsonify({"error": "Aerodrome warning output file not found. Please run verification first."}), 404
+            
+        if not os.path.exists(metar_features):
+            return jsonify({"error": "METAR features file not found. Please run verification first."}), 404
+        
+        # Generate Excel report
+        excel_file_path = generate_excel_warning_report(ad_warn_output, metar_features)
+        
+        if not os.path.exists(excel_file_path):
+            return jsonify({"error": "Failed to generate Excel report"}), 500
+        
+        print(f"[DEBUG] Sending Excel file: {excel_file_path}")
+        return send_file(
+            excel_file_path,
+            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            as_attachment=True,
+            download_name='aerodrome_warning_report.xlsx'
+        )
+    except Exception as e:
+        print(f"Error downloading aerodrome warning Excel report: {str(e)}")
+        return jsonify({"error": f"An error occurred while downloading the Excel report: {str(e)}"}), 500

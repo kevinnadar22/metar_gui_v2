@@ -770,16 +770,18 @@
                     <button id="adwrn-verifyBtn" type="button" class="bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-10 rounded-md shadow-md transition duration-300 text-lg">Verify Forecast</button>
                 </div>
                 
-                <!-- Download Button - Initially hidden -->
+                <!-- Download Buttons - Initially hidden -->
                 <div id="adwrn-download-container" class="text-center mt-6" style="display: none;">
-                    <button id="adwrn-download-report-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-8 rounded-md shadow-md transition duration-300 text-lg flex items-center justify-center mx-auto">
-                        <i class="fas fa-download mr-2"></i>
-                        Download Report
-                    </button>
+                    <div class="flex flex-col sm:flex-row justify-center gap-3">
+                        <button id="adwrn-download-excel-btn" class="bg-green-300 hover:bg-green-400 text-green-800 font-normal py-2 px-4 rounded-md shadow-sm transition duration-300 text-sm flex items-center justify-center">
+                            <i class="fas fa-file-excel mr-1"></i>
+                            Download Excel Report
+                        </button>
+                    </div>
                 </div>
                 
                 <div id="adwrn-final-report-container" class="mt-8" style="display:none;">
-                    <div id="adwrn-accuracy" style="display:none; font-size:1.25rem; font-weight:600; color:#256029; margin-bottom:1rem;"></div>
+                    <div id="adwrn-accuracy" style="display:none; font-size:1.75rem; font-weight:600; color:#000000; margin-bottom:1rem; white-space:pre-line; text-align:center;"></div>
                     
                     <style>
                         .warning-table {
@@ -882,7 +884,7 @@
                         }
                     </style>
                     
-                    <h2 class="heading">Aerodrome Warning Section</h2>
+
                     
                     <div class="table-container">
                         <table class="warning-table" id="adwrn-final-report-table">

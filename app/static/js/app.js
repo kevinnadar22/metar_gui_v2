@@ -1628,9 +1628,9 @@ if (adwrnVerifyBtn && adwrnFinalReportContainer && adwrnFinalReportTable && adwr
                 console.log('Response data:', data); // Debug log
                 adwrnReportLoadingSection.style.display = 'none';
                 if (data.success) {
-                    // Show accuracy percentage if present
-                    if (data.accuracy) {
-                        adwrnAccuracy.textContent = `Aerodrome Warning Accuracy: ${data.accuracy}%`;
+                    // Show only station information if available (hide accuracy)
+                    if (data.station_info) {
+                        adwrnAccuracy.textContent = data.station_info;
                         adwrnAccuracy.style.display = 'block';
                     } else {
                         adwrnAccuracy.style.display = 'none';
@@ -1686,13 +1686,100 @@ if (adwrnVerifyBtn && adwrnFinalReportContainer && adwrnFinalReportTable && adwr
 
 // Add event listener for the download button
 document.addEventListener('DOMContentLoaded', function() {
-    const downloadBtn = document.getElementById('adwrn-download-report-btn');
-    if (downloadBtn) {
-        downloadBtn.addEventListener('click', downloadExcel);
+    // Add event listener for the Excel download button
+    const excelDownloadBtn = document.getElementById('adwrn-download-excel-btn');
+    if (excelDownloadBtn) {
+        excelDownloadBtn.addEventListener('click', downloadExcelReport);
+    }
+});
+
+// Function to download Excel report
+function downloadExcelReport() {
+    console.log('Excel download button clicked');
+    
+    const stationInput = document.getElementById('adwrn-station-input');
+    const startDateInput = document.querySelector('input[name="start_date"]');
+    const endDateInput = document.querySelector('input[name="end_date"]');
+    const accuracyElement = document.getElementById('adwrn-accuracy');
+    
+    // Get station name
+    const stationName = stationInput ? stationInput.value.toUpperCase() : 'UNKNOWN';
+    
+    // Get validity period - check if user uploaded a file or used date pickers
+    let validityPeriod = 'unknown_period';
+    const datePickerSection = document.querySelector('.date-picker-section');
+    const isDatePickerDisabled = datePickerSection && datePickerSection.classList.contains('opacity-50');
+    
+    if (!isDatePickerDisabled && startDateInput && endDateInput) {
+        const startDate = startDateInput.value;
+        const endDate = endDateInput.value;
+        if (startDate && endDate) {
+            validityPeriod = `${startDate}_to_${endDate}`;
+        }
+    } else {
+        // User uploaded a file, use current date as validity period
+        const today = new Date().toISOString().split('T')[0];
+        validityPeriod = `${today}_file_upload`;
     }
     
+    // Get accuracy percentage
+    let accuracyPercent = '0';
+    if (accuracyElement && accuracyElement.textContent) {
+        const accuracyMatch = accuracyElement.textContent.match(/(\d+(?:\.\d+)?)%/);
+        if (accuracyMatch) {
+            accuracyPercent = accuracyMatch[1];
+        }
+    }
+    
+    // Create filename
+    const filename = `${stationName}_Aerodrome_Warning_${validityPeriod}_${accuracyPercent}%_accuracy.xlsx`;
+    console.log('Attempting to download Excel:', filename);
+    
+    // Show loading state
+    const excelDownloadBtn = document.getElementById('adwrn-download-excel-btn');
+    if (excelDownloadBtn) {
+        const originalText = excelDownloadBtn.innerHTML;
+        excelDownloadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Downloading...';
+        excelDownloadBtn.disabled = true;
+        
+        // Reset button after 3 seconds regardless of outcome
+        setTimeout(() => {
+            excelDownloadBtn.innerHTML = originalText;
+            excelDownloadBtn.disabled = false;
+        }, 3000);
+    }
+    
+    // Fetch the Excel data and trigger download
+    fetch('/api/download/adwrn_excel_report')
+        .then(response => {
+            console.log('Excel download response status:', response.status);
+            if (!response.ok) {
+                return response.json().then(errData => {
+                    throw new Error(errData.error || 'Failed to download Excel report');
+                });
+            }
+            return response.blob();
+        })
+        .then(blob => {
+            console.log('Excel download blob received, size:', blob.size);
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.style.display = 'none';
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+            console.log('Excel download completed successfully');
+        })
+        .catch(error => {
+            console.error('Excel download error:', error);
+            showCustomAlert('Error downloading Excel report: ' + error.message);
+        });
+}
 
-});
+
 
 // File input change handler for aerodrome warning observation file
 document.querySelector('.adwrn-obs-file-input').addEventListener('change', function(e) {
