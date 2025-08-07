@@ -770,15 +770,7 @@
                     <button id="adwrn-verifyBtn" type="button" class="bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-10 rounded-md shadow-md transition duration-300 text-lg">Verify Forecast</button>
                 </div>
                 
-                <!-- Download Buttons - Initially hidden -->
-                <div id="adwrn-download-container" class="text-center mt-6" style="display: none;">
-                    <div class="flex flex-col sm:flex-row justify-center gap-3">
-                        <button id="adwrn-download-excel-btn" class="bg-green-300 hover:bg-green-400 text-green-800 font-normal py-2 px-4 rounded-md shadow-sm transition duration-300 text-sm flex items-center justify-center">
-                            <i class="fas fa-file-excel mr-1"></i>
-                            Download Excel Report
-                        </button>
-                    </div>
-                </div>
+
                 
                 <div id="adwrn-final-report-container" class="mt-8" style="display:none;">
                     <div id="adwrn-accuracy" style="display:none; font-size:1.75rem; font-weight:600; color:#000000; margin-bottom:1rem; white-space:pre-line; text-align:center;"></div>
@@ -920,30 +912,11 @@
             <span class="ml-2 text-sm text-gray-600">Processing...</span>
         </div>
         <div id="adwrn-reportSection" style="display: none;">
-            <section class="container mx-auto px-4 max-w-7xl mt-6 mb-8">
-                <h2 id="adwrnReportTitle" class="text-2xl font-bold mb-6 text-gray-800 text-center">VERIFICATION RESULT OF AERODROME WARNING FORECAST</h2>
-                <div class="overflow-x-auto bg-white rounded-lg shadow-md">
-                    <table class="min-w-full" id="adwrn-comparisonTable">
-                        <thead class="bg-gray-100"></thead>
-                        <tbody class="divide-y divide-gray-200"></tbody>
-                    </table>
-                </div>
-            </section>
-            <section class="container mx-auto px-4 max-w-7xl mt-6 mb-8">
-                <h2 class="text-2xl font-bold mb-6 text-gray-800 text-center">Hourly Comparison</h2>
-                <div class="overflow-x-auto bg-white rounded-lg shadow-md">
-                    <table class="min-w-full" id="adwrn-detailedComparisonTable">
-                        <thead class="bg-gray-100"></thead>
-                        <tbody class="divide-y divide-gray-200"></tbody>
-                    </table>
-                </div>
-            </section>
             <section class="container mx-auto px-4 max-w-7xl mb-16">
-                <h2 class="text-2xl font-bold mb-6 text-gray-800 text-center">Download Results</h2>
                 <div class="flex flex-col sm:flex-row justify-center gap-4">
-                    <a href="#" id="adwrn-downloadCsvBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-6 rounded-md shadow transition duration-300 flex items-center justify-center">
-                        <i class="fas fa-file-csv mr-2"></i>
-                        Download Comparison as CSV
+                    <a href="#" id="adwrn-downloadTableBtn" class="bg-green-600 hover:bg-green-700 text-white font-medium py-2.5 px-6 rounded-md shadow transition duration-300 flex items-center justify-center">
+                        <i class="fas fa-file-excel mr-2"></i>
+                        Download Aerodrome Warnings Table
                     </a>
                 </div>
             </section>

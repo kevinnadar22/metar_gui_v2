@@ -7,7 +7,7 @@ import re
 from werkzeug.utils import secure_filename
 from app.utils import decode_metar_to_csv, extract_data_from_file_with_day_and_wind, compare_weather_data, OgimetAPI, extract_day_month_year_from_filename,extract_month_year_from_date,fetch_upper_air_data,circular_difference,process_weather_accuracy_helper,interpolate_temperature_only
 from app.utils.AD_warn import parse_warning_file
-from app.utils.generate_warning_report import generate_warning_report, generate_excel_warning_report
+from app.utils.generate_warning_report import generate_warning_report, generate_excel_warning_report, generate_aerodrome_warnings_table
 from app.utils.extract_metar_features import extract_metar_features
 from app.utils.validation import validate_files
 from app.config import METAR_DATA_DIR, UPPER_AIR_DATA_DIR
@@ -1303,3 +1303,38 @@ def download_adwrn_excel_report():
     except Exception as e:
         print(f"Error downloading aerodrome warning Excel report: {str(e)}")
         return jsonify({"error": f"An error occurred while downloading the Excel report: {str(e)}"}), 500
+
+@api_bp.route('/download/adwrn_table', methods=['GET'])
+def download_adwrn_table():
+    """Download the aerodrome warnings table in the exact format requested"""
+    try:
+        # Define base directory and ensure it exists
+        ad_warn_dir = os.path.join(os.getcwd(), 'ad_warn_data')
+        
+        # Define input and output paths
+        ad_warn_output = os.path.join(ad_warn_dir, 'AD_warn_output.csv')
+        metar_features = os.path.join(ad_warn_dir, 'metar_extracted_features.txt')
+        
+        # Check if required files exist
+        if not os.path.exists(ad_warn_output):
+            return jsonify({"error": "Aerodrome warning output file not found. Please run verification first."}), 404
+            
+        if not os.path.exists(metar_features):
+            return jsonify({"error": "METAR features file not found. Please run verification first."}), 404
+        
+        # Generate the specific table format
+        table_file_path = generate_aerodrome_warnings_table(ad_warn_output, metar_features)
+        
+        if not os.path.exists(table_file_path):
+            return jsonify({"error": "Failed to generate aerodrome warnings table"}), 500
+        
+        print(f"[DEBUG] Sending aerodrome warnings table: {table_file_path}")
+        return send_file(
+            table_file_path,
+            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            as_attachment=True,
+            download_name='Aerodrome_Warnings_Table.xlsx'
+        )
+    except Exception as e:
+        print(f"Error downloading aerodrome warnings table: {str(e)}")
+        return jsonify({"error": f"An error occurred while downloading the table: {str(e)}"}), 500

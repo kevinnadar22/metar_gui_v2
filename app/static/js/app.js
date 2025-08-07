@@ -1612,11 +1612,7 @@ if (adwrnVerifyBtn && adwrnFinalReportContainer && adwrnFinalReportTable && adwr
         // Don't clear thead - let the renderAerodromeWarningTable function handle it
         adwrnFinalReportTable.querySelector('tbody').innerHTML = '';
         
-        // Hide download button initially
-        const downloadContainer = document.getElementById('adwrn-download-container');
-        if (downloadContainer) {
-            downloadContainer.style.display = 'none';
-        }
+
         
         adwrnReportLoadingSection.style.display = 'flex';
         fetch('/api/adwrn_verify', { method: 'POST' })
@@ -1642,16 +1638,19 @@ if (adwrnVerifyBtn && adwrnFinalReportContainer && adwrnFinalReportTable && adwr
                     renderAerodromeWarningTable(data.report, adwrnFinalReportTable, detailedAccuracy);
                     adwrnFinalReportContainer.style.display = 'block';
                     
+                    // Show the report section with download buttons
+                    const adwrnReportSection = document.getElementById('adwrn-reportSection');
+                    if (adwrnReportSection) {
+                        adwrnReportSection.style.display = 'block';
+                    }
+                    
                     // Debug: Check if table headers are visible
                     console.log("Table element:", adwrnFinalReportTable);
                     console.log("Table thead:", adwrnFinalReportTable.querySelector('thead'));
                     console.log("Table headers:", adwrnFinalReportTable.querySelectorAll('th'));
                     console.log("Container display style:", adwrnFinalReportContainer.style.display);
                     
-                    // Show download button after successful verification
-                    if (downloadContainer) {
-                        downloadContainer.style.display = 'block';
-                    }
+
                 } else {
                     console.log('Validation failed:', data); // Debug log
                     // Handle validation errors with more specific messaging
@@ -1686,21 +1685,22 @@ if (adwrnVerifyBtn && adwrnFinalReportContainer && adwrnFinalReportTable && adwr
 
 // Add event listener for the download button
 document.addEventListener('DOMContentLoaded', function() {
-    // Add event listener for the Excel download button
-    const excelDownloadBtn = document.getElementById('adwrn-download-excel-btn');
-    if (excelDownloadBtn) {
-        excelDownloadBtn.addEventListener('click', downloadExcelReport);
+    // Add event listener for the aerodrome warnings table download button
+    const tableDownloadBtn = document.getElementById('adwrn-downloadTableBtn');
+    if (tableDownloadBtn) {
+        tableDownloadBtn.addEventListener('click', downloadAerodromeWarningsTable);
     }
 });
 
-// Function to download Excel report
-function downloadExcelReport() {
-    console.log('Excel download button clicked');
+
+
+// Function to download aerodrome warnings table
+function downloadAerodromeWarningsTable() {
+    console.log('Aerodrome warnings table download button clicked');
     
     const stationInput = document.getElementById('adwrn-station-input');
     const startDateInput = document.querySelector('input[name="start_date"]');
     const endDateInput = document.querySelector('input[name="end_date"]');
-    const accuracyElement = document.getElementById('adwrn-accuracy');
     
     // Get station name
     const stationName = stationInput ? stationInput.value.toUpperCase() : 'UNKNOWN';
@@ -1722,46 +1722,37 @@ function downloadExcelReport() {
         validityPeriod = `${today}_file_upload`;
     }
     
-    // Get accuracy percentage
-    let accuracyPercent = '0';
-    if (accuracyElement && accuracyElement.textContent) {
-        const accuracyMatch = accuracyElement.textContent.match(/(\d+(?:\.\d+)?)%/);
-        if (accuracyMatch) {
-            accuracyPercent = accuracyMatch[1];
-        }
-    }
-    
     // Create filename
-    const filename = `${stationName}_Aerodrome_Warning_${validityPeriod}_${accuracyPercent}%_accuracy.xlsx`;
-    console.log('Attempting to download Excel:', filename);
+    const filename = `${stationName}_Aerodrome_Warnings_Table_${validityPeriod}.xlsx`;
+    console.log('Attempting to download aerodrome warnings table:', filename);
     
     // Show loading state
-    const excelDownloadBtn = document.getElementById('adwrn-download-excel-btn');
-    if (excelDownloadBtn) {
-        const originalText = excelDownloadBtn.innerHTML;
-        excelDownloadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Downloading...';
-        excelDownloadBtn.disabled = true;
+    const tableDownloadBtn = document.getElementById('adwrn-downloadTableBtn');
+    if (tableDownloadBtn) {
+        const originalText = tableDownloadBtn.innerHTML;
+        tableDownloadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Downloading...';
+        tableDownloadBtn.disabled = true;
         
         // Reset button after 3 seconds regardless of outcome
         setTimeout(() => {
-            excelDownloadBtn.innerHTML = originalText;
-            excelDownloadBtn.disabled = false;
+            tableDownloadBtn.innerHTML = originalText;
+            tableDownloadBtn.disabled = false;
         }, 3000);
     }
     
-    // Fetch the Excel data and trigger download
-    fetch('/api/download/adwrn_excel_report')
+    // Fetch the table data and trigger download
+    fetch('/api/download/adwrn_table')
         .then(response => {
-            console.log('Excel download response status:', response.status);
+            console.log('Table download response status:', response.status);
             if (!response.ok) {
                 return response.json().then(errData => {
-                    throw new Error(errData.error || 'Failed to download Excel report');
+                    throw new Error(errData.error || 'Failed to download aerodrome warnings table');
                 });
             }
             return response.blob();
         })
         .then(blob => {
-            console.log('Excel download blob received, size:', blob.size);
+            console.log('Table download blob received, size:', blob.size);
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
@@ -1771,11 +1762,11 @@ function downloadExcelReport() {
             a.click();
             window.URL.revokeObjectURL(url);
             document.body.removeChild(a);
-            console.log('Excel download completed successfully');
+            console.log('Aerodrome warnings table download completed successfully');
         })
         .catch(error => {
-            console.error('Excel download error:', error);
-            showCustomAlert('Error downloading Excel report: ' + error.message);
+            console.error('Table download error:', error);
+            showCustomAlert('Error downloading aerodrome warnings table: ' + error.message);
         });
 }
 

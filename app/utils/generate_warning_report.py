@@ -4,6 +4,7 @@ import os
 from openpyxl import Workbook
 from openpyxl.styles import Font, Alignment, Border, Side, PatternFill
 from openpyxl.utils.dataframe import dataframe_to_rows
+from openpyxl.utils import get_column_letter
 
 def generate_warning_report(ad_warn_output_path, metar_features_path):
     # Read warnings
@@ -389,5 +390,118 @@ def generate_excel_warning_report(ad_warn_output_path, metar_features_path):
     output_path = os.path.join(os.path.dirname(ad_warn_output_path), 'aerodrome_warning_report.xlsx')
     wb.save(output_path)
     print(f'Excel report saved as {output_path}')
+    
+    return output_path 
+
+def generate_aerodrome_warnings_table(ad_warn_output_path, metar_features_path):
+    """
+    Generate Excel file that matches exactly the frontend table format
+    """
+    from openpyxl import Workbook
+    from openpyxl.styles import Alignment, Font, Border, Side
+    from openpyxl.utils import get_column_letter
+    
+    # Read the final warning report to get accurate data
+    final_report_path = os.path.join(os.path.dirname(ad_warn_output_path), 'final_warning_report.csv')
+    
+    if not os.path.exists(final_report_path):
+        # If final report doesn't exist, generate it first
+        generate_warning_report(ad_warn_output_path, metar_features_path)
+    
+    # Read the final warning report
+    final_df = pd.read_csv(final_report_path)
+    
+    # Create workbook and sheet
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Aerodrome Warnings"
+
+    # Define headers exactly as in frontend
+    headers = [
+        "क्र. सं. / Sr.No.",
+        "तत्त्व / Elements", 
+        "विमान क्षेत्र चेतावनियों की सं. / Warning no 1 Warning no 2................ Warning no. (Issue date/Issue Time UTC)",
+        "रेंज के अंतगर्द आने वाले (पारस) मामलों की प्रतिशतता अथवा सही होने की प्रतिशतता / % of cases within range or occurrence (% correct)",
+        "वास्तविक मौसम समयावधि के साथ जिसके लिये चेतावनी जारी नहीं की गयी थी / Actual weather with duration for which no warning was issued"
+    ]
+
+    # Add headers to sheet
+    for col, header in enumerate(headers, 1):
+        cell = ws.cell(row=1, column=col, value=header)
+        cell.font = Font(bold=True)
+        cell.alignment = Alignment(wrap_text=True, vertical="top", horizontal="center")
+
+    # Extract thunderstorm and gust data from the final report
+    thunderstorm_times = []
+    gust_times = []
+    
+    for _, row in final_df.iterrows():
+        elements = str(row.get('Elements (Thunderstorm/Surface wind & Gust)', ''))
+        issue_time = str(row.get('Warning issue Time', ''))
+        accuracy = row.get('true-1 / false-0', 0)
+        
+        if 'Thunderstorm' in elements:
+            thunderstorm_times.append(issue_time)
+        if 'Gust' in elements:
+            gust_times.append(issue_time)
+    
+    # Calculate percentages
+    total_thunderstorm = len(thunderstorm_times)
+    total_gust = len(gust_times)
+    
+    # Count accurate predictions (where true-1 / false-0 = 1)
+    accurate_thunderstorm = len(final_df[
+        (final_df['Elements (Thunderstorm/Surface wind & Gust)'].str.contains('Thunderstorm', na=False)) & 
+        (final_df['true-1 / false-0'] == 1)
+    ])
+    
+    accurate_gust = len(final_df[
+        (final_df['Elements (Thunderstorm/Surface wind & Gust)'].str.contains('Gust', na=False)) & 
+        (final_df['true-1 / false-0'] == 1)
+    ])
+    
+    thunderstorm_percentage = f"{int((accurate_thunderstorm / total_thunderstorm * 100))}%" if total_thunderstorm > 0 else "0%"
+    gust_percentage = f"{int((accurate_gust / total_gust * 100))}%" if total_gust > 0 else "0%"
+    
+    # Format thunderstorm times - all times separated by commas
+    thunderstorm_times_str = ",".join(thunderstorm_times) if thunderstorm_times else "-"
+    gust_times_str = ",".join(gust_times) if gust_times else "-"
+
+    # Add data rows exactly as in frontend
+    data = [
+        ["1.", "उष्णकटिबंधीय चक्रवात / Tropical cyclone", "-", "-", "-"],
+        ["2.", "गर्जन सुनामी / Thunderstorms", thunderstorm_times_str, thunderstorm_percentage, "-"],
+        ["3.", "ओला / Hail", "-", "-", "-"],
+        ["4.", "बर्फ / Snow", "-", "-", "-"],
+        ["5.", "हिमवर्षा / Freezing precipitation", "-", "-", "-"],
+        ["6.", "पाला या शीत / Hoar Frost or rime", "-", "-", "-"],
+        ["7.", "धूल भरी आँधी / Dust storm", "-", "-", "-"],
+        ["8.", "रेतीली आँधी / Sandstorm", "-", "-", "-"],
+        ["9.", "उठती रेत या धूल / Rising sand or dust", "-", "-", "-"],
+        ["10.", "प्रबल सतही पवन तथा झोंके / Strong surface wind and gusts\nगति / Speed", gust_times_str, gust_percentage, "-"],
+        ["", "दिशा परिवर्तन / Direction change", "-", "-", "-"],
+        ["11.", "बवंडर / Squall\nदिशा / Direction\nगति / Speed", "-", "-", "-"],
+        ["12.", "पाला / Frost", "-", "-", "-"],
+        ["13.", "ज्वालामुखीय राख / Volcanic ash", "-", "-", "-"],
+        ["14.", "सुनामी / Tsunami", "-", "-", "-"],
+    ]
+
+    # Add data rows
+    for row_idx, row_data in enumerate(data, 2):
+        for col_idx, value in enumerate(row_data, 1):
+            cell = ws.cell(row=row_idx, column=col_idx, value=value)
+            cell.alignment = Alignment(wrap_text=True, vertical="top")
+
+    # Set column widths
+    ws.column_dimensions['A'].width = 8
+    ws.column_dimensions['B'].width = 35
+    ws.column_dimensions['C'].width = 50
+    ws.column_dimensions['D'].width = 20
+    ws.column_dimensions['E'].width = 40
+
+    # Save Excel file
+    output_path = os.path.join(os.path.dirname(ad_warn_output_path), 'Aerodrome_Warnings_Table.xlsx')
+    wb.save(output_path)
+    print(f'Aerodrome warnings table saved as {output_path}')
     
     return output_path 
