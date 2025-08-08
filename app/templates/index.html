@@ -572,27 +572,34 @@
             </div>
 
             <!-- Detailed Comparison Table -->
-            <div class="overflow-x-auto bg-white rounded-lg shadow-md">
-                <table class="min-w-full" id="verificationTable">
-                    <thead class="bg-gray-100">
-                        <tr>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-800 uppercase tracking-wider">Altitude (m)</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-800 uppercase tracking-wider">Observed Height (m)</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-800 uppercase tracking-wider">Forecast Temp (°C)</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-800 uppercase tracking-wider">Observed Temp (°C)</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-800 uppercase tracking-wider">Temp Diff</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-800 uppercase tracking-wider">Forecast Wind (kt)</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-800 uppercase tracking-wider">Observed Wind (kt)</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-800 uppercase tracking-wider">Wind Diff</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-800 uppercase tracking-wider">Wind Direction (°)</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-800 uppercase tracking-wider">Temp Status</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-800 uppercase tracking-wider">Wind Status</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-gray-200">
-                    </tbody>
-                </table>
-            </div>
+             <div class="overflow-x auto">
+    <table id="verificationTable" class="table-auto w-full border border-collapse text-sm">
+      <thead>
+        <tr>
+          <th rowspan="2" class="border px-2 py-1">Date</th>
+          <th rowspan="2" class="border px-2 py-1">Validity (UTC)</th>
+          <th colspan="4" class="border px-2 py-1">Forecast & Elements Verified</th>
+          <th colspan="3" class="border px-2 py-1">Realised & Elements Verified</th>
+          <th colspan="3" class="border px-2 py-1">Accuracy</th>
+        </tr>
+        <tr>
+          <th class="border px-2 py-1">FL</th>
+          <th class="border px-2 py-1">Wind Dir</th>
+          <th class="border px-2 py-1">Speed</th>
+          <th class="border px-2 py-1">Temp</th>
+          <th class="border px-2 py-1">Wind Dir</th>
+          <th class="border px-2 py-1">Speed (KT)</th>
+          <th class="border px-2 py-1">Temp</th>
+          <th class="border px-2 py-1">Wind Dir</th>
+          <th class="border px-2 py-1">Speed</th>
+          <th class="border px-2 py-1">Temp</th>
+        </tr>
+      </thead>
+      <tbody id="upperAirTableBody">
+        <!-- JS will populate rows -->
+      </tbody>
+    </table>
+  </div>
         </section>
 
         <!-- Download Section -->

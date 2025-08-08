@@ -979,25 +979,78 @@ upperAirVerifyBtn.addEventListener('click', function () {
             document.getElementById('weatherAccuracy').textContent = data.weather_accuracy !== undefined ? `${data.weather_accuracy}%` : '--';
 
             // Fetch and populate the verification table
-            if (data.file_path) {
-                fetch(`/api/download/upper_air_csv?file_path=${encodeURIComponent(data.file_path)}`)
-                    .then(response => {
-                        if (!response.ok) throw new Error('Failed to download verification CSV');
-                        return response.text();
-                    })
-                    .then(csvText => {
-                        populateUpperAirVerificationTable(csvText);
-                    })
-                    .catch(error => {
-                        showCustomAlert('Failed to load verification data. Please try again.');
-                    });
+//             if (data.file_path) {
+//                 fetch(`/api/download/upper_air_csv?file_path=${encodeURIComponent(data.file_path)}`)
+//                     .then(response => {
+//                         if (!response.ok) throw new Error('Failed to download verification CSV');
+//                         return response.text();
+//                     })
+//                     .then(csvText => {
+//                         populateUpperAirVerificationTable(csvText);
+//                     })
+//                     .catch(error => {
+//                         showCustomAlert('Failed to load verification data. Please try again.');
+//                     });
 
-                // Set download button
-                const downloadBtn = document.querySelector('#upperAirReportSection #downloadCsvBtn');
-                if (downloadBtn) {
-                    downloadBtn.href = `/api/download/upper_air_csv?file_path=${encodeURIComponent(data.file_path)}`;
-                }
-            }
+//                 // Set download button
+//                 const downloadBtn = document.querySelector('#upperAirReportSection #downloadCsvBtn');
+// if (downloadBtn && data.file_path.endsWith('.xlsx')) {
+//     downloadBtn.href = `/api/download/upper_air_csv?file_path=${encodeURIComponent(data.file_path)}`;
+//     downloadBtn.textContent = "Download XLSX Report";
+// }
+
+//             }
+
+    const tableBody = document.getElementById('upperAirTableBody');
+    tableBody.innerHTML = ''; // Clear previous data
+
+    data.data.forEach((row, index) => {
+        console.log('Processing row:', row);
+        const rowKey = `${row.date}_${row.validity}`;
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td class="border px-2 py-1">${row.date}</td>
+            <td class="border px-2 py-1">${row.validity}</td>
+            <td class="border px-2 py-1">${row.fl}</td>
+            <td class="border px-2 py-1">${row.forecast_wind_dir}</td>
+            <td class="border px-2 py-1">${row.forecast_speed}</td>
+            <td class="border px-2 py-1">${row.forecast_temp}</td>
+            <td class="border px-2 py-1">${row.actual_wind_dir}</td>
+            <td class="border px-2 py-1">${row.actual_speed}</td>
+            <td class="border px-2 py-1">${row.actual_temp}</td>
+            <td class="border px-2 py-1">${row.wind_dir_acc}</td>
+            <td class="border px-2 py-1">${row.speed_acc}</td>
+            <td class="border px-2 py-1">${row.temp_acc}</td>
+        `;
+        tableBody.appendChild(tr);
+
+         const nextRow = data.data[index + 1];
+    const nextKey = nextRow ? `${nextRow.date}_${nextRow.validity}` : null;
+
+    if (rowKey !== nextKey) {
+        const weatherTr = document.createElement('tr');
+        const forecast = row.weather_forecast || 'N/A';
+        const realised = Array.isArray(row.weather_matched) ? row.weather_matched.join(" / ") : 'None';
+        const accuracy = row.weather_acc || 'N/A';
+        weatherTr.innerHTML = `
+            <td class="border px-2 py-1">${row.date}</td>
+            <td class="border px-2 py-1">${row.validity}</td>
+            <td class="border px-2 py-1 font-bold text-blue-600">Significant Weather</td>
+            <td class="border px-2 py-1" colspan="3">${forecast}</td>
+            <td class="border px-2 py-1" colspan="3">${realised}</td>
+            <td class="border px-2 py-1 font-semibold" colspan="3">${accuracy}</td>
+        `;
+        tableBody.appendChild(weatherTr);
+    }
+    });
+
+    // Set download button
+    const downloadBtn = document.querySelector('#upperAirReportSection #downloadCsvBtn');
+    if (downloadBtn && data.file_path && data.file_path.endsWith('.xlsx')) {
+        downloadBtn.href = `/api/download/upper_air_csv?file_path=${encodeURIComponent(data.file_path)}`;
+        downloadBtn.textContent = "Download XLSX Report";
+        downloadBtn.style.display = 'inline-block';
+    }
         })
         .catch(error => {
             alert('Error processing upper air data: ' + error.message);

@@ -5,7 +5,7 @@ import base64
 from datetime import datetime
 import re
 from werkzeug.utils import secure_filename
-from app.utils import decode_metar_to_csv, extract_data_from_file_with_day_and_wind, compare_weather_data, OgimetAPI, extract_day_month_year_from_filename,extract_month_year_from_date,fetch_upper_air_data,circular_difference,process_weather_accuracy_helper,interpolate_temperature_only
+from app.utils import decode_metar_to_csv, extract_data_from_file_with_day_and_wind, compare_weather_data, OgimetAPI, extract_day_month_year_from_filename,extract_month_year_from_date,fetch_upper_air_data,circular_difference,process_weather_accuracy_helper,interpolate_temperature_only,generate_upper_air_verification_xlsx
 from app.utils.AD_warn import parse_warning_file
 from app.utils.generate_warning_report import generate_warning_report
 from app.utils.extract_metar_features import extract_metar_features
@@ -20,6 +20,7 @@ import requests
 from urllib.parse import quote
 import sys  
 import subprocess
+import math
 
 api_bp = Blueprint('api', __name__, url_prefix='/api')
 
@@ -402,6 +403,7 @@ def parse_forecast_pdf(pdf_path):
     # Example: if the PDF gives "01 Jan 2023 00:00"
         dt = datetime.strptime(startDateTimeRaw, "%Y/%m/%d %H:%M")
         startDateTime = dt.strftime("%Y%m%d%H%M")
+        start_hour = dt.strftime("%H")
     except ValueError:
     # Try another format if needed, or raise error
         raise ValueError(f"Could not parse date/time: '{startDateTimeRaw}'")
@@ -415,9 +417,12 @@ def parse_forecast_pdf(pdf_path):
     # Example: if the PDF gives "01 Jan 2023 00:00"
         dt = datetime.strptime(endDateTimeRaw, "%Y/%m/%d %H:%M")
         endDateTime = dt.strftime("%Y%m%d%H%M")
+        end_hour = dt.strftime("%H")
     except ValueError:
     # Try another format if needed, or raise error
         raise ValueError(f"Could not parse date/time: '{endDateTimeRaw}'")
+    
+    validity_code = f"{start_hour}-{end_hour}"
 
 
     # Extract WEATHER section (from 'WEATHER' to end or next section)
@@ -430,7 +435,7 @@ def parse_forecast_pdf(pdf_path):
     data.sort(reverse=True)
 
     df = pd.DataFrame(data, columns=["Altitude (m)", "Wind Direction", "Wind Speed (kt)", "Temperature (°C)"])
-    return df, weather_text,startDateTime, endDateTime,icao
+    return df, weather_text,startDateTime, endDateTime,icao,validity_code
 
 @api_bp.route('/get_upper_air', methods=['GET'])
 def get_upper_air():
@@ -477,7 +482,7 @@ def process_upper_air():
             forecast_filename = secure_filename(forecast_file.filename)
             forecast_path = os.path.join(UPPER_AIR_DATA_DIR, 'uploads', forecast_filename)
             forecast_file.save(forecast_path)
-            forecast_df,weather,startTime,endTime,icao = parse_forecast_pdf(forecast_path)
+            forecast_df,weather,startTime,endTime,icao,validity_code = parse_forecast_pdf(forecast_path)
             if hasattr(forecast_df, 'columns'):
                 forecast_df.columns = forecast_df.columns.str.strip()
                 forecast_df = forecast_df.applymap(lambda x: x.strip() if isinstance(x, str) else x)
@@ -568,47 +573,87 @@ def process_upper_air():
             wind_dir_accuracy = None
 
 
-
         min_pairs["temp_correct"] = min_pairs["temp_diff"] <= 2
         min_pairs["wind_correct"] = min_pairs["wind_diff"] <= 10
 
         temp_accuracy = round(min_pairs["temp_correct"].mean() * 100, 2)
         wind_accuracy = round(min_pairs["wind_correct"].mean() * 100, 2)
 
+        weather_check_result = validate_forecast_weather_with_metar(forecast_path)
+        weather_accuracy_point = weather_check_result["status"]
+        weather_accuracy_percentage= weather_check_result["match_percentage"]
 
-        result_csv = os.path.join(UPPER_AIR_DOWNLOADS_DIR, f"upper_air_verification_{station_id}.csv")
-        weather_accuracy_point = process_weather_accuracy_helper(weather, startTime, endTime, icao)
+        start_dt = datetime.strptime(startTime, "%Y%m%d%H%M")
+        formatted_start = start_dt.strftime("%d/%m/%Y %H:%M UTC")
+        end_dt = datetime.strptime(endTime, "%Y%m%d%H%M")
+        formatted_end = end_dt.strftime("%d/%m/%Y %H:%M UTC")
 
-        # Create header information with period and station details
-        with open(result_csv, 'w', newline='', encoding='utf-8') as f:
-            f.write(f"REPORT,")
-            f.write(f"{station_id},")
-            f.write(f"{icao},")
-            # Convert startTime and endTime from YYYYMMDDHHMM to human readable format and merge
-            start_dt = datetime.strptime(startTime, "%Y%m%d%H%M")
-            formatted_start = start_dt.strftime("%d/%m/%Y %H:%M UTC")
-            end_dt = datetime.strptime(endTime, "%Y%m%d%H%M")
-            formatted_end = end_dt.strftime("%d/%m/%Y %H:%M UTC")
-            f.write(f"{formatted_start} to {formatted_end},")
-            f.write("\n")  # Empty line separator
-            
-            # Add accuracy details
-            f.write("\n")  # Empty line
-            f.write(f"Temperature Accuracy, Wind Speed Accuracy, Wind Direction Accuracy, Weather Accuracy\n")
-            f.write(f"{temp_accuracy}, {wind_accuracy}, {wind_dir_accuracy}, {weather_accuracy_point}\n")
-            f.write(",\n")  # Empty line before data
-            f.write(",\n")
-            
-        # Append the actual data to the CSV
-        min_pairs.to_csv(result_csv, mode='a', index=False)
+        result_xlsx = os.path.join(UPPER_AIR_DOWNLOADS_DIR, f"upper_air_verification_{station_id}.xlsx")
+
+
+        data_rows = []
+        altitude_to_fl = {
+        3000: "FL 100 (3000 M)",
+        2100: "FL 070 (2100 M)",
+        1500: "FL 050 (1500 M)",
+        900:  "FL 030 (900 M)",
+        600:  "FL 020 (600 M)",
+        300:  "FL 010 (300 M)"
+        }
+        for _, row in min_pairs.iterrows():
+            raw_altitude = row.get("Altitude (m)", None)
+
+            if pd.isnull(raw_altitude) or not isinstance(raw_altitude, (int, float)) or math.isnan(raw_altitude):
+                continue  # Skip rows with invalid or missing altitude
+
+            altitude_m = int(raw_altitude)
+
+            if altitude_m > 3000:
+                continue  # Skip higher altitudes
+            closest_alt = min(altitude_to_fl.keys(), key=lambda x: abs(x - altitude_m))
+            fl_label = altitude_to_fl[closest_alt]
+
+            data_rows.append({
+                "date": formatted_start.split()[0],
+                "validity": validity_code,
+                "fl": fl_label,
+                'weather_forecast': weather_check_result.get("forecast_text", ""),   # string
+                'weather_matched': weather_check_result["matched_keywords"],
+                "forecast_wind_dir": row.get("Wind Direction", ""),
+                "forecast_speed": row.get("Wind Speed (kt)", ""),
+                "forecast_temp": row.get("Temperature (°C)", ""),
+                "actual_wind_dir": row.get("actual_wind_direction", ""),
+                "actual_speed": round(row.get("wind speed_kt_actual", 0), 2),
+                "actual_temp": row.get("interp_temperature_C", ""),
+                "wind_dir_acc": "CORRECT" if row.get("wind_dir_correct") else "INCORRECT",
+                "speed_acc": "CORRECT" if row.get("wind_correct") else "INCORRECT",
+                "temp_acc": "CORRECT" if row.get("temp_correct") else "INCORRECT",
+                "weather_acc": weather_accuracy_point,
+            })
+
+        metadata = {"icao": icao, "month_year": start_dt.strftime("%B %Y")}
+        # Build weather_info dict to pass to Excel writer
+        weather_info = {
+            f"{formatted_start.split()[0]}_{validity_code}": {
+                'weather_forecast': weather_check_result.get("forecast_text", ""),
+                "matched": weather_check_result.get("matched_keywords", []),
+                "accuracy": weather_accuracy_point
+            }
+        }
+
+        generate_upper_air_verification_xlsx(data_rows, metadata, result_xlsx, weather_info=weather_info)
+
 
 
         return jsonify({
-            'file_path': result_csv,
+            'file_path': result_xlsx,
             'temp_accuracy': temp_accuracy,
             'wind_accuracy': wind_accuracy,
             'wind_dir_accuracy': wind_dir_accuracy,
-            'weather_accuracy': weather_accuracy_point,
+            'weather_accuracy': weather_accuracy_percentage,
+            'weather_forecast': weather_check_result.get("forecast_text", ""),   # string
+            'weather_matched': weather_check_result["matched_keywords"],
+            'data': data_rows,
             'metadata': {
                 'station_id': station_id,
                 'icao': icao,
@@ -626,7 +671,62 @@ def download_upper_air_csv():
     file_path = request.args.get('file_path')
     if file_path and os.path.exists(file_path):
         return send_file(file_path, as_attachment=True)
-    return jsonify({'error': 'File not found'}), 404
+    elif file_path.endswith('.xlsx'):
+        return send_file(file_path, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', as_attachment=True)
+
+    return jsonify({'error': 'File not found'}), 400
+
+def validate_forecast_weather_with_metar(forecast_pdf_path):
+    """
+    Validates forecast weather condition against actual METARs for the same time range.
+    """
+    try:
+        forecast_df, forecast_weather, start_time, end_time, icao, _ = parse_forecast_pdf(forecast_pdf_path)
+        print(f"[INFO] Forecast weather: {forecast_weather}")
+        print(f"[INFO] ICAO: {icao}, Time: {start_time} to {end_time}")
+
+        # Fetch METAR using Ogimet
+        api = OgimetAPI()
+        metar_file_path = api.save_metar_to_file(begin=start_time, end=end_time, icao=icao)
+
+        if not os.path.exists(metar_file_path):
+            raise FileNotFoundError(f"METAR file not found: {metar_file_path}")
+
+        with open(metar_file_path, 'r', encoding='utf-8') as f:
+            metar_lines = f.readlines()
+
+        forecast_keywords = re.findall(r'\b[A-Z]{2,}\b', forecast_weather)
+        forecast_keywords = [w.strip() for w in forecast_keywords if w.isalpha()]
+        print(f"[DEBUG] Forecast weather keywords: {forecast_keywords}")
+
+        found_keywords = []
+        for line in metar_lines:
+            for keyword in forecast_keywords:
+                if keyword in line:
+                    found_keywords.append(keyword)
+
+        match_status = "CORRECT" if found_keywords else "INCORRECT"
+        match_percentage = 100 if found_keywords else 0
+
+        return {
+            "status": match_status,
+            "metar_lines": metar_lines,
+            "match_percentage": match_percentage,
+            "matched_keywords": list(set(found_keywords)),
+            "forecast_text": forecast_weather,
+            # "found_keywords": list(set(found_keywords))
+        }
+
+    except Exception as e:
+        print(f"[ERROR] Weather verification failed: {e}")
+        return {
+            "status": "ERROR",
+            "match_percentage": 0,
+            "error": str(e),
+            "metar_lines": [],
+            "matched_keywords": []
+        }
+
 
 
 @api_bp.route('/upload_ad_warning', methods=['POST'])
