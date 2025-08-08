@@ -94,7 +94,129 @@ from openpyxl.styles import Font, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
 import re
 
-def generate_upper_air_verification_xlsx(data_rows, metadata, file_path,weather_info=None):
+# def generate_upper_air_verification_xlsx(data_rows, metadata, file_path,weather_info=None):
+#     wb = Workbook()
+#     ws = wb.active
+#     ws.title = "Upper Air Verification"
+
+#     thin_border = Border(
+#         left=Side(style='thin'), right=Side(style='thin'),
+#         top=Side(style='thin'), bottom=Side(style='thin')
+#     )
+
+#     def is_merged(ws, row, col):
+#         for merged_range in ws.merged_cells.ranges:
+#             if (row >= merged_range.min_row and row <= merged_range.max_row and
+#                 col >= merged_range.min_col and col <= merged_range.max_col):
+#                 return (merged_range.min_row, merged_range.min_col) != (row, col)
+#         return False
+
+#     def write_cell(ws, row, col, value, bold=False, center=True):
+#         if is_merged(ws, row, col):
+#             return  # Skip writing to non-top-left merged cells
+#         cell = ws.cell(row=row, column=col)
+#         cell.value = value
+#         if bold:
+#             cell.font = Font(bold=True)
+#         if center:
+#             cell.alignment = Alignment(horizontal="center", vertical="center")
+#         cell.border = thin_border
+    
+
+#     # Assign header values BEFORE merging
+#     write_cell(ws, 1, 1, "Date", bold=True)
+#     write_cell(ws, 1, 2, "Validity (UTC)", bold=True)
+#     write_cell(ws, 1, 3, "Forecast & Elements verified", bold=True)
+#     write_cell(ws, 1, 7, "Realised & Elements verified", bold=True)
+#     write_cell(ws, 1, 10, "Accuracy", bold=True)
+
+#     # Merge header cells
+#     ws.merge_cells('A1:A2')
+#     ws.merge_cells('B1:B2')
+#     ws.merge_cells('C1:F1')
+#     ws.merge_cells('G1:I1')
+#     ws.merge_cells('J1:L1')
+
+#     # Write bottom row headers (row 2)
+#     headers_bottom = [
+#         "", "", "FL", "Wind Direction", "Speed", "Temp.",
+#         "Wind Direction", "Speed (KT)", "Temp.",
+#         "Wind Dir", "Speed", "Temp"
+#     ]
+#     for col_num, val in enumerate(headers_bottom, start=1):
+#         write_cell(ws, 2, col_num, val, bold=True)
+
+#     current_row = 3
+
+#     last_key = None
+
+
+#     # Write data rows
+#     for idx, row in enumerate(data_rows):
+#         row_key = f"{row.get('date', '')}_{row.get('validity', '')}"
+#         print(f"Checking weather_info for key: {row_key}")
+#         print("Available keys in weather_info:", weather_info.keys())
+
+
+#         values = [
+#             row.get("date", ""),
+#             row.get("validity", ""),
+#             row.get("fl", ""),
+#             row.get("forecast_wind_dir", ""),
+#             row.get("forecast_speed", ""),
+#             row.get("forecast_temp", ""),
+#             row.get("actual_wind_dir", ""),
+#             row.get("actual_speed", ""),
+#             f"{float(row.get('actual_temp', 0)):.2f}",
+#             row.get("wind_dir_acc", ""),
+#             row.get("speed_acc", ""),
+#             row.get("temp_acc", "")
+#         ]
+#         for col_num, val in enumerate(values, start=1):
+#             write_cell(ws, current_row, col_num, val)
+#         current_row += 1
+
+
+#         next_row_key = None
+#         if idx + 1 < len(data_rows):
+#             next_row = data_rows[idx + 1]
+#             next_row_key = f"{next_row.get('date', '')}_{next_row.get('validity', '')}"
+
+#         if row_key != next_row_key:
+#             # Add Significant Weather row
+#             weather_forecast = weather_info.get(row_key, {}).get("weather_forecast", "") if weather_info else ""
+#             weather_realised = " / ".join(weather_info.get(row_key, {}).get("matched", [])) if weather_info else ""
+#             weather_accuracy = weather_info.get(row_key, {}).get("accuracy", "") if weather_info else ""
+#             print(f"weather_forecast: {weather_forecast}")
+#             print(f"weather_realised: {weather_realised}")
+#             print(f"weather_accuracy: {weather_accuracy}")
+
+#             weather_row = [
+#                 row.get("date", ""),
+#                 row.get("validity", ""),
+#                 "Significant Weather",
+#                 "", "", weather_forecast,
+#                 "", "", weather_realised,
+#                 "", "", weather_accuracy
+#             ]
+#             for col_num, val in enumerate(weather_row, start=1):
+#                 write_cell(ws, current_row, col_num, val)
+#             current_row += 1
+
+#     # Auto adjust column widths
+#     for col in ws.columns:
+#         max_length = max(len(str(cell.value or "")) for cell in col)
+#         ws.column_dimensions[get_column_letter(col[0].column)].width = max_length + 2
+
+#     wb.save(file_path)
+#     return file_path
+
+from datetime import datetime
+from openpyxl import Workbook
+from openpyxl.styles import Border, Side, Font, Alignment
+from openpyxl.utils import get_column_letter
+
+def generate_upper_air_verification_xlsx(data_rows, metadata, file_path, weather_info=None):
     wb = Workbook()
     ws = wb.active
     ws.title = "Upper Air Verification"
@@ -113,7 +235,7 @@ def generate_upper_air_verification_xlsx(data_rows, metadata, file_path,weather_
 
     def write_cell(ws, row, col, value, bold=False, center=True):
         if is_merged(ws, row, col):
-            return  # Skip writing to non-top-left merged cells
+            return
         cell = ws.cell(row=row, column=col)
         cell.value = value
         if bold:
@@ -122,40 +244,62 @@ def generate_upper_air_verification_xlsx(data_rows, metadata, file_path,weather_
             cell.alignment = Alignment(horizontal="center", vertical="center")
         cell.border = thin_border
 
-    # Assign header values BEFORE merging
-    write_cell(ws, 1, 1, "Date", bold=True)
-    write_cell(ws, 1, 2, "Validity (UTC)", bold=True)
-    write_cell(ws, 1, 3, "Forecast & Elements verified", bold=True)
-    write_cell(ws, 1, 7, "Realised & Elements verified", bold=True)
-    write_cell(ws, 1, 10, "Accuracy", bold=True)
+    # Push table down by 2 rows for the heading
+    ws.insert_rows(1, amount=2)
+
+    # --- Bilingual Heading ---
+    if data_rows:
+        first_date = data_rows[0].get("date", "")
+        try:
+            dt_obj = datetime.strptime(first_date, "%d/%m/%Y")
+            month_name = dt_obj.strftime("%B")
+            year_val = dt_obj.year
+        except:
+            month_name = "Unknown"
+            year_val = ""
+
+        heading_en = f"Verification of Local / Area Forecasts for the month of {month_name} - {year_val} in r/o AMO Mumbai"
+        heading_hi = f"{month_name},{year_val} के लिए लोकल /एरिया पूर्वानुमान का सत्यापन रिपोर्ट"
+
+        ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=12)
+        ws.cell(row=1, column=1, value=heading_en).font = Font(bold=True)
+        ws.cell(row=1, column=1).alignment = Alignment(horizontal="center", vertical="center")
+
+        ws.merge_cells(start_row=2, start_column=1, end_row=2, end_column=12)
+        ws.cell(row=2, column=1, value=heading_hi).font = Font(bold=True)
+        ws.cell(row=2, column=1).alignment = Alignment(horizontal="center", vertical="center")
+
+    # --- Table Header Row (starts from row 3 now) ---
+    write_cell(ws, 3, 1, "Date", bold=True)
+    write_cell(ws, 3, 2, "Validity (UTC)", bold=True)
+    write_cell(ws, 3, 3, "Forecast & Elements verified", bold=True)
+    write_cell(ws, 3, 7, "Realised & Elements verified", bold=True)
+    write_cell(ws, 3, 10, "Accuracy", bold=True)
 
     # Merge header cells
-    ws.merge_cells('A1:A2')
-    ws.merge_cells('B1:B2')
-    ws.merge_cells('C1:F1')
-    ws.merge_cells('G1:I1')
-    ws.merge_cells('J1:L1')
+    ws.merge_cells('A3:A4')
+    ws.merge_cells('B3:B4')
+    ws.merge_cells('C3:F3')
+    ws.merge_cells('G3:I3')
+    ws.merge_cells('J3:L3')
 
-    # Write bottom row headers (row 2)
+    # Row 4 headers
     headers_bottom = [
         "", "", "FL", "Wind Direction", "Speed", "Temp.",
         "Wind Direction", "Speed (KT)", "Temp.",
         "Wind Dir", "Speed", "Temp"
     ]
     for col_num, val in enumerate(headers_bottom, start=1):
-        write_cell(ws, 2, col_num, val, bold=True)
+        write_cell(ws, 4, col_num, val, bold=True)
 
-    current_row = 3
+    # --- Data Rows start at row 5 ---
+    current_row = 5
 
-    last_key = None
-
-
-    # Write data rows
     for idx, row in enumerate(data_rows):
         row_key = f"{row.get('date', '')}_{row.get('validity', '')}"
         print(f"Checking weather_info for key: {row_key}")
-        print("Available keys in weather_info:", weather_info.keys())
-
+        if weather_info:
+            print("Available keys in weather_info:", weather_info.keys())
 
         values = [
             row.get("date", ""),
@@ -175,20 +319,16 @@ def generate_upper_air_verification_xlsx(data_rows, metadata, file_path,weather_
             write_cell(ws, current_row, col_num, val)
         current_row += 1
 
-
+        # Check next row key
         next_row_key = None
         if idx + 1 < len(data_rows):
             next_row = data_rows[idx + 1]
             next_row_key = f"{next_row.get('date', '')}_{next_row.get('validity', '')}"
 
         if row_key != next_row_key:
-            # Add Significant Weather row
             weather_forecast = weather_info.get(row_key, {}).get("weather_forecast", "") if weather_info else ""
             weather_realised = " / ".join(weather_info.get(row_key, {}).get("matched", [])) if weather_info else ""
             weather_accuracy = weather_info.get(row_key, {}).get("accuracy", "") if weather_info else ""
-            print(f"weather_forecast: {weather_forecast}")
-            print(f"weather_realised: {weather_realised}")
-            print(f"weather_accuracy: {weather_accuracy}")
 
             weather_row = [
                 row.get("date", ""),
@@ -202,13 +342,14 @@ def generate_upper_air_verification_xlsx(data_rows, metadata, file_path,weather_
                 write_cell(ws, current_row, col_num, val)
             current_row += 1
 
-    # Auto adjust column widths
+    # Auto adjust widths
     for col in ws.columns:
         max_length = max(len(str(cell.value or "")) for cell in col)
         ws.column_dimensions[get_column_letter(col[0].column)].width = max_length + 2
 
     wb.save(file_path)
     return file_path
+
 
 
 # from openpyxl import Workbook
