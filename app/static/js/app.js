@@ -1665,11 +1665,7 @@ if (adwrnVerifyBtn && adwrnFinalReportContainer && adwrnFinalReportTable && adwr
         // Don't clear thead - let the renderAerodromeWarningTable function handle it
         adwrnFinalReportTable.querySelector('tbody').innerHTML = '';
         
-        // Hide download button initially
-        const downloadContainer = document.getElementById('adwrn-download-container');
-        if (downloadContainer) {
-            downloadContainer.style.display = 'none';
-        }
+
         
         adwrnReportLoadingSection.style.display = 'flex';
         fetch('/api/adwrn_verify', { method: 'POST' })
@@ -1681,9 +1677,9 @@ if (adwrnVerifyBtn && adwrnFinalReportContainer && adwrnFinalReportTable && adwr
                 console.log('Response data:', data); // Debug log
                 adwrnReportLoadingSection.style.display = 'none';
                 if (data.success) {
-                    // Show accuracy percentage if present
-                    if (data.accuracy) {
-                        adwrnAccuracy.textContent = `Aerodrome Warning Accuracy: ${data.accuracy}%`;
+                    // Show only station information if available (hide accuracy)
+                    if (data.station_info) {
+                        adwrnAccuracy.textContent = data.station_info;
                         adwrnAccuracy.style.display = 'block';
                     } else {
                         adwrnAccuracy.style.display = 'none';
@@ -1695,16 +1691,19 @@ if (adwrnVerifyBtn && adwrnFinalReportContainer && adwrnFinalReportTable && adwr
                     renderAerodromeWarningTable(data.report, adwrnFinalReportTable, detailedAccuracy);
                     adwrnFinalReportContainer.style.display = 'block';
                     
+                    // Show the report section with download buttons
+                    const adwrnReportSection = document.getElementById('adwrn-reportSection');
+                    if (adwrnReportSection) {
+                        adwrnReportSection.style.display = 'block';
+                    }
+                    
                     // Debug: Check if table headers are visible
                     console.log("Table element:", adwrnFinalReportTable);
                     console.log("Table thead:", adwrnFinalReportTable.querySelector('thead'));
                     console.log("Table headers:", adwrnFinalReportTable.querySelectorAll('th'));
                     console.log("Container display style:", adwrnFinalReportContainer.style.display);
                     
-                    // Show download button after successful verification
-                    if (downloadContainer) {
-                        downloadContainer.style.display = 'block';
-                    }
+
                 } else {
                     console.log('Validation failed:', data); // Debug log
                     // Handle validation errors with more specific messaging
@@ -1739,13 +1738,92 @@ if (adwrnVerifyBtn && adwrnFinalReportContainer && adwrnFinalReportTable && adwr
 
 // Add event listener for the download button
 document.addEventListener('DOMContentLoaded', function() {
-    const downloadBtn = document.getElementById('adwrn-download-report-btn');
-    if (downloadBtn) {
-        downloadBtn.addEventListener('click', downloadExcel);
+    // Add event listener for the aerodrome warnings table download button
+    const tableDownloadBtn = document.getElementById('adwrn-downloadTableBtn');
+    if (tableDownloadBtn) {
+        tableDownloadBtn.addEventListener('click', downloadAerodromeWarningsTable);
+    }
+});
+
+
+
+// Function to download aerodrome warnings table
+function downloadAerodromeWarningsTable() {
+    console.log('Aerodrome warnings table download button clicked');
+    
+    const stationInput = document.getElementById('adwrn-station-input');
+    const startDateInput = document.querySelector('input[name="start_date"]');
+    const endDateInput = document.querySelector('input[name="end_date"]');
+    
+    // Get station name
+    const stationName = stationInput ? stationInput.value.toUpperCase() : 'UNKNOWN';
+    
+    // Get validity period - check if user uploaded a file or used date pickers
+    let validityPeriod = 'unknown_period';
+    const datePickerSection = document.querySelector('.date-picker-section');
+    const isDatePickerDisabled = datePickerSection && datePickerSection.classList.contains('opacity-50');
+    
+    if (!isDatePickerDisabled && startDateInput && endDateInput) {
+        const startDate = startDateInput.value;
+        const endDate = endDateInput.value;
+        if (startDate && endDate) {
+            validityPeriod = `${startDate}_to_${endDate}`;
+        }
+    } else {
+        // User uploaded a file, use current date as validity period
+        const today = new Date().toISOString().split('T')[0];
+        validityPeriod = `${today}_file_upload`;
     }
     
+    // Create filename
+    const filename = `${stationName}_Aerodrome_Warnings_Table_${validityPeriod}.xlsx`;
+    console.log('Attempting to download aerodrome warnings table:', filename);
+    
+    // Show loading state
+    const tableDownloadBtn = document.getElementById('adwrn-downloadTableBtn');
+    if (tableDownloadBtn) {
+        const originalText = tableDownloadBtn.innerHTML;
+        tableDownloadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Downloading...';
+        tableDownloadBtn.disabled = true;
+        
+        // Reset button after 3 seconds regardless of outcome
+        setTimeout(() => {
+            tableDownloadBtn.innerHTML = originalText;
+            tableDownloadBtn.disabled = false;
+        }, 3000);
+    }
+    
+    // Fetch the table data and trigger download
+    fetch('/api/download/adwrn_table')
+        .then(response => {
+            console.log('Table download response status:', response.status);
+            if (!response.ok) {
+                return response.json().then(errData => {
+                    throw new Error(errData.error || 'Failed to download aerodrome warnings table');
+                });
+            }
+            return response.blob();
+        })
+        .then(blob => {
+            console.log('Table download blob received, size:', blob.size);
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.style.display = 'none';
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+            console.log('Aerodrome warnings table download completed successfully');
+        })
+        .catch(error => {
+            console.error('Table download error:', error);
+            showCustomAlert('Error downloading aerodrome warnings table: ' + error.message);
+        });
+}
 
-});
+
 
 // File input change handler for aerodrome warning observation file
 document.querySelector('.adwrn-obs-file-input').addEventListener('change', function(e) {
