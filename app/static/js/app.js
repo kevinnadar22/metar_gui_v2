@@ -1048,7 +1048,7 @@ upperAirVerifyBtn.addEventListener('click', function () {
     const downloadBtn = document.querySelector('#upperAirReportSection #downloadCsvBtn');
     if (downloadBtn && data.file_path && data.file_path.endsWith('.xlsx')) {
         downloadBtn.href = `/api/download/upper_air_csv?file_path=${encodeURIComponent(data.file_path)}`;
-        downloadBtn.textContent = "Download XLSX Report";
+        // downloadBtn.textContent = "Download XLSX Report";
         downloadBtn.style.display = 'inline-block';
     }
         })

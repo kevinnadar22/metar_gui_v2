@@ -15,7 +15,7 @@ def get_metar_time_group(metar):
         time_part = match_full.group(2)  # HHMM
         dd = date_part[-2:]
         hhmm = time_part
-        return f"{dd}{hhmm}"
+        return f"{dd}/{hhmm}"
     return None
 
 def extract_metar_features(ad_warn_output_path, metar_file_path, output_path):

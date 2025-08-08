@@ -21,6 +21,7 @@ def parse_warning_file(filepath, station_code="VABB"):
 
             main_line = lines[i]
             main_parts = main_line.split()
+            print(main_parts)
             if len(main_parts) < 2:
                 i += 1
                 continue
@@ -117,7 +118,11 @@ def parse_warning_file(filepath, station_code="VABB"):
 
     df["Validity from"] = df["Validity from"].astype(str).apply(round_down_to_half_hour).apply(fix_2400)
     df["Validity To"] = df["Validity To"].astype(str).apply(round_up_to_next_half_hour).apply(fix_2400)
-    df["Issue date/time"] = df["Issue date/time"].apply(lambda val: val[:-1] if isinstance(val, str) and val.endswith('Z') else val)
+    df["Issue date/time"] = df["Issue date/time"].apply(
+    lambda val: f"{val[:2]}/{val[2:-1]}" if isinstance(val, str) and val.endswith('Z') else (
+        f"{val[:2]}/{val[2:]}" if isinstance(val, str) else val
+    )
+)
     df = df[df["Station"] == station_code].reset_index(drop=True)
     df["Wind dir (deg)"] = pd.to_numeric(df["Wind dir (deg)"], errors="coerce").astype("Int64")
 
