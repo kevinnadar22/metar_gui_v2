@@ -59,13 +59,15 @@ body {
 .input-container {
     display: flex;
     flex-wrap: wrap;
-    gap: 20px;
+    gap: 15px;
     justify-content: center;
 }
 
 .upload-box {
     flex: 1;
-    min-width: 300px;
+    /* max-width: 380px; */
+    
+    min-width: 350px;
     display: flex;
     flex-direction: column;
 }
