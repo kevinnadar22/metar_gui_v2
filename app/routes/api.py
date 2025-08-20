@@ -1240,6 +1240,14 @@ def adwrn_verify():
         
         print(f"[DEBUG] Sending response with detailed accuracy: {response_data['detailed_accuracy']}")
         
+        # After generating the report and extracting station_info, prepend the heading to the CSV file
+        if station_info:
+            with open(report_file, 'r', encoding='utf-8') as f:
+                original_content = f.read()
+            with open(report_file, 'w', encoding='utf-8') as f:
+                f.write(station_info + '\n')
+                f.write(original_content)
+        
         return jsonify(response_data)
     except Exception as e:
         print(f"[ERROR] Error in adwrn_verify: {str(e)}")

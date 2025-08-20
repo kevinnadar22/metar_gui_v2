@@ -409,12 +409,21 @@ def generate_aerodrome_warnings_table(ad_warn_output_path, metar_features_path):
         generate_warning_report(ad_warn_output_path, metar_features_path)
     
     # Read the final warning report
-    final_df = pd.read_csv(final_report_path)
-    
+    with open(final_report_path, 'r', encoding='utf-8') as f:
+        heading = f.readline().strip()
+    final_df = pd.read_csv(final_report_path, skiprows=1)
+
     # Create workbook and sheet
     wb = Workbook()
     ws = wb.active
     ws.title = "Aerodrome Warnings"
+
+    # Add merged, bold heading at the top
+    num_columns = 5  # Number of columns in the table
+    ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=num_columns)
+    heading_cell = ws.cell(row=1, column=1, value=heading)
+    heading_cell.font = Font(bold=True, size=14)
+    heading_cell.alignment = Alignment(horizontal="center", vertical="center")
 
     # Define headers exactly as in frontend
     headers = [
@@ -425,12 +434,13 @@ def generate_aerodrome_warnings_table(ad_warn_output_path, metar_features_path):
         "वास्तविक मौसम समयावधि के साथ जिसके लिये चेतावनी जारी नहीं की गयी थी / Actual weather with duration for which no warning was issued"
     ]
 
-    # Add headers to sheet
+    # Add headers to sheet (now row 2)
     for col, header in enumerate(headers, 1):
-        cell = ws.cell(row=1, column=col, value=header)
+        cell = ws.cell(row=2, column=col, value=header)
         cell.font = Font(bold=True)
         cell.alignment = Alignment(wrap_text=True, vertical="top", horizontal="center")
 
+    # Data rows start from row 3
     # Extract thunderstorm and gust data from the final report
     thunderstorm_times = []
     gust_times = []
@@ -487,7 +497,7 @@ def generate_aerodrome_warnings_table(ad_warn_output_path, metar_features_path):
     ]
 
     # Add data rows
-    for row_idx, row_data in enumerate(data, 2):
+    for row_idx, row_data in enumerate(data, 3):
         for col_idx, value in enumerate(row_data, 1):
             cell = ws.cell(row=row_idx, column=col_idx, value=value)
             cell.alignment = Alignment(wrap_text=True, vertical="top")
