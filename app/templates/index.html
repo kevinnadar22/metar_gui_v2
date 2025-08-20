@@ -42,8 +42,9 @@
         }
         .display {
             display: none;
-            min-height: 75vh;
-            max-height:75vh ;
+            min-height: max-content; /* fit content */
+            padding-bottom: 2vh;     /* add extra space */
+            max-height: 100vh;
         }
         .display.active {
         display: block;
