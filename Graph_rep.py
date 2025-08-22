@@ -2,8 +2,8 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 
-# Load the dataset
-df = pd.read_csv('ad_warn_data/final_warning_report.csv')
+# Load the dataset (skip the title line and use the second line as header)
+df = pd.read_csv('ad_warn_data/final_warning_report.csv', header=1)
 
 # Data Cleaning and Preparation
 # Rename columns for easier access
