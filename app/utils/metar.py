@@ -648,3 +648,45 @@ def compare_weather_data(
     )
 
     return daily_accuracy, merged_df
+
+
+import matplotlib.pyplot as plt
+import io
+import base64
+
+def plot_accuracy_chart(daily_accuracy, metric="Overall"):
+    """
+    Creates a bar chart for accuracy over days.
+    
+    Args:
+        daily_accuracy (pd.DataFrame): DataFrame from compare_weather_data.
+        metric (str): Which metric to plot ("Overall", "Wind Direction", "Wind Speed", "Temperature", "QNH").
+    
+    Returns:
+        str: Base64 encoded PNG image (can be sent to frontend).
+    """
+    df = daily_accuracy.copy()
+
+    # Extract only % number
+    df[metric] = df[metric].str.extract(r'(\d+\.?\d*)').astype(float)
+
+    # Filter out non-date rows (Whole Month, ICAO Requirement)
+    df = df[~df["DAY"].isin(["Whole Month", "ICAO Requirement"])]
+
+    # Plot
+    plt.figure(figsize=(10,5))
+    plt.bar(df["DAY"], df[metric], color="skyblue")
+    plt.xticks(rotation=45)
+    plt.ylim(0, 100)
+    plt.ylabel("Accuracy (%)")
+    plt.xlabel("Day")
+    plt.title(f"{metric} Accuracy per Day")
+
+    # Save to base64
+    buf = io.BytesIO()
+    plt.tight_layout()
+    plt.savefig(buf, format="png")
+    buf.seek(0)
+    img_base64 = base64.b64encode(buf.read()).decode("utf-8")
+    plt.close()
+    return img_base64

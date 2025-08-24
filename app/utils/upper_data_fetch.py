@@ -295,7 +295,29 @@ def generate_upper_air_verification_xlsx(data_rows, metadata, file_path, weather
     # --- Data Rows start at row 5 ---
     current_row = 5
 
-    for idx, row in enumerate(data_rows):
+    altitude_to_fl = {
+    3000: "FL 100 (3000 M)",
+    2100: "FL 070 (2100 M)",
+    1500: "FL 050 (1500 M)",
+    900:  "FL 030 (900 M)",
+    600:  "FL 020 (600 M)",
+    300:  "FL 010 (300 M)"
+    }
+
+    fl_labels = list(altitude_to_fl.values())
+    filtered_rows = [row for row in data_rows if row.get("fl") in fl_labels]
+
+    overall_temp_acc = round(sum(1 for r in data_rows if r.get("temp_acc") == "CORRECT") / len(data_rows) * 100, 2) if data_rows else 0
+    overall_wind_acc = round(sum(1 for r in data_rows if r.get("speed_acc") == "CORRECT") / len(data_rows) * 100, 2) if data_rows else 0
+    overall_wind_dir_acc = round(sum(1 for r in data_rows if r.get("wind_dir_acc") == "CORRECT") / len(data_rows) * 100, 2) if data_rows else 0
+
+# For FL accuracy (only FL levels)
+    fl_temp_acc = round(sum(1 for r in filtered_rows if r.get("temp_acc") == "CORRECT") / len(filtered_rows) * 100, 2) if filtered_rows else None
+    fl_wind_acc = round(sum(1 for r in filtered_rows if r.get("speed_acc") == "CORRECT") / len(filtered_rows) * 100, 2) if filtered_rows else None
+    fl_wind_dir_acc = round(sum(1 for r in filtered_rows if r.get("wind_dir_acc") == "CORRECT") / len(filtered_rows) * 100, 2) if filtered_rows else None
+
+
+    for idx, row in enumerate(filtered_rows):
         row_key = f"{row.get('date', '')}_{row.get('validity', '')}"
         print(f"Checking weather_info for key: {row_key}")
         if weather_info:
@@ -313,11 +335,13 @@ def generate_upper_air_verification_xlsx(data_rows, metadata, file_path, weather
             f"{float(row.get('actual_temp', 0)):.2f}",
             row.get("wind_dir_acc", ""),
             row.get("speed_acc", ""),
-            row.get("temp_acc", "")
+            row.get("temp_acc", ""),
+            # row.get("fl_accuracy_summary", {}),
         ]
         for col_num, val in enumerate(values, start=1):
             write_cell(ws, current_row, col_num, val)
         current_row += 1
+        print(values)
 
         # Check next row key
         next_row_key = None
@@ -325,11 +349,12 @@ def generate_upper_air_verification_xlsx(data_rows, metadata, file_path, weather
             next_row = data_rows[idx + 1]
             next_row_key = f"{next_row.get('date', '')}_{next_row.get('validity', '')}"
 
-        if row_key != next_row_key:
+        if row_key != next_row_key or idx == len(filtered_rows) - 1:
             weather_forecast = weather_info.get(row_key, {}).get("weather_forecast", "") if weather_info else ""
             weather_realised = " / ".join(weather_info.get(row_key, {}).get("matched", [])) if weather_info else ""
             weather_accuracy = weather_info.get(row_key, {}).get("accuracy", "") if weather_info else ""
 
+            print(f"Writing weather row for {row_key}")  # DEBUG
             weather_row = [
                 row.get("date", ""),
                 row.get("validity", ""),
@@ -341,6 +366,49 @@ def generate_upper_air_verification_xlsx(data_rows, metadata, file_path, weather
             for col_num, val in enumerate(weather_row, start=1):
                 write_cell(ws, current_row, col_num, val)
             current_row += 1
+
+    
+    current_row += 1
+  # or filter differently if needed
+
+# Calculate overall accuracies
+    ws.cell(row=current_row, column=1, value=f"Overall Temperature Accuracy: {overall_temp_acc}%")
+    ws.merge_cells(start_row=current_row, start_column=1, end_row=current_row, end_column=12)
+    ws.cell(row=current_row, column=1).font = Font(bold=True)
+    current_row += 1
+
+    ws.cell(row=current_row, column=1, value=f"Overall Wind Speed Accuracy: {overall_wind_acc}%")
+    ws.merge_cells(start_row=current_row, start_column=1, end_row=current_row, end_column=12)
+    ws.cell(row=current_row, column=1).font = Font(bold=True)
+    current_row += 1
+
+    ws.cell(row=current_row, column=1, value=f"Overall Wind Direction Accuracy: {overall_wind_dir_acc}%")
+    ws.merge_cells(start_row=current_row, start_column=1, end_row=current_row, end_column=12)
+    ws.cell(row=current_row, column=1).font = Font(bold=True)
+    current_row += 1
+    
+    ws.cell(row=current_row, column=1, value="Accuracy Summary for FL 010 (300 M) to FL 100 (3000 M)")
+    ws.merge_cells(start_row=current_row, start_column=1, end_row=current_row, end_column=6)
+    ws.cell(row=current_row, column=1).font = Font(bold=True)
+    current_row += 1
+
+# Table header
+    headers = ["FL Range", "Temperature Accuracy (%)", "Wind Speed Accuracy (%)", "Wind Direction Accuracy (%)"]
+    for col_num, header in enumerate(headers, start=1):
+        ws.cell(row=current_row, column=col_num, value=header)
+        ws.cell(row=current_row, column=col_num).font = Font(bold=True)
+    current_row += 1
+
+# Single summary row for all FLs
+    ws.cell(row=current_row, column=1, value="FL 010 (300 M) to FL 100 (3000 M)")
+    ws.cell(row=current_row, column=2, value=fl_temp_acc)
+    ws.cell(row=current_row, column=3, value=fl_wind_acc)
+    ws.cell(row=current_row, column=4, value=fl_wind_dir_acc)
+    # ws.cell(row=current_row, column=5, value=fl_accuracy_summary["Total Levels"])
+    current_row += 1
+
+    # Leave a blank row after FL summary
+    
 
     # Auto adjust widths
     for col in ws.columns:
