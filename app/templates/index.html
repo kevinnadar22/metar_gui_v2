@@ -42,9 +42,9 @@
         }
         .display {
             display: none;
-            min-height: 80vh; /* fit content */
+            min-height: max-content; /* fit content */
             padding-bottom: 2vh;     /* add extra space */
-            /* max-height: 100vh; */
+            max-height: 100vh;
         }
         .display.active {
         display: block;
@@ -85,9 +85,9 @@
         </div>
     </header>
     <nav>
-        <button class="tab-button active text-sm font-semibold" onclick="showDisplay(0)" >Take-Off Forecast</button>
-        <button class="tab-button text-sm font-semibold" onclick="showDisplay(1)" >Local Area forecast </button>
-        <button class="tab-button text-sm font-semibold" onclick="showDisplay(2)" >Aerodrome Warning Verification</button>
+        <button class="tab-button active" onclick="showDisplay(0)" >Take-Off Forecast</button>
+        <button class="tab-button" onclick="showDisplay(1)" >Local Area forecast </button>
+        <button class="tab-button" onclick="showDisplay(2)" >Aerodrome Warning Verification</button>
     </nav>
 
 
@@ -96,7 +96,7 @@
     <h1 class="text-2xl font-bold text-center mt-2 mb-2 text-gray-800">TAKE-OFF Forecast verification</h1>
 
     <!-- Upload Section -->
-    <section class="container  mx-auto px-0 md:max-w-8xl max-w-7xl mt-4 mb-0 pb-0">
+    <section class="container  mx-auto px-4 max-w-7xl mt-6 mb-0 pb-0">
         <div class="pb-0">
 
             
@@ -306,7 +306,7 @@
                            Forecast File Preview
                         </h3>
                         <div
-                            class="preview-content bg-gray-50 border border-gray-200 rounded-md p-4 font-mono text-sm whitespace-pre-wrap overflow-auto shadow-inner hover:shadow-md transition-shadow duration-300 mb-4" style="max-height: 100px;"></div>
+                            class="preview-content bg-gray-50 border border-gray-200 rounded-md p-4 font-mono text-sm whitespace-pre-wrap overflow-auto shadow-inner hover:shadow-md transition-shadow duration-300" style="max-height: 400px;"></div>
                         <div class="loading-indicator hidden flex items-center justify-center py-4">
                             <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
                             <span class="ml-2 text-gray-600">Loading file content...</span>
@@ -336,68 +336,48 @@
         <span class="ml-2 text-sm text-gray-600">Processing...</span>
     </div>
 
-    <!-- <div class="model  absolute top-0 left-0 h-full w-full bg-white/10 backdrop-blur-md border border-white/20 ">
+    <div id="reportSection" style="display: none;">
+        <!-- Monthly Comparison -->
+        <section class="container mx-auto px-4 max-w-7xl mt-6 mb-8">
+            <h2 id="metarReportTitle" class="text-2xl font-bold mb-6 text-gray-800 text-center">VERIFICATION RESULT OF TAKE-OFF 
+                FORECAST</h2>
 
-    </div> -->
-
-    <!-- Modal for Report Display -->
-    <div id="reportModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
-        <div class="bg-white rounded-lg shadow-xl max-w-7xl w-full max-h-[90vh] overflow-y-auto">
-            <!-- Modal Header -->
-            <div class="flex justify-between items-center p-6 border-b border-gray-200">
-                <h2 class="text-xl font-semibold text-gray-800">Verification Report</h2>
-                <button id="closeModalBtn" class="text-gray-400 hover:text-gray-600 text-2xl font-bold">
-                    &times;
-                </button>
+            <div class="overflow-x-auto bg-white rounded-lg shadow-md">
+                <table class="min-w-full" id="comparisonTable">
+                    <thead class="bg-gray-100">
+                    </thead>
+                    <tbody class="divide-y divide-gray-200">
+                    </tbody>
+                </table>
             </div>
-            
-            <!-- Modal Content -->
-            <div class="p-6">
-                <div id="reportSection">
-                    <!-- Monthly Comparison -->
-                    <section class="container mx-auto px-4 max-w-8xl mt-6 mb-8">
-                        <h2 id="metarReportTitle" class="text-2xl font-bold mb-6 text-gray-800 text-center">VERIFICATION RESULT OF TAKE-OFF 
-                            FORECAST</h2>
+        </section>
 
-                        <div class="overflow-x-auto bg-white rounded-lg shadow-md">
-                            <table class="min-w-full" id="comparisonTable">
-                                <thead class="bg-gray-100">
-                                </thead>
-                                <tbody class="divide-y divide-gray-200">
-                                </tbody>
-                            </table>
-                        </div>
-                    </section>
+        <!-- Detailed Comparison -->
+        <section class="container mx-auto px-4 max-w-7xl mt-6 mb-8">
+            <h2 class="text-2xl font-bold mb-6 text-gray-800 text-center">Hourly Comparison</h2>
+            <div class="overflow-x-auto bg-white rounded-lg shadow-md">
 
-                    <!-- Detailed Comparison -->
-                    <section class="container mx-auto px-4 max-w-7xl mt-6 mb-8">
-                        <h2 class="text-2xl font-bold mb-6 text-gray-800 text-center">Hourly Comparison</h2>
-                        <div class="overflow-x-auto bg-white rounded-lg shadow-md">
-
-                            <table class="min-w-full" id="detailedComparisonTable">
-                                <thead class="bg-gray-100">
-                                </thead>
-                                <tbody class="divide-y divide-gray-200">
-                                </tbody>
-                            </table>
-                        </div>
-                    </section>
-
-                    <!-- Download Section -->
-                    <section class="container mx-auto px-4 max-w-7xl mb-16">
-                        <h2 class="text-2xl font-bold mb-6 text-gray-800 text-center">Download Results</h2>
-
-                        <div class="flex flex-col sm:flex-row justify-center gap-4">
-                            <a href="#" id="downloadCsvBtn"
-                                class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-6 rounded-md shadow transition duration-300 flex items-center justify-center">
-                                <i class="fas fa-file-csv mr-2"></i>
-                                Download Comparison as CSV
-                            </a>
-                        </div>
-                    </section>
-                </div>
+                <table class="min-w-full" id="detailedComparisonTable">
+                    <thead class="bg-gray-100">
+                    </thead>
+                    <tbody class="divide-y divide-gray-200">
+                    </tbody>
+                </table>
             </div>
-        </div>
+        </section>
+
+        <!-- Download Section -->
+        <section class="container mx-auto px-4 max-w-7xl mb-16">
+            <h2 class="text-2xl font-bold mb-6 text-gray-800 text-center">Download Results</h2>
+
+            <div class="flex flex-col sm:flex-row justify-center gap-4">
+                <a href="#" id="downloadCsvBtn"
+                    class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-6 rounded-md shadow transition duration-300 flex items-center justify-center">
+                    <i class="fas fa-file-csv mr-2"></i>
+                    Download Comparison as CSV
+                </a>
+            </div>
+        </section>
     </div>
 
     </div>
@@ -408,7 +388,7 @@
 
 <h1 class="text-2xl font-bold text-center mt-2 mb-2 text-gray-800">Local Area Forecast verification</h1>
 <!-- Upper Air Section -->
-<section class="container mx-auto px-0 md:max-w-8xl max-w-7xl mt-6 mb-8">
+<section class="container mx-auto px-4 max-w-7xl mt-6 mb-8">
     <div class="">
 
         
@@ -428,10 +408,10 @@
                 <div class="mt-4">
                     <p class="text-sm text-gray-500 mb-2">Example stations:</p>
                     <div class="flex flex-wrap gap-2">
-                        <button class="upper-air-station-example px-2 py-1 text-xs bg-blue-100 hover:bg-blue-10 rounded-md text-black-700 transition-colors" data-code="43003">43003 (Mumbai)</button>
-                        <button class="upper-air-station-example px-2 py-1 text-xs bg-blue-100 hover:bg-blue-10 rounded-md text-black-700 transition-colors" data-code="43063">43063 (Pune)</button>
-                        <button class="upper-air-station-example px-2 py-1 text-xs bg-blue-100 hover:bg-blue-10 rounded-md text-black-700 transition-colors" data-code="43128">43128 (Hyderabad)</button>
-                        <button class="upper-air-station-example px-2 py-1 text-xs bg-blue-100 hover:bg-blue-10 rounded-md text-black-700 transition-colors" data-code="43279">43279 (Chennai)</button>
+                        <button class="station-example px-2 py-1 text-xs bg-blue-100 hover:bg-blue-10 rounded-md text-black-700 transition-colors" data-code="43003">43003 (Mumbai)</button>
+                        <button class="station-example px-2 py-1 text-xs bg-blue-100 hover:bg-blue-10 rounded-md text-black-700 transition-colors" data-code="43063">43063 (Pune)</button>
+                        <button class="station-example px-2 py-1 text-xs bg-blue-100 hover:bg-blue-10 rounded-md text-black-700 transition-colors" data-code="43128">43128 (Hyderabad)</button>
+                        <button class="station-example px-2 py-1 text-xs bg-blue-100 hover:bg-blue-10 rounded-md text-black-700 transition-colors" data-code="43279">43279 (Chennai)</button>
                         <!-- <button class="upper-air-station-example px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded-md text-gray-700 transition-colors" data-code="43063">43063 (Ahmedabad)</button> -->
                     </div>
                 </div>
@@ -478,9 +458,10 @@
                         <select id="upperAirHourSelect" class="w-60 border border-gray-300 rounded-md p-2.5">
                             <!-- Populated by JS -->
                         </select>
-                        <!-- <button id="upperAirFetchBtn" class="bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded-md shadow transition duration-200">
+                        <button id="upperAirFetchBtn" class="bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded-md shadow transition duration-200">
                             Fetch 
-                        </button> -->
+                            <!-- Data -->
+                        </button>
                     </div>
                     <p class="text-xs text-gray-500 mt-1">Upper air data is typically available at 00:00 and 12:00 UTC</p>
                 </div>
@@ -539,7 +520,7 @@
                 <div class="bg-blue-50 border border-blue-200 rounded-md p-3 mb-4 text-blue-700 text-sm">
                     <p>Upload PDF file containing local area forecast for verification.</p>
                 </div>
-                <div id="upperAirForecastUploadArea" class="upload-area border-2 border-dashed border-gray-300 rounded-lg p-4 text-center h-28 flex flex-col items-center justify-center bg-blue-100 transition-colors duration-200 mb-0">
+                <div id="upperAirForecastUploadArea" class="upload-area border-2 border-dashed border-gray-300 rounded-lg p-4 text-center h-28 flex flex-col items-center justify-center bg-blue-100 transition-colors duration-200 mb-6">
                     <p class="mb-2 text-gray-600">Upload a forecast PDF file</p>
                     <label class="cursor-pointer bg-blue-600 hover:bg-blue-700 text-white font-medium py-1.5 px-4 rounded-md transition duration-300">
                         <i class="fas fa-upload mr-1"></i> 
@@ -559,17 +540,17 @@
                     </div>
                     <h3 class="text-sm font-medium text-gray-700 mb-2 flex items-center">PDF Processing Status</h3>
     
-                    <div class="bg-gray-50 border border-gray-200 rounded-md p-2 text-sm  max-h-[150px] overflow-x-auto shadow-inner hover:shadow-md transition-shadow duration-300">
+                    <div class="bg-gray-50 border border-gray-200 rounded-md p-2 text-sm  max-h-60 overflow-y-auto shadow-inner hover:shadow-md transition-shadow duration-300">
                         <!-- preview-content  || above class name--> 
                         <table  id="windTable" style="display:none;border-collapse: collapse; width: 100%; margin-top: 10px;">
-                            <thead class="text-[10px]" id="thead">
-                            <tr class="text-[10px]" id="tr" >
-                            <th class="text-[10px]" style="border: 1px solid #ccc; background-color: #f4f4f4; padding: 6px; text-align: center;" >Altitude 1</th>
-                            <th class="text-[10px]" style="border: 1px solid #ccc; background-color: #f4f4f4; padding: 6px; text-align: center;">Dir/Speed 1</th>
-                            <th class="text-[10px]" style="border: 1px solid #ccc; background-color: #f4f4f4; padding: 6px; text-align: center;">Temp 1</th>
-                            <th class="text-[10px]" style="border: 1px solid #ccc; background-color: #f4f4f4; padding: 6px; text-align: center;">Altitude 2</th>
-                            <th class="text-[10px]" style="border: 1px solid #ccc; background-color: #f4f4f4; padding: 6px; text-align: center;">Dir/Speed 2</th>
-                            <th class="text-[10px]" style="border: 1px solid #ccc; background-color: #f4f4f4; padding: 6px; text-align: center;">Temp 2</th>
+                            <thead id="thead">
+                            <tr id="tr" >
+                            <th style="border: 1px solid #ccc; background-color: #f4f4f4; padding: 6px; text-align: center;" >Altitude 1</th>
+                            <th style="border: 1px solid #ccc; background-color: #f4f4f4; padding: 6px; text-align: center;">Dir/Speed 1</th>
+                            <th style="border: 1px solid #ccc; background-color: #f4f4f4; padding: 6px; text-align: center;">Temp 1</th>
+                            <th style="border: 1px solid #ccc; background-color: #f4f4f4; padding: 6px; text-align: center;">Altitude 2</th>
+                            <th style="border: 1px solid #ccc; background-color: #f4f4f4; padding: 6px; text-align: center;">Dir/Speed 2</th>
+                            <th style="border: 1px solid #ccc; background-color: #f4f4f4; padding: 6px; text-align: center;">Temp 2</th>
                             </tr>
                             </thead>
                         <tbody ></tbody>
@@ -602,101 +583,86 @@
         <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
         <span class="ml-2 text-sm text-gray-600">Processing verification...</span>
     </div>
-<!-- Modal for Upper Air Report Display -->
-<div id="upperAirReportModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-white rounded-lg shadow-xl max-w-7xl w-full max-h-[90vh] overflow-y-auto">
-        <!-- Modal Header -->
-        <div class="flex justify-between items-center p-6 border-b border-gray-200">
-            <h2 class="text-xl font-semibold text-gray-800">Upper Air Verification Report</h2>
-            <button id="closeUpperAirModalBtn" class="text-gray-400 hover:text-gray-600 text-2xl font-bold">
-                &times;
-            </button>
-        </div>
-        
-        <!-- Modal Content -->
-        <div class="p-6">
-            <div id="upperAirReportSection">
-                <!-- Verification Results -->
-                <section class="container mx-auto px-4 max-w-7xl mt-6 mb-8">
-                    <h2 id="upperAirReportTitle" class="text-2xl font-bold mb-6 text-gray-800 text-center">UPPER AREA FORECAST VERIFICATION RESULTS</h2>
 
-                    <!-- Summary Cards -->
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                        <div class="bg-white rounded-lg shadow-md p-6">
-                            <h3 class="text-lg font-semibold text-gray-800 mb-4">Temperature Forecast Accuracy</h3>
-                            <div class="text-3xl font-bold text-blue-600" id="tempAccuracy">--</div>
-                            <p class="text-sm text-gray-600 mt-2">Percentage of temperature forecasts within ±2°C</p>
-                        </div>
-                        <div class="bg-white rounded-lg shadow-md p-6">
-                            <h3 class="text-lg font-semibold text-gray-800 mb-4">Wind Speed Forecast Accuracy</h3>
-                            <div class="text-3xl font-bold text-green-600" id="windAccuracy">--</div>
-                            <p class="text-sm text-gray-600 mt-2">Percentage of wind speed forecasts within ±10 knots</p>
-                        </div>
-                        <div class="bg-white rounded-lg shadow-md p-6">
-                            <h3 class="text-lg font-semibold text-gray-800 mb-4">Wind Direction Forecast Accuracy</h3>
-                            <div class="text-3xl font-bold text-green-600" id="windDirAccuracy">--</div>
-                            <p class="text-sm text-gray-600 mt-2">Percentage of wind direction forecasts within ±30 degrees</p>
-                        </div>
-                        <div class="bg-white rounded-lg shadow-md p-6">
-                            <h3 class="text-lg font-semibold text-gray-800 mb-4">Weather Forecast Accuracy</h3>
-                            <div class="text-3xl font-bold text-green-600" id="weatherAccuracy">--</div>
-                            <p class="text-sm text-gray-600 mt-2">Weather accuracy is calculated by comparing the forecast weather with the observed weather</p>
-                        </div>
-                    </div>
+    <div id="upperAirReportSection" style="display: none;">
+        <!-- Verification Results -->
+        <section class="container mx-auto px-4 max-w-7xl mt-6 mb-8">
+            <h2 id="upperAirReportTitle" class="text-2xl font-bold mb-6 text-gray-800 text-center">UPPER AREA FORECAST VERIFICATION RESULTS</h2>
 
-                    <!-- Detailed Comparison Table -->
-                    <div class="w-full overflow-x-auto mt-4">
-                        <table id="verificationTable" class="w-full border-collapse border border-gray-300 min-w-[900px] text-sm">
-                            <thead class="bg-gray-100">
-                                <tr>
-                                    <th rowspan="2" class="border px-2 py-1">Date</th>
-                                    <th rowspan="2" class="border px-2 py-1">Validity (UTC)</th>
-                                    <th colspan="4" class="border px-2 py-1">Forecast & Elements Verified</th>
-                                    <th colspan="3" class="border px-2 py-1">Realised & Elements Verified</th>
-                                    <th colspan="3" class="border px-2 py-1">Accuracy</th>
-                                </tr>
-                                <tr>
-                                    <th class="border px-2 py-1">FL</th>
-                                    <th class="border px-2 py-1">Wind Dir</th>
-                                    <th class="border px-2 py-1">Speed</th>
-                                    <th class="border px-2 py-1">Temp</th>
-                                    <th class="border px-2 py-1">Wind Dir</th>
-                                    <th class="border px-2 py-1">Speed (KT)</th>
-                                    <th class="border px-2 py-1">Temp</th>
-                                    <th class="border px-2 py-1">Wind Dir</th>
-                                    <th class="border px-2 py-1">Speed</th>
-                                    <th class="border px-2 py-1">Temp</th>
-                                </tr>
-                            </thead>
-                            <tbody id="upperAirTableBody">
-                                <!-- JS will populate rows -->
-                            </tbody>
-                        </table>
-                    </div>
-                </section>
-
-                <!-- Download Section -->
-                <section class="container mx-auto px-4 max-w-7xl mb-16">
-                    <h2 class="text-2xl font-bold mb-6 text-gray-800 text-center">Download Results</h2>
-
-                    <div class="flex flex-col sm:flex-row justify-center gap-4">
-                        <a href="#" id="downloadUpperAirCsvBtn"
-                            class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-6 rounded-md shadow transition duration-300 flex items-center justify-center">
-                            <i class="fas fa-file-csv mr-2"></i>
-                            Download Upper Air Verification Results
-                        </a>
-                    </div>
-                </section>
+            <!-- Summary Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4">Temperature Forecast Accuracy</h3>
+                    <div class="text-3xl font-bold text-blue-600" id="tempAccuracy">--</div>
+                    <p class="text-sm text-gray-600 mt-2">Percentage of temperature forecasts within ±2°C</p>
+                </div>
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4">Wind Speed Forecast Accuracy</h3>
+                    <div class="text-3xl font-bold text-green-600" id="windAccuracy">--</div>
+                    <p class="text-sm text-gray-600 mt-2">Percentage of wind speed forecasts within ±10 knots</p>
+                </div>
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4">Wind Direction Forecast Accuracy</h3>
+                    <div class="text-3xl font-bold text-green-600" id="windDirAccuracy">--</div>
+                    <p class="text-sm text-gray-600 mt-2">Percentage of wind direction forecasts within ±30 degrees</p>
+                </div>
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4">Weather Forecast Accuracy</h3>
+                    <div class="text-3xl font-bold text-green-600" id="weatherAccuracy">--</div>
+                    <p class="text-sm text-gray-600 mt-2">Weather accuracy is calculated by comparing the forecast weather with the observed weather</p>
+                </div>
             </div>
-        </div>
+
+            <!-- Detailed Comparison Table -->
+    <div class="w-full overflow-x-auto mt-4">
+    <table id="verificationTable" class="w-full border-collapse border border-gray-300 min-w-[900px] text-sm">
+      <thead class="bg-gray-100">
+        <tr>
+          <th rowspan="2" class="border px-2 py-1">Date</th>
+          <th rowspan="2" class="border px-2 py-1">Validity (UTC)</th>
+          <th colspan="4" class="border px-2 py-1">Forecast & Elements Verified</th>
+          <th colspan="3" class="border px-2 py-1">Realised & Elements Verified</th>
+          <th colspan="3" class="border px-2 py-1">Accuracy</th>
+        </tr>
+        <tr>
+          <th class="border px-2 py-1">FL</th>
+          <th class="border px-2 py-1">Wind Dir</th>
+          <th class="border px-2 py-1">Speed</th>
+          <th class="border px-2 py-1">Temp</th>
+          <th class="border px-2 py-1">Wind Dir</th>
+          <th class="border px-2 py-1">Speed (KT)</th>
+          <th class="border px-2 py-1">Temp</th>
+          <th class="border px-2 py-1">Wind Dir</th>
+          <th class="border px-2 py-1">Speed</th>
+          <th class="border px-2 py-1">Temp</th>
+        </tr>
+      </thead>
+      <tbody id="upperAirTableBody">
+        <!-- JS will populate rows -->
+      </tbody>
+    </table>
+  </div>
+        </section>
+
+        <!-- Download Section -->
+        <section class="container mx-auto px-4 max-w-7xl mb-16">
+            <h2 class="text-2xl font-bold mb-6 text-gray-800 text-center">Download Results</h2>
+
+            <div class="flex flex-col sm:flex-row justify-center gap-4">
+                <a href="#" id="downloadCsvBtn"
+                    class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-6 rounded-md shadow transition duration-300 flex items-center justify-center">
+                    <i class="fas fa-file-csv mr-2"></i>
+                    Download Upper Air Verification Results
+                </a>
+            </div>
+        </section>
     </div>
-</div>
     </div>
 
     <!-- BEGIN: Aerodrome Warning Verification Tab -->
     <div class="display">
         <h1 class="text-2xl font-bold text-center mt-2 mb-2 text-gray-800">AERODROME WARNING Verification</h1>
-        <section class="container mx-auto px-0 md:max-w-8xl max-w-7xl mt-6 mb-8">
+        <section class="container mx-auto px-4 max-w-7xl mt-6 mb-8">
             <form id="adwrn-form" method="POST" enctype="multipart/form-data">
             <div class="">
                 
@@ -768,9 +734,9 @@
                             </div>
                             <!-- Fetch Button below date/time -->
                             <div class="text-center mt-4">
-                                <!-- <button id="adwrn-fetch-btn" type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-10 rounded-md shadow-md transition duration-200">
+                                <button id="adwrn-fetch-btn" type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-10 rounded-md shadow-md transition duration-200">
                                   Fetch
-                                </button> -->
+                                </button>
                                 <div id="fetch-loading-indicator" class="hidden mt-4 flex items-center justify-center">
                                     <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
                                     <span class="ml-2 text-sm text-gray-600">Fetching data...</span>
@@ -857,165 +823,140 @@
                     <button id="adwrn-verifyBtn" type="button" class="bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-10 rounded-md shadow-md transition duration-300 text-lg">Verify Forecast</button>
                 </div>
                 
-<!-- Modal for Aerodrome Warning Report Display -->
-<div id="adwrnReportModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-white rounded-lg shadow-xl max-w-7xl w-full max-h-[90vh] overflow-y-auto">
-        <!-- Modal Header -->
-        <div class="flex justify-between items-center p-6 border-b border-gray-200">
-            <h2 class="text-xl font-semibold text-gray-800">Aerodrome Warning Verification Report</h2>
-            <button id="closeAdwrnModalBtn" class="text-gray-400 hover:text-gray-600 text-2xl font-bold">
-                &times;
-            </button>
-        </div>
-        
-        <!-- Modal Content -->
-        <div class="p-6">
-            <div id="adwrn-final-report-container">
-                <div id="adwrn-accuracy" style="display:none; font-size:1.75rem; font-weight:600; color:#000000; margin-bottom:1rem; white-space:pre-line; text-align:center;"></div>
-                
-                <style>
-                    .warning-table {
-                      width: 100%;
-                      border-collapse: collapse;
-                      margin-top: 30px;
-                      font-size: 12px;
-                      table-layout: fixed;
-                    }
-                  
-                    .warning-table th, .warning-table td {
-                      border: 1px solid #999;
-                      padding: 4px 6px;
-                      vertical-align: top;
-                      word-break: break-word;
-                      overflow-wrap: break-word;
-                    }
-                  
-                    .warning-table th {
-                      background-color: #f2f2f2;
-                      text-align: center;
-                      font-weight: bold;
-                      font-size: 11px;
-                      color: #000;
-                      border: 1px solid #999;
-                      padding: 4px 6px;
-                      position: relative;
-                      z-index: 10;
-                    }
-                  
-                    .warning-table td {
-                      text-align: center;
-                      font-size: 11px;
-                    }
-                  
-                    .heading {
-                      font-size: 18px;
-                      margin-top: 40px;
-                      font-weight: bold;
-                      text-align: center;
-                    }
-                    
-                    /* Responsive design for smaller screens */
-                    @media (max-width: 768px) {
-                      .warning-table {
-                        font-size: 10px;
-                      }
-                      .warning-table th, .warning-table td {
-                        padding: 2px 4px;
-                        font-size: 9px;
-                      }
-                      .warning-table th {
-                        font-size: 9px;
-                      }
-                      .heading {
-                        font-size: 16px;
-                      }
-                    }
-                    
-                    /* Container for horizontal scrolling on very small screens */
-                    .table-container {
-                      overflow-x: auto;
-                      max-width: 100%;
-                      margin: 0 auto;
-                    }
-                    
-                    /* Column widths for better fit */
-                    .warning-table th:nth-child(1), .warning-table td:nth-child(1) {
-                      width: 8%;
-                    }
-                    .warning-table th:nth-child(2), .warning-table td:nth-child(2) {
-                      width: 25%;
-                    }
-                    .warning-table th:nth-child(3), .warning-table td:nth-child(3) {
-                      width: 35%;
-                    }
-                    .warning-table th:nth-child(4), .warning-table td:nth-child(4) {
-                      width: 12%;
-                    }
-                    .warning-table th:nth-child(5), .warning-table td:nth-child(5) {
-                      width: 20%;
-                    }
-                    
-                    /* Handle very long warning lists */
-                    .warning-table td:nth-child(3) {
-                      max-width: 0;
-                      overflow: hidden;
-                      text-overflow: ellipsis;
-                    }
-                    
-                    /* Show full content on hover for long warning lists */
-                    .warning-table td:nth-child(3):hover {
-                      overflow: visible;
-                      white-space: normal;
-                      word-break: break-all;
-                      position: relative;
-                      z-index: 10;
-                      background: white;
-                      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-                    }
-                </style>
-                
 
                 
-                <div class="table-container">
-                    <table class="warning-table" id="adwrn-final-report-table">
-                        <thead>
-                            <tr>
-                              <th>क्र. सं. /<br>Sr.No.</th>
-                              <th>तत्त्व /<br>Elements</th>
-                              <th>
-                                विमान क्षेत्र चेतावनियों की सं. /<br>
-                                Warning no 1 Warning no 2................ Warning no.<br>
-                                (Issue date/Issue Time UTC)
-                              </th>
-                              <th>
-                                रेंज के अंतगर्द आने वाले (पारस) मामलों की प्रतिशतता अथवा सही होने की प्रतिशतता /<br>
-                                % of cases within range or occurrence<br>
-                                (% correct)
-                              </th>
-                              <th>
-                                वास्तविक मौसम समयावधि के साथ जिसके लिये चेतावनी जारी नहीं की गयी थी /<br>
-                                Actual weather with duration for which no warning was issued
-                              </th>
-                            </tr>
-                          </thead>
-                          <tbody></tbody>
-                    </table>
-                </div>
+                <div id="adwrn-final-report-container" class="mt-8" style="display:none;">
+                    <div id="adwrn-accuracy" style="display:none; font-size:1.75rem; font-weight:600; color:#000000; margin-bottom:1rem; white-space:pre-line; text-align:center;"></div>
+                    
+                    <style>
+                        .warning-table {
+                          width: 100%;
+                          border-collapse: collapse;
+                          margin-top: 30px;
+                          font-size: 12px;
+                          table-layout: fixed;
+                        }
+                      
+                        .warning-table th, .warning-table td {
+                          border: 1px solid #999;
+                          padding: 4px 6px;
+                          vertical-align: top;
+                          word-break: break-word;
+                          overflow-wrap: break-word;
+                        }
+                      
+                        .warning-table th {
+                          background-color: #f2f2f2;
+                          text-align: center;
+                          font-weight: bold;
+                          font-size: 11px;
+                          color: #000;
+                          border: 1px solid #999;
+                          padding: 4px 6px;
+                          position: relative;
+                          z-index: 10;
+                        }
+                      
+                        .warning-table td {
+                          text-align: center;
+                          font-size: 11px;
+                        }
+                      
+                        .heading {
+                          font-size: 18px;
+                          margin-top: 40px;
+                          font-weight: bold;
+                          text-align: center;
+                        }
+                        
+                        /* Responsive design for smaller screens */
+                        @media (max-width: 768px) {
+                          .warning-table {
+                            font-size: 10px;
+                          }
+                          .warning-table th, .warning-table td {
+                            padding: 2px 4px;
+                            font-size: 9px;
+                          }
+                          .warning-table th {
+                            font-size: 9px;
+                          }
+                          .heading {
+                            font-size: 16px;
+                          }
+                        }
+                        
+                        /* Container for horizontal scrolling on very small screens */
+                        .table-container {
+                          overflow-x: auto;
+                          max-width: 100%;
+                          margin: 0 auto;
+                        }
+                        
+                        /* Column widths for better fit */
+                        .warning-table th:nth-child(1), .warning-table td:nth-child(1) {
+                          width: 8%;
+                        }
+                        .warning-table th:nth-child(2), .warning-table td:nth-child(2) {
+                          width: 25%;
+                        }
+                        .warning-table th:nth-child(3), .warning-table td:nth-child(3) {
+                          width: 35%;
+                        }
+                        .warning-table th:nth-child(4), .warning-table td:nth-child(4) {
+                          width: 12%;
+                        }
+                        .warning-table th:nth-child(5), .warning-table td:nth-child(5) {
+                          width: 20%;
+                        }
+                        
+                        /* Handle very long warning lists */
+                        .warning-table td:nth-child(3) {
+                          max-width: 0;
+                          overflow: hidden;
+                          text-overflow: ellipsis;
+                        }
+                        
+                        /* Show full content on hover for long warning lists */
+                        .warning-table td:nth-child(3):hover {
+                          overflow: visible;
+                          white-space: normal;
+                          word-break: break-all;
+                          position: relative;
+                          z-index: 10;
+                          background: white;
+                          box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+                        }
+                    </style>
+                    
 
-                <!-- Download Section -->
-                <section class="container mx-auto px-4 max-w-7xl mb-16 mt-8">
-                    <h2 class="text-2xl font-bold mb-6 text-gray-800 text-center">Download Results</h2>
-                    <div class="flex flex-col sm:flex-row justify-center gap-4">
-                        <a href="#" id="adwrn-downloadTableBtn" class="bg-green-600 hover:bg-green-700 text-white font-medium py-2.5 px-6 rounded-md shadow transition duration-300 flex items-center justify-center">
-                            <i class="fas fa-file-excel mr-2"></i>
-                            Download Aerodrome Warnings Table
-                        </a>
+                    
+                    <div class="table-container">
+                        <table class="warning-table" id="adwrn-final-report-table">
+                            <thead>
+                                <tr>
+                                  <th>क्र. सं. /<br>Sr.No.</th>
+                                  <th>तत्त्व /<br>Elements</th>
+                                  <th>
+                                    विमान क्षेत्र चेतावनियों की सं. /<br>
+                                    Warning no 1 Warning no 2................ Warning no.<br>
+                                    (Issue date/Issue Time UTC)
+                                  </th>
+                                  <th>
+                                    रेंज के अंतगर्द आने वाले (पारस) मामलों की प्रतिशतता अथवा सही होने की प्रतिशतता /<br>
+                                    % of cases within range or occurrence<br>
+                                    (% correct)
+                                  </th>
+                                  <th>
+                                    वास्तविक मौसम समयावधि के साथ जिसके लिये चेतावनी जारी नहीं की गयी थी /<br>
+                                    Actual weather with duration for which no warning was issued
+                                  </th>
+                                </tr>
+                              </thead>
+                              <tbody></tbody>
+                        </table>
                     </div>
-                </section>
-            </div>
-        </div>
-    </div>
-</div>
+                </div>
             </div>
             <div id="adwrn-message" class="text-center mt-4"></div>
         </section>
@@ -1023,12 +964,21 @@
             <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
             <span class="ml-2 text-sm text-gray-600">Processing...</span>
         </div>
-
+        <div id="adwrn-reportSection" style="display: none;">
+            <section class="container mx-auto px-4 max-w-7xl mb-16">
+                <div class="flex flex-col sm:flex-row justify-center gap-4">
+                    <a href="#" id="adwrn-downloadTableBtn" class="bg-green-600 hover:bg-green-700 text-white font-medium py-2.5 px-6 rounded-md shadow transition duration-300 flex items-center justify-center">
+                        <i class="fas fa-file-excel mr-2"></i>
+                        Download Aerodrome Warnings Table
+                    </a>
+                </div>
+            </section>
+        </div>
     </div>
     <!-- END: Aerodrome Warning Verification Tab -->
 
     <!-- Footer -->
-    <footer class="bg-gray-800 text-gray-300 py-4">
+    <footer class="bg-gray-800 text-gray-300 py-6">
         <div class="container mx-auto px-4 max-w-7xl text-center">
             <p>© 2025 Forecast verification Dashboard. All rights reserved.</p>
         </div>
