@@ -206,3 +206,58 @@ body {
 .upload-area {
     margin-bottom: 15px !important; /* Force consistent margin */
 }
+
+/* Popup Modal Styles */
+#reportPopup {
+    backdrop-filter: blur(5px);
+    transition: opacity 0.3s ease-in-out;
+}
+
+#reportPopup.hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
+#reportPopup.flex {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+#reportPopup > div {
+    animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+    from {
+        transform: scale(0.9) translateY(-20px);
+        opacity: 0;
+    }
+    to {
+        transform: scale(1) translateY(0);
+        opacity: 1;
+    }
+}
+
+/* Ensure popup content is scrollable */
+#reportPopup .overflow-y-auto {
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e0 #f7fafc;
+}
+
+#reportPopup .overflow-y-auto::-webkit-scrollbar {
+    width: 8px;
+}
+
+#reportPopup .overflow-y-auto::-webkit-scrollbar-track {
+    background: #f7fafc;
+    border-radius: 4px;
+}
+
+#reportPopup .overflow-y-auto::-webkit-scrollbar-thumb {
+    background: #cbd5e0;
+    border-radius: 4px;
+}
+
+#reportPopup .overflow-y-auto::-webkit-scrollbar-thumb:hover {
+    background: #a0aec0;
+}

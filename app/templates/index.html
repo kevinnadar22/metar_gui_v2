@@ -44,7 +44,7 @@
             display: none;
             min-height: max-content; /* fit content */
             padding-bottom: 2vh;     /* add extra space */
-            max-height: 100vh;
+            min-height: 80vh;
         }
         .display.active {
         display: block;
@@ -96,7 +96,7 @@
     <h1 class="text-2xl font-bold text-center mt-2 mb-2 text-gray-800">TAKE-OFF Forecast verification</h1>
 
     <!-- Upload Section -->
-    <section class="container  mx-auto px-4 max-w-7xl mt-6 mb-0 pb-0">
+    <section class="container  mx-auto px-4 max-w-8xl mt-6 mb-0 pb-0">
         <div class="pb-0">
 
             
@@ -231,7 +231,7 @@
                                 File Preview
                             </h3>
                             <div
-                                class="preview-content bg-gray-50 border border-gray-200 rounded-md p-4 font-mono text-sm whitespace-pre-wrap max-h-60 overflow-y-auto shadow-inner hover:shadow-md transition-shadow duration-300">
+                                class="preview-content bg-gray-50 border border-gray-200 rounded-md p-4 font-mono text-sm whitespace-pre-wrap max-h-[200px] overflow-y-auto shadow-inner hover:shadow-md transition-shadow duration-300">
                             </div>
                             <div class="loading-indicator hidden flex items-center justify-center py-4">
                                 <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -247,7 +247,7 @@
                         <div class="metar-preview mt-6 hidden">
                             <h3 class="text-sm font-medium text-gray-700 mb-2">METAR Data Preview</h3>
                             <div
-                                class="preview-content bg-gray-50 border border-gray-200 rounded-md p-4 font-mono text-sm whitespace-pre-wrap max-h-60 overflow-y-auto">
+                                class="preview-content bg-gray-50 border border-gray-200 rounded-md p-4 font-mono text-sm whitespace-pre-wrap max-h-[200px] overflow-y-auto">
                             </div>
                             <div class="loading-indicator hidden flex items-center justify-center py-4">
                                 <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -259,7 +259,7 @@
                     <!-- Reset Button - Below date picker with normal color -->
                     <div class="reset-button-container text-center">
                         <button
-                            class="toggle-input-btn bg-blue-500 hover:bg-blue-600 text-white font-medium py-2.5 px-8 rounded-md shadow-md transition duration-200"
+                            class="toggle-input-btn bg-blue-500 mb-6 hover:bg-blue-600 text-white font-medium py-2.5 px-8 rounded-md shadow-md transition duration-200"
                             id="toggleInputBtn" style="display: none;">
                             <span class="toggle-to-default">Reset</span>
                         </button>
@@ -306,7 +306,7 @@
                            Forecast File Preview
                         </h3>
                         <div
-                            class="preview-content bg-gray-50 border border-gray-200 rounded-md p-4 font-mono text-sm whitespace-pre-wrap overflow-auto shadow-inner hover:shadow-md transition-shadow duration-300" style="max-height: 400px;"></div>
+                            class="preview-content bg-gray-50 border border-gray-200 rounded-md p-4 font-mono text-sm whitespace-pre-wrap overflow-auto shadow-inner hover:shadow-md transition-shadow duration-300" style="max-height: 150px;"></div>
                         <div class="loading-indicator hidden flex items-center justify-center py-4">
                             <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
                             <span class="ml-2 text-gray-600">Loading file content...</span>
@@ -327,6 +327,7 @@
                     class="bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-10 rounded-md shadow-md transition duration-300 text-lg">
                     Verify Forecast
                 </button>
+                
             </div>
     </section>
 
@@ -336,50 +337,69 @@
         <span class="ml-2 text-sm text-gray-600">Processing...</span>
     </div>
 
-    <div id="reportSection" style="display: none;">
-        <!-- Monthly Comparison -->
-        <section class="container mx-auto px-4 max-w-7xl mt-6 mb-8">
-            <h2 id="metarReportTitle" class="text-2xl font-bold mb-6 text-gray-800 text-center">VERIFICATION RESULT OF TAKE-OFF 
-                FORECAST</h2>
-
-            <div class="overflow-x-auto bg-white rounded-lg shadow-md">
-                <table class="min-w-full" id="comparisonTable">
-                    <thead class="bg-gray-100">
-                    </thead>
-                    <tbody class="divide-y divide-gray-200">
-                    </tbody>
-                </table>
+    <!-- Report Popup Modal -->
+    <div id="reportPopup" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center">
+        <div class="bg-white rounded-lg shadow-xl w-[90%] h-[90%] flex flex-col">
+            <!-- Popup Header -->
+            <div class="flex justify-between items-center p-6 border-b border-gray-200">
+                <h2 class="text-xl font-bold text-gray-800">Verification Report</h2>
+                <button id="closeReportPopup" class="text-gray-500 hover:text-gray-700 text-2xl font-bold">
+                    <i class="fas fa-times"></i>
+                </button>
             </div>
-        </section>
+            
+            <!-- Popup Content -->
+            <div class="flex-1 overflow-y-auto p-6">
+                <div id="reportSection" style="display: none;">
+                    <!-- Monthly Comparison -->
+                    <section class="container mx-auto px-4 max-w-7xl mt-6 mb-8">
+                        <h2 id="metarReportTitle" class="text-2xl font-bold mb-6 text-gray-800 text-center">VERIFICATION RESULT OF TAKE-OFF 
+                            FORECAST</h2>
 
-        <!-- Detailed Comparison -->
-        <section class="container mx-auto px-4 max-w-7xl mt-6 mb-8">
-            <h2 class="text-2xl font-bold mb-6 text-gray-800 text-center">Hourly Comparison</h2>
-            <div class="overflow-x-auto bg-white rounded-lg shadow-md">
+                        <div class="overflow-x-auto bg-white rounded-lg shadow-md">
+                            <table class="min-w-full" id="comparisonTable">
+                                <thead class="bg-gray-100">
+                                </thead>
+                                <tbody class="divide-y divide-gray-200">
+                                </tbody>
+                            </table>
+                        </div>
+                    </section>
 
-                <table class="min-w-full" id="detailedComparisonTable">
-                    <thead class="bg-gray-100">
-                    </thead>
-                    <tbody class="divide-y divide-gray-200">
-                    </tbody>
-                </table>
+                    <!-- Detailed Comparison -->
+                    <section class="container mx-auto px-4 hidden max-w-7xl mt-6 mb-8">
+                        <h2 class="text-2xl font-bold mb-6 text-gray-800 text-center">Hourly Comparison</h2>
+                        <div class="overflow-x-auto bg-white rounded-lg shadow-md">
+
+                            <table class="min-w-full" id="detailedComparisonTable">
+                                <thead class="bg-gray-100">
+                                </thead>
+                                <tbody class="divide-y divide-gray-200">
+                                </tbody>
+                            </table>
+                        </div>
+                    </section>
+
+                    <!-- Download Section -->
+                    <section class="container mx-auto px-4 max-w-7xl mb-16">
+                        <h2 class="text-2xl font-bold mb-6 text-gray-800 text-center">Download Results</h2>
+
+                        <div class="flex flex-col sm:flex-row justify-center gap-4">
+                            <a href="#" id="downloadCsvBtn"
+                                class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-6 rounded-md shadow transition duration-300 flex items-center justify-center">
+                                <i class="fas fa-file-csv mr-2"></i>
+                                Download Comparison as CSV
+                            </a>
+                        </div>
+                    </section>
+                </div>
             </div>
-        </section>
-
-        <!-- Download Section -->
-        <section class="container mx-auto px-4 max-w-7xl mb-16">
-            <h2 class="text-2xl font-bold mb-6 text-gray-800 text-center">Download Results</h2>
-
-            <div class="flex flex-col sm:flex-row justify-center gap-4">
-                <a href="#" id="downloadCsvBtn"
-                    class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-6 rounded-md shadow transition duration-300 flex items-center justify-center">
-                    <i class="fas fa-file-csv mr-2"></i>
-                    Download Comparison as CSV
-                </a>
-            </div>
-        </section>
+        </div>
     </div>
 
+
+
+    
     </div>
 
     <div class="display ">
@@ -388,7 +408,7 @@
 
 <h1 class="text-2xl font-bold text-center mt-2 mb-2 text-gray-800">Local Area Forecast verification</h1>
 <!-- Upper Air Section -->
-<section class="container mx-auto px-4 max-w-7xl mt-6 mb-8">
+<section class="container mx-auto px-4 max-w-8xl mt-6 mb-8">
     <div class="">
 
         
@@ -408,10 +428,10 @@
                 <div class="mt-4">
                     <p class="text-sm text-gray-500 mb-2">Example stations:</p>
                     <div class="flex flex-wrap gap-2">
-                        <button class="station-example px-2 py-1 text-xs bg-blue-100 hover:bg-blue-10 rounded-md text-black-700 transition-colors" data-code="43003">43003 (Mumbai)</button>
-                        <button class="station-example px-2 py-1 text-xs bg-blue-100 hover:bg-blue-10 rounded-md text-black-700 transition-colors" data-code="43063">43063 (Pune)</button>
-                        <button class="station-example px-2 py-1 text-xs bg-blue-100 hover:bg-blue-10 rounded-md text-black-700 transition-colors" data-code="43128">43128 (Hyderabad)</button>
-                        <button class="station-example px-2 py-1 text-xs bg-blue-100 hover:bg-blue-10 rounded-md text-black-700 transition-colors" data-code="43279">43279 (Chennai)</button>
+                        <button class="upper-air-station-example px-2 py-1 text-xs bg-blue-100 hover:bg-blue-10 rounded-md text-black-700 transition-colors" data-code="43003">43003 (Mumbai)</button>
+                        <button class="upper-air-station-example px-2 py-1 text-xs bg-blue-100 hover:bg-blue-10 rounded-md text-black-700 transition-colors" data-code="43063">43063 (Pune)</button>
+                        <button class="upper-air-station-example px-2 py-1 text-xs bg-blue-100 hover:bg-blue-10 rounded-md text-black-700 transition-colors" data-code="43128">43128 (Hyderabad)</button>
+                        <button class="upper-air-station-example px-2 py-1 text-xs bg-blue-100 hover:bg-blue-10 rounded-md text-black-700 transition-colors" data-code="43279">43279 (Chennai)</button>
                         <!-- <button class="upper-air-station-example px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded-md text-gray-700 transition-colors" data-code="43063">43063 (Ahmedabad)</button> -->
                     </div>
                 </div>
@@ -431,7 +451,7 @@
                     <p class="mt-2 text-xs text-gray-500">The file should be in CSV format as downloaded from the system</p>
                 </div> -->
                 <!-- File Preview Section for CSV -->
-                <!-- <div id="upperAirObsFilePreview" class="file-preview hidden relative">
+                <div id="upperAirObsFilePreview" class="file-preview hidden relative">
                     <div class="file-name-container bg-blue-50 border border-blue-100 rounded-lg p-3 mb-3">
                         <p class="text-sm font-medium text-blue-700 flex items-center overflow-x-scroll hide-scrollbar w-[85%]">
                             <i class="fas fa-file-csv mr-2"></i>
@@ -448,7 +468,7 @@
                     <button class="close-btn absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white rounded-full w-7 h-7 flex items-center justify-center transition-colors duration-300 shadow-md">
                         <i class="fas fa-times"></i>
                     </button>
-                </div> -->
+                </div>
 
                 <!-- OR Date Picker Section -->
                 <div id="upperAirDatePickerSection" class="mt-6">
@@ -458,10 +478,9 @@
                         <select id="upperAirHourSelect" class="w-60 border border-gray-300 rounded-md p-2.5">
                             <!-- Populated by JS -->
                         </select>
-                        <button id="upperAirFetchBtn" class="bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded-md shadow transition duration-200">
+                        <!-- <button id="upperAirFetchBtn" class="bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded-md shadow transition duration-200">
                             Fetch 
-                            <!-- Data -->
-                        </button>
+                        </button> -->
                     </div>
                     <p class="text-xs text-gray-500 mt-1">Upper air data is typically available at 00:00 and 12:00 UTC</p>
                 </div>
@@ -485,7 +504,7 @@
                         </p>
                     </div>
                     <h3 class="text-sm font-medium text-gray-700 mb-2 flex items-center">File Preview</h3>
-                    <div class="preview-content bg-gray-50 border border-gray-200 rounded-md p-4 font-mono text-sm whitespace-pre-wrap max-h-60 overflow-y-auto shadow-inner hover:shadow-md transition-shadow duration-300"></div>
+                    <div class="preview-content bg-gray-50 border border-gray-200 rounded-md p-4 font-mono text-sm whitespace-pre-wrap max-h-[200px] overflow-y-auto shadow-inner hover:shadow-md transition-shadow duration-300"></div>
                     <div class="loading-indicator hidden flex items-center justify-center py-4">
                         <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
                         <span class="ml-2 text-gray-600">Loading file content...</span>
@@ -540,7 +559,7 @@
                     </div>
                     <h3 class="text-sm font-medium text-gray-700 mb-2 flex items-center">PDF Processing Status</h3>
     
-                    <div class="bg-gray-50 border border-gray-200 rounded-md p-2 text-sm  max-h-60 overflow-y-auto shadow-inner hover:shadow-md transition-shadow duration-300">
+                    <div class="bg-gray-50 border border-gray-200 rounded-md p-2 text-sm  max-h-[150px] overflow-y-auto shadow-inner hover:shadow-md transition-shadow duration-300">
                         <!-- preview-content  || above class name--> 
                         <table  id="windTable" style="display:none;border-collapse: collapse; width: 100%; margin-top: 10px;">
                             <thead id="thead">
@@ -615,7 +634,7 @@
 
             <!-- Detailed Comparison Table -->
     <div class="w-full overflow-x-auto mt-4">
-    <table id="verificationTable" class="w-full border-collapse border border-gray-300 min-w-[900px] text-sm">
+    <table id="verificationTable" class="w-full hidden border-collapse border border-gray-300 min-w-[900px] text-sm">
       <thead class="bg-gray-100">
         <tr>
           <th rowspan="2" class="border px-2 py-1">Date</th>
@@ -638,7 +657,6 @@
         </tr>
       </thead>
       <tbody id="upperAirTableBody">
-        <!-- JS will populate rows -->
       </tbody>
     </table>
   </div>
@@ -646,7 +664,7 @@
 
         <!-- Download Section -->
         <section class="container mx-auto px-4 max-w-7xl mb-16">
-            <h2 class="text-2xl font-bold mb-6 text-gray-800 text-center">Download Results</h2>
+            <!-- <h2 class="text-2xl font-bold mb-6 text-gray-800 text-center">Download Results</h2> -->
 
             <div class="flex flex-col sm:flex-row justify-center gap-4">
                 <a href="#" id="downloadCsvBtn"
@@ -746,7 +764,7 @@
                             <div id="adwrn-metar-preview" class="bg-gray-50 border border-gray-200 rounded-md p-4 font-mono text-sm whitespace-pre-wrap max-h-60 overflow-y-auto mt-4" style="display:none;"></div>
                             <div class="metar-preview mt-6 hidden">
                                 <h3 class="text-sm font-medium text-gray-700 mb-2">METAR Data Preview</h3>
-                                <div class="preview-content bg-gray-50 border border-gray-200 rounded-md p-4 font-mono text-sm whitespace-pre-wrap max-h-60 overflow-y-auto"></div>
+                                <div class="preview-content bg-gray-50 border border-gray-200 rounded-md p-4 font-mono text-sm whitespace-pre-wrap max-h-[200px] overflow-y-auto"></div>
                                 <div class="loading-indicator hidden flex items-center justify-center py-4">
                                     <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
                                     <span class="ml-2 text-gray-600">Fetching METAR data...</span>

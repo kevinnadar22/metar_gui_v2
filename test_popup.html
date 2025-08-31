@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Popup Test</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="app/static/css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body class="bg-gray-100">
+    <div class="container mx-auto px-4 py-8">
+        <h1 class="text-3xl font-bold text-center mb-8">Popup Test</h1>
+        
+        <!-- Test Button -->
+        <div class="text-center">
+            <button id="testBtn" class="bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-10 rounded-md shadow-md transition duration-300 text-lg">
+                Test Popup
+            </button>
+        </div>
+
+        <!-- Report Popup Modal -->
+        <div id="reportPopup" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center">
+            <div class="bg-white rounded-lg shadow-xl w-[90%] h-[90%] flex flex-col">
+                <!-- Popup Header -->
+                <div class="flex justify-between items-center p-6 border-b border-gray-200">
+                    <h2 class="text-xl font-bold text-gray-800">Verification Report</h2>
+                    <button id="closeReportPopup" class="text-gray-500 hover:text-gray-700 text-2xl font-bold">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                
+                <!-- Popup Content -->
+                <div class="flex-1 overflow-y-auto p-6">
+                    <div id="reportSection">
+                        <h2 class="text-2xl font-bold mb-6 text-gray-800 text-center">VERIFICATION RESULT OF TAKE-OFF FORECAST</h2>
+                        
+                        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                            <h3 class="text-lg font-semibold mb-4">Test Content</h3>
+                            <p class="text-gray-600 mb-4">This is a test of the popup functionality. The popup should cover 90% of the screen and be scrollable.</p>
+                            
+                            <!-- Add some content to make it scrollable -->
+                            <div class="space-y-4">
+                                <div class="bg-gray-50 p-4 rounded">
+                                    <h4 class="font-medium">Section 1</h4>
+                                    <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>
+                                </div>
+                                
+                                <div class="bg-gray-50 p-4 rounded">
+                                    <h4 class="font-medium">Section 2</h4>
+                                    <p>Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.</p>
+                                </div>
+                                
+                                <div class="bg-gray-50 p-4 rounded">
+                                    <h4 class="font-medium">Section 3</h4>
+                                    <p>Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.</p>
+                                </div>
+                                
+                                <div class="bg-gray-50 p-4 rounded">
+                                    <h4 class="font-medium">Section 4</h4>
+                                    <p>Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</p>
+                                </div>
+                                
+                                <div class="bg-gray-50 p-4 rounded">
+                                    <h4 class="font-medium">Section 5</h4>
+                                    <p>Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium.</p>
+                                </div>
+                                
+                                <div class="bg-gray-50 p-4 rounded">
+                                    <h4 class="font-medium">Section 6</h4>
+                                    <p>Totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo.</p>
+                                </div>
+                                
+                                <div class="bg-gray-50 p-4 rounded">
+                                    <h4 class="font-medium">Section 7</h4>
+                                    <p>Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit, sed quia consequuntur magni dolores.</p>
+                                </div>
+                                
+                                <div class="bg-gray-50 p-4 rounded">
+                                    <h4 class="font-medium">Section 8</h4>
+                                    <p>Eos qui ratione voluptatem sequi nesciunt. Neque porro quisquam est, qui dolorem ipsum quia dolor sit amet.</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Download Section -->
+                        <div class="text-center">
+                            <button class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-6 rounded-md shadow transition duration-300">
+                                <i class="fas fa-file-csv mr-2"></i>
+                                Download Test Results
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const testBtn = document.getElementById('testBtn');
+            const reportPopup = document.getElementById('reportPopup');
+            const closeReportPopup = document.getElementById('closeReportPopup');
+            
+            // Show popup when test button is clicked
+            testBtn.addEventListener('click', function() {
+                reportPopup.classList.remove('hidden');
+                reportPopup.classList.add('flex');
+            });
+            
+            // Close popup when close button is clicked
+            closeReportPopup.addEventListener('click', function() {
+                reportPopup.classList.add('hidden');
+                reportPopup.classList.remove('flex');
+            });
+            
+            // Close popup when clicking outside the modal content
+            reportPopup.addEventListener('click', function(e) {
+                if (e.target === reportPopup) {
+                    reportPopup.classList.add('hidden');
+                    reportPopup.classList.remove('flex');
+                }
+            });
+            
+            // Close popup with Escape key
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape' && !reportPopup.classList.contains('hidden')) {
+                    reportPopup.classList.add('hidden');
+                    reportPopup.classList.remove('flex');
+                }
+            });
+        });
+    </script>
+</body>
+</html>
