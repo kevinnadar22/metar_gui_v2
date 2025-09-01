@@ -1,27 +1,36 @@
 import pandas as pd
 import plotly.express as px
-import plotly.graph_objects as go
 
-# Load the dataset (skip the title line and use the second line as header)
-df = pd.read_csv('ad_warn_data/final_warning_report.csv', header=1)
+# 1. Load and process the data from the updated CSV file, skipping the first row
+try:
+    df = pd.read_csv('./ad_warn_data/final_warning_report.csv', skiprows=1)
+except FileNotFoundError:
+    print("Error: 'final_warning_report.csv' not found. Please make sure the file is in the correct directory.")
+    exit()
 
-# Data Cleaning and Preparation
-# Rename columns for easier access
+
+# 2. Rename columns for easier access
 df.rename(columns={
-    'Elements (Thunderstorm/Surface wind & Gust)': 'Elements',
     'Warning issue Time': 'Warning_issue_Time',
     'true-1 / false-0': 'Is_Correct',
-    'Accuracy_Percentage': 'Accuracy_Percentage',
     'Warning_Type': 'Warning_Type'
 }, inplace=True)
 
-# Extract the day from the 'Warning_issue_Time' column
-df['Day'] = df['Warning_issue_Time'].str.split('/').str[0].astype(int)
+# Clean up any potential whitespace issues in column names
+df.columns = df.columns.str.strip()
 
-# Filter for Thunderstorm and Gust warnings (using the 'Warning_Type' column)
+
+# 3. Perform calculations
+# Ensure required columns exist before proceeding
+required_cols = ['Warning_issue_Time', 'Warning_Type', 'Is_Correct']
+if not all(col in df.columns for col in required_cols):
+    print(f"Error: Missing one of the required columns: {required_cols}")
+    print(f"Available columns: {df.columns.tolist()}")
+    exit()
+
+df['Day'] = df['Warning_issue_Time'].str.split('/').str[0].astype(int)
 df_filtered = df[df['Warning_Type'].isin(['Thunderstorm', 'Wind'])]
 
-# Calculate the daily accuracy for each warning type
 daily_accuracy = df_filtered.groupby(['Day', 'Warning_Type'])['Is_Correct'].agg(
     correct_warnings='sum',
     total_warnings='count'
@@ -29,38 +38,56 @@ daily_accuracy = df_filtered.groupby(['Day', 'Warning_Type'])['Is_Correct'].agg(
 
 daily_accuracy['Accuracy'] = (daily_accuracy['correct_warnings'] / daily_accuracy['total_warnings']) * 100
 
-# Pivot the table to have separate columns for Thunderstorm and Gust accuracy
-df_pivot = daily_accuracy.pivot(index='Day', columns='Warning_Type', values='Accuracy').reset_index()
-df_pivot.rename(columns={'Wind': 'Gust'}, inplace=True)
-df_pivot = df_pivot.fillna(0)
+# Separate the data for each graph
+df_ts = daily_accuracy[daily_accuracy['Warning_Type'] == 'Thunderstorm'].copy()
+df_gust = daily_accuracy[daily_accuracy['Warning_Type'] == 'Wind'].copy()
 
 
-# Create the line graph
-fig_line = px.line(
-    df_pivot,
-    x='Day',
-    y=['Thunderstorm', 'Gust'],
-    title='Daily Accuracy of Thunderstorm and Gust Warnings',
-    labels={'Day': 'Day of the Month', 'value': 'Accuracy (%)', 'Warning_Type': 'Warning Type'},
-    markers=True
+# 4. Create the Thunderstorm accuracy graph
+fig_ts = px.bar(
+    df_ts,
+    x="Day",
+    y="Accuracy",
+    text="Accuracy",
+    labels={"Day": "Day", "Accuracy": "Accuracy (%)"},
+    title="Thunderstorm Warning Accuracy per Day",
+    color="Accuracy",
+    color_continuous_scale="Blues"
 )
-fig_line.update_layout(
-    legend_title_text='Warning Type'
+fig_ts.update_traces(
+    texttemplate="%{y:.1f}%",
+    textposition="outside",
+    hovertemplate="Day %{x}<br>Accuracy: %{y:.1f}%<extra></extra>"
 )
-fig_line.write_html("line_graph.html")
+fig_ts.update_layout(yaxis_range=[0, 110]) # Range extended slightly for text visibility
 
 
-# Create the bar chart (histogram)
-fig_bar = px.bar(
-    daily_accuracy.rename(columns={'Warning_Type': 'Warning Type', 'Accuracy':'Accuracy (%)'}),
-    x='Day',
-    y='Accuracy (%)',
-    color='Warning Type',
-    barmode='group',
-    title='Daily Accuracy of Thunderstorm and Gust Warnings',
-    labels={'Day': 'Day of the Month', 'Accuracy (%)': 'Accuracy (%)'}
+# 5. Create the Gust warning accuracy graph
+fig_gust = px.bar(
+    df_gust,
+    x="Day",
+    y="Accuracy",
+    text="Accuracy",
+    labels={"Day": "Day", "Accuracy": "Accuracy (%)"},
+    title="Gust Warning Accuracy per Day",
+    color="Accuracy",
+    color_continuous_scale="Reds"
 )
+fig_gust.update_traces(
+    texttemplate="%{y:.1f}%",
+    textposition="outside",
+    hovertemplate="Day %{x}<br>Accuracy: %{y:.1f}%<extra></extra>"
+)
+fig_gust.update_layout(yaxis_range=[0, 110]) # Range extended slightly for text visibility
 
-fig_bar.write_html("bar_chart.html")
 
-print(df_pivot)
+# 6. Combine both graphs into a single HTML file
+with open("accuracy_dashboard.html", "w") as f:
+    f.write("<html><head><title>Warning Accuracy Dashboard</title></head><body>")
+    f.write(f"<h1 style='font-family: sans-serif; text-align: center;'>Warning Accuracy Dashboard</h1>")
+    f.write(fig_ts.to_html(full_html=False, include_plotlyjs='cdn'))
+    f.write("<hr>") # Add a line to separate the charts
+    f.write(fig_gust.to_html(full_html=False, include_plotlyjs=False)) # No need to include JS again
+    f.write("</body></html>")
+
+print("Successfully generated the HTML file: accuracy_dashboard.html")
