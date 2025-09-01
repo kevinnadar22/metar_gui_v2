@@ -98,12 +98,12 @@ def generate_warning_report(ad_warn_output_path, metar_features_path):
 
         # Elements logic for FCST rows (based on METAR evidence)
         elements = ''
-        if found_gust and found_cb:
-            elements = 'Gust & Thunderstorm warning'
-        elif found_gust:
-            elements = 'Gust warning'
-        elif found_cb:
-            elements = 'Thunderstorm warning'
+        # if found_gust and found_cb:
+        #     elements = 'Gust & Thunderstorm warning'
+        # elif found_gust:
+        #     elements = 'Gust warning'
+        # elif found_cb:
+        #     elements = 'Thunderstorm warning'
 
         # Logic for true/false and remarks (unchanged)
         if has_gust and not has_tsra:
