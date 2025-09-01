@@ -893,7 +893,16 @@ def upload_ad_warning():
     
     try:
         # Parse the warning file immediately to validate it
-        df = parse_warning_file(warning_file, station_code="VABB")
+        # Extract station code from the warning file using the validation function
+        from app.utils.validation import extract_icao_from_warning
+        station_code = extract_icao_from_warning(warning_file)
+        if not station_code:
+            station_code = "VABB"  # Default fallback
+            print(f"[DEBUG] Could not extract station code from warning file, using default: {station_code}")
+        else:
+            print(f"[DEBUG] Extracted station code from warning file: {station_code}")
+        
+        df = parse_warning_file(warning_file, station_code=station_code)
         
         # Read the file for preview
         with open(warning_file, 'r', encoding='utf-8') as f:

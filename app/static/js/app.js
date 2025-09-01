@@ -577,93 +577,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     }
                     metarReportTitle.innerHTML = update_string;
 
-                    // Set download button href
-                    const downloadCsvBtn = document.getElementById('downloadCsvBtn');
-                    downloadCsvBtn.href = downloadUrl;
-
-                    // Function to populate a table from CSV data
-                    const populateTableFromCSV = (csvText, tableElement) => {
-                        // Parse CSV and populate table
-                        const rows = csvText.split('\n');
-                        const headers = rows[0].split(',');
-
-                        // Create table container with scroll
-                        const tableContainer = document.createElement('div');
-                        tableContainer.className = 'overflow-auto max-h-[500px] border border-gray-200 rounded-lg';
-
-                        // Clear only tbody content, preserve thead
-                        const tbody = tableElement.querySelector('tbody') || document.createElement('tbody');
-                        tbody.innerHTML = '';
-
-                        // Create and update thead if it doesn't exist
-                        let thead = tableElement.querySelector('thead');
-                        if (!thead) {
-                            thead = document.createElement('thead');
-                            thead.className = 'bg-gray-100 sticky top-0 z-10';
-                        }
-
-                        // Update header content
-                        const headerRow = document.createElement('tr');
-                        headers.forEach(header => {
-                            const th = document.createElement('th');
-                            // Replace underscores with spaces and capitalize each word
-                            th.textContent = header.replace(/_/g, ' ')
-                                .replace(/\w\S*/g, txt => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase());
-                            th.className = 'px-6 py-3 text-left text-xs font-medium text-gray-800 uppercase tracking-wider';
-                            headerRow.appendChild(th);
-                        });
-                        thead.innerHTML = '';
-                        thead.appendChild(headerRow);
-
-                        // Ensure thead is in table
-                        if (!tableElement.contains(thead)) {
-                            tableElement.appendChild(thead);
-                        }
-
-                        // Create table body rows
-                        for (let i = 1; i < rows.length; i++) {
-                            if (rows[i].trim() === '') continue;
-
-                            const rowData = rows[i].split(',');
-                            const tr = document.createElement('tr');
-                            tr.className = 'transition-colors duration-150 ease-in-out';
-
-                            rowData.forEach((cell, index) => {
-                                const td = document.createElement('td');
-                                td.textContent = cell;
-                                td.className = 'px-6 py-4 text-sm border-b border-gray-200';
-                                tr.appendChild(td);
-                            });
-                            tbody.appendChild(tr);
-                        }
-
-                        // Ensure tbody is in table
-                        if (!tableElement.contains(tbody)) {
-                            tableElement.appendChild(tbody);
-                        }
-
-                        // Add border and other styling to the table
-                        tableElement.className = 'min-w-full divide-y divide-gray-200 table-fixed';
-
-                        // Wrap table in scrollable container if not already wrapped
-                        const parent = tableElement.parentElement;
-                        if (!parent.classList.contains('overflow-auto')) {
-                            // Remove table from current parent
-                            if (parent) {
-                                parent.removeChild(tableElement);
-                            }
-
-                            // Add table to container and container to original parent
-                            tableContainer.appendChild(tableElement);
-                            if (parent) {
-                                parent.appendChild(tableContainer);
-                            } else {
-                                reportSection.appendChild(tableContainer);
-                            }
-                        }
-                    };
-
-                    // Fetch and populate the comparison table
+                    // Fetch CSV and extract warning percentages
                     fetch(downloadUrl)
                         .then(response => {
                             if (!response.ok) {
@@ -672,24 +586,35 @@ document.addEventListener('DOMContentLoaded', function () {
                             return response.text();
                         })
                         .then(csvText => {
-                            populateTableFromCSV(csvText, comparisonTable);
-                            
-                            // Now fetch and populate the detailed comparison table
-                            return fetch(detailedDownloadUrl);
-                        })
-                        .then(response => {
-                            if (!response.ok) {
-                                throw new Error('Failed to download detailed comparison CSV');
+                            // Extract thunderstorm and gust percentages from CSV
+                            let thunderstormPercent = '--';
+                            let gustPercent = '--';
+                            const rows = csvText.split('\n');
+                            const headers = rows[0].split(',');
+                            for (let i = 1; i < rows.length; i++) {
+                                const row = rows[i].split(',');
+                                if (row.length < headers.length) continue;
+                                const element = row[1]?.toLowerCase() || '';
+                                const accuracy = row[3] || row[4] || '';
+                                if (element.includes('thunderstorm') || element.includes('ts')) {
+                                    thunderstormPercent = accuracy.includes('%') ? accuracy : `${Math.round(parseFloat(accuracy)*100)}%`;
+                                }
+                                if (element.includes('gust') || element.includes('wind')) {
+                                    gustPercent = accuracy.includes('%') ? accuracy : `${Math.round(parseFloat(accuracy)*100)}%`;
+                                }
                             }
-                            return response.text();
-                        })
-                        .then(csvText => {
-                            // Get the detailed comparison table
-                            const detailedComparisonTable = document.getElementById('detailedComparisonTable');
-                            populateTableFromCSV(csvText, detailedComparisonTable);
-                            
-                            // Show report section after both tables are populated
-                            reportSection.style.display = 'block';
+
+                            // Show modal popup
+                            document.getElementById('thunderstormPercent').textContent = thunderstormPercent;
+                            document.getElementById('gustPercent').textContent = gustPercent;
+                            const modal = document.getElementById('warningModal');
+                            modal.style.display = 'flex';
+                            // Set download button href
+                            document.getElementById('modalDownloadBtn').href = downloadUrl;
+                            // Close modal handler
+                            document.getElementById('closeWarningModal').onclick = function() {
+                                modal.style.display = 'none';
+                            };
                         })
                         .catch(error => {
                             hideLoadingSection(); // Hide loading on error
@@ -1285,289 +1210,12 @@ document.querySelectorAll('.adwrn-forecast-file-input').forEach(input => {
 
 // === ADWRN Final Warning Report Verification ===
 const adwrnVerifyBtn = document.getElementById('adwrn-verifyBtn');
-const adwrnFinalReportContainer = document.getElementById('adwrn-final-report-container');
-const adwrnFinalReportTable = document.getElementById('adwrn-final-report-table');
-const adwrnAccuracy = document.getElementById('adwrn-accuracy');
 const adwrnReportLoadingSection = document.getElementById('adwrn-reportLoadingSection');
 
-function renderCsvToTable(csvText, tableElement) {
-    const lines = csvText.trim().split(/\r?\n/);
-    if (lines.length === 0) return;
-    // Remove any trailing blank lines
-    while (lines.length && lines[lines.length-1].trim() === '') lines.pop();
-    // Extract header and rows
-    const header = lines[0].split(',');
-    const rows = lines.slice(1).map(line => line.split(','));
-    // Render header
-    const thead = tableElement.querySelector('thead');
-    thead.innerHTML = '';
-    const headerRow = document.createElement('tr');
-    header.forEach(h => {
-        const th = document.createElement('th');
-        th.textContent = h.trim();
-        th.className = 'px-6 py-3 text-left text-xs font-medium text-gray-800 uppercase tracking-wider';
-        headerRow.appendChild(th);
-    });
-    thead.appendChild(headerRow);
-    // Render body
-    const tbody = tableElement.querySelector('tbody');
-    tbody.innerHTML = '';
-    rows.forEach(row => {
-        if (row.length !== header.length) return;
-        const tr = document.createElement('tr');
-        row.forEach(cell => {
-            const td = document.createElement('td');
-            td.textContent = cell.trim();
-            td.className = 'px-6 py-4 text-sm border-b border-gray-200';
-            tr.appendChild(td);
-        });
-        tbody.appendChild(tr);
-    });
-}
 
-function renderAerodromeWarningTable(csvText, tableElement, detailedAccuracy = {}) {
-    const lines = csvText.trim().split(/\r?\n/);
-    if (lines.length === 0) return;
-    
-    // Remove any trailing blank lines
-    while (lines.length && lines[lines.length-1].trim() === '') lines.pop();
-    
-    // Extract header and rows
-    const header = lines[0].split(',');
-    const rows = lines.slice(1).map(line => line.split(','));
-    
-    // Debug: Print table structure
-    console.log("Table element:", tableElement);
-    console.log("Table thead:", tableElement.querySelector('thead'));
-    console.log("Table tbody:", tableElement.querySelector('tbody'));
-    
-    // Ensure thead is visible and has content
-    const thead = tableElement.querySelector('thead');
-    if (thead) {
-        console.log("Thead found, ensuring it's visible");
-        thead.style.display = 'table-header-group';
-        const headerRow = thead.querySelector('tr');
-        if (headerRow) {
-            console.log("Header row found with", headerRow.children.length, "columns");
-            Array.from(headerRow.children).forEach((th, index) => {
-                console.log(`Header ${index + 1}:`, th.textContent);
-            });
-        } else {
-            // If no header row exists, create one
-            console.log("No header row found, creating one");
-            const newHeaderRow = document.createElement('tr');
-            const headers = [
-                'क्र. सं. / Sr.No.',
-                'तत्त्व / Elements',
-                'विमान क्षेत्र चेतावनियों की सं. / Warning no 1 Warning no 2................ Warning no. (Issue date/Issue Time UTC)',
-                'रेंज के अंतगर्द आने वाले (पारस) मामलों की प्रतिशतता अथवा सही होने की प्रतिशतता / % of cases within range or occurrence (% correct)',
-                'वास्तविक मौसम समयावधि के साथ जिसके लिये चेतावनी जारी नहीं की गयी थी / Actual weather with duration for which no warning was issued'
-            ];
-            
-            headers.forEach(headerText => {
-                const th = document.createElement('th');
-                th.innerHTML = headerText;
-                newHeaderRow.appendChild(th);
-            });
-            thead.appendChild(newHeaderRow);
-            console.log("Created new header row with", headers.length, "columns");
-        }
-    }
-    
-    // Define the standard aerodrome warning elements
-    const warningElements = [
-        { srNo: "1.", element: "उष्णकटिबंधीय चक्रवात / Tropical cyclone" },
-        { srNo: "2.", element: "गर्जन सुनामी / Thunderstorms" },
-        { srNo: "3.", element: "ओला / Hail" },
-        { srNo: "4.", element: "बर्फ / Snow" },
-        { srNo: "5.", element: "हिमवर्षा / Freezing precipitation" },
-        { srNo: "6.", element: "पाला या शीत / Hoar Frost or rime" },
-        { srNo: "7.", element: "धूल भरी आँधी / Dust storm" },
-        { srNo: "8.", element: "रेतीली आँधी / Sandstorm" },
-        { srNo: "9.", element: "उठती रेत या धूल / Rising sand or dust" },
-        { srNo: "10.", element: "प्रबल सतही पवन तथा झोंके / Strong surface wind and gusts<br><strong>गति / Speed</strong>" },
-        { srNo: "", element: "<strong>दिशा परिवर्तन / Direction change</strong>" },
-        { srNo: "11.", element: "बवंडर / Squall<br>दिशा / Direction<br>गति / Speed" },
-        { srNo: "12.", element: "पाला / Frost" },
-        { srNo: "13.", element: "ज्वालामुखीय राख / Volcanic ash" },
-        { srNo: "14.", element: "सुनामी / Tsunami" }
-    ];
-    
-    // Render body
-    const tbody = tableElement.querySelector('tbody');
-    tbody.innerHTML = '';
-    
-    // Process the CSV data to extract relevant information
-    const thunderstormWarnings = [];
-    const windWarnings = [];
-    let thunderstormAccuracy = "-";
-    let windAccuracy = "-";
-    
-    // Parse the CSV data more carefully
-    rows.forEach(row => {
-        if (row.length >= 4) {
-            const element = row[1]?.trim() || "";
-            const issueTime = row[2]?.trim() || "";
-            const accuracy = row[3]?.trim() || "";
-            
-            // Check for thunderstorm warnings
-            if (element.toLowerCase().includes("thunderstorm") || element.toLowerCase().includes("गर्जन") || element.toLowerCase().includes("ts")) {
-                if (issueTime && issueTime !== "-" && issueTime !== "0") {
-                    thunderstormWarnings.push(issueTime);
-                }
-                if (accuracy && accuracy !== "-" && accuracy !== "0") {
-                    // Convert accuracy to percentage
-                    const accuracyNum = parseFloat(accuracy);
-                    if (!isNaN(accuracyNum)) {
-                        thunderstormAccuracy = accuracyNum === 1 ? "100%" : `${Math.round(accuracyNum * 100)}%`;
-                    } else {
-                        thunderstormAccuracy = accuracy; // Keep as is if it's already a percentage
-                    }
-                }
-            } 
-            // Check for wind/gust warnings
-            else if (element.toLowerCase().includes("wind") || element.toLowerCase().includes("gust") || element.toLowerCase().includes("पवन") || element.toLowerCase().includes("surface")) {
-                if (issueTime && issueTime !== "-" && issueTime !== "0") {
-                    windWarnings.push(issueTime);
-                }
-                if (accuracy && accuracy !== "-" && accuracy !== "0") {
-                    // Convert accuracy to percentage
-                    const accuracyNum = parseFloat(accuracy);
-                    if (!isNaN(accuracyNum)) {
-                        windAccuracy = accuracyNum === 1 ? "100%" : `${Math.round(accuracyNum * 100)}%`;
-                    } else {
-                        windAccuracy = accuracy; // Keep as is if it's already a percentage
-                    }
-                }
-            }
-        }
-    });
-    
-    // If we have the Accuracy_Percentage column (column 5), use it instead
-    if (header.length >= 5 && header[4]?.includes("Accuracy")) {
-        rows.forEach(row => {
-            if (row.length >= 5) {
-                const element = row[1]?.trim() || "";
-                const issueTime = row[2]?.trim() || "";
-                const accuracyPercentage = row[4]?.trim() || "";
-                
-                // Check for thunderstorm warnings
-                if (element.toLowerCase().includes("thunderstorm") || element.toLowerCase().includes("गर्जन") || element.toLowerCase().includes("ts")) {
-                    if (issueTime && issueTime !== "-" && issueTime !== "0") {
-                        thunderstormWarnings.push(issueTime);
-                    }
-                    if (accuracyPercentage && accuracyPercentage !== "-" && accuracyPercentage !== "0%") {
-                        thunderstormAccuracy = accuracyPercentage;
-                    }
-                } 
-                // Check for wind/gust warnings
-                else if (element.toLowerCase().includes("wind") || element.toLowerCase().includes("gust") || element.toLowerCase().includes("पवन") || element.toLowerCase().includes("surface")) {
-                    if (issueTime && issueTime !== "-" && issueTime !== "0") {
-                        windWarnings.push(issueTime);
-                    }
-                    if (accuracyPercentage && accuracyPercentage !== "-" && accuracyPercentage !== "0%") {
-                        windAccuracy = accuracyPercentage;
-                    }
-                }
-            }
-        });
-    }
-    
-    // Calculate actual percentages from the data
-    let thunderstormCount = 0;
-    let thunderstormCorrect = 0;
-    let windCount = 0;
-    let windCorrect = 0;
-    
-    rows.forEach(row => {
-        if (row.length >= 4) {
-            const element = row[1]?.trim() || "";
-            const accuracy = row[3]?.trim() || "";
-            
-            // Count thunderstorm warnings
-            if (element.toLowerCase().includes("thunderstorm") || element.toLowerCase().includes("गर्जन") || element.toLowerCase().includes("ts")) {
-                thunderstormCount++;
-                if (accuracy === "1" || accuracy === "true") {
-                    thunderstormCorrect++;
-                }
-            } 
-            // Count wind/gust warnings
-            else if (element.toLowerCase().includes("wind") || element.toLowerCase().includes("gust") || element.toLowerCase().includes("पवन") || element.toLowerCase().includes("surface")) {
-                windCount++;
-                if (accuracy === "1" || accuracy === "true") {
-                    windCorrect++;
-                }
-            }
-        }
-    });
-    
-    // Use detailed accuracy from API if available, otherwise calculate from data
-    console.log("Using detailed accuracy:", detailedAccuracy);
-    
-    if (detailedAccuracy.thunderstorm !== undefined) {
-        thunderstormAccuracy = `${detailedAccuracy.thunderstorm}%`;
-        console.log("Setting thunderstorm accuracy to:", thunderstormAccuracy);
-    } else if (thunderstormCount > 0) {
-        const thunderstormPercent = Math.round((thunderstormCorrect / thunderstormCount) * 100);
-        thunderstormAccuracy = `${thunderstormPercent}%`;
-        console.log("Calculated thunderstorm accuracy:", thunderstormAccuracy);
-    }
-    
-    if (detailedAccuracy.wind !== undefined) {
-        windAccuracy = `${detailedAccuracy.wind}%`;
-        console.log("Setting wind accuracy to:", windAccuracy);
-    } else if (windCount > 0) {
-        const windPercent = Math.round((windCorrect / windCount) * 100);
-        windAccuracy = `${windPercent}%`;
-        console.log("Calculated wind accuracy:", windAccuracy);
-    }
-    
-    // Populate the table with standard format
-    warningElements.forEach((item, index) => {
-        const tr = document.createElement('tr');
-        
-        // Sr.No.
-        const td1 = document.createElement('td');
-        td1.textContent = item.srNo;
-        tr.appendChild(td1);
-        
-        // Elements
-        const td2 = document.createElement('td');
-        td2.innerHTML = item.element;
-        tr.appendChild(td2);
-        
-        // Warning numbers and times
-        const td3 = document.createElement('td');
-        if (index === 1) { // Thunderstorms
-            td3.textContent = thunderstormWarnings.length > 0 ? thunderstormWarnings.join(',') : "-";
-        } else if (index === 9) { // Wind speed
-            td3.textContent = windWarnings.length > 0 ? windWarnings.join(',') : "-";
-            td3.style.whiteSpace = "pre-wrap";
-            td3.style.fontSize = "10px";
-        } else {
-            td3.textContent = "-";
-        }
-        tr.appendChild(td3);
-        
-        // Accuracy percentage
-        const td4 = document.createElement('td');
-        if (index === 1) { // Thunderstorms
-            td4.textContent = thunderstormAccuracy;
-        } else if (index === 9) { // Wind speed
-            td4.textContent = windAccuracy;
-        } else {
-            td4.textContent = "-";
-        }
-        tr.appendChild(td4);
-        
-        // Actual weather without warnings
-        const td5 = document.createElement('td');
-        td5.textContent = "-";
-        tr.appendChild(td5);
-        
-        tbody.appendChild(tr);
-    });
-}
+
+
+
 
 // Function to download Excel report with station name, validity period, and accuracy
 function downloadExcel() {
@@ -1655,17 +1303,13 @@ function downloadExcel() {
         });
 }
 
-if (adwrnVerifyBtn && adwrnFinalReportContainer && adwrnFinalReportTable && adwrnAccuracy && adwrnReportLoadingSection) {
+if (adwrnVerifyBtn && adwrnReportLoadingSection) {
     adwrnVerifyBtn.addEventListener('click', function() {
         console.log('Verify button clicked'); // Debug log
         
-        adwrnFinalReportContainer.style.display = 'none';
-        adwrnAccuracy.style.display = 'none';
-        adwrnAccuracy.textContent = '';
-        // Don't clear thead - let the renderAerodromeWarningTable function handle it
-        adwrnFinalReportTable.querySelector('tbody').innerHTML = '';
-        
-
+        // Hide any existing modals or containers
+        const modal = document.getElementById('adwrnResultsModal');
+        if (modal) modal.style.display = 'none';
         
         adwrnReportLoadingSection.style.display = 'flex';
         fetch('/api/adwrn_verify', { method: 'POST' })
@@ -1677,33 +1321,57 @@ if (adwrnVerifyBtn && adwrnFinalReportContainer && adwrnFinalReportTable && adwr
                 console.log('Response data:', data); // Debug log
                 adwrnReportLoadingSection.style.display = 'none';
                 if (data.success) {
-                    // Show only station information if available (hide accuracy)
-                    if (data.station_info) {
-                        adwrnAccuracy.textContent = data.station_info;
-                        adwrnAccuracy.style.display = 'block';
-                    } else {
-                        adwrnAccuracy.style.display = 'none';
-                    }
-                    
-                    // Pass detailed accuracy data to the table rendering function
+                    // Extract accuracy percentages from the data
                     const detailedAccuracy = data.detailed_accuracy || {};
                     console.log("Detailed accuracy from API:", detailedAccuracy);
-                    renderAerodromeWarningTable(data.report, adwrnFinalReportTable, detailedAccuracy);
-                    adwrnFinalReportContainer.style.display = 'block';
                     
-                    // Show the report section with download buttons
-                    const adwrnReportSection = document.getElementById('adwrn-reportSection');
-                    if (adwrnReportSection) {
-                        adwrnReportSection.style.display = 'block';
+                    // Update modal content with accuracy percentages
+                    const thunderstormPercent = document.getElementById('adwrn-thunderstorm-percent');
+                    const gustPercent = document.getElementById('adwrn-gust-percent');
+                    const stationInfo = document.getElementById('adwrn-modal-station-info');
+                    const stationInfoText = stationInfo.querySelector('p');
+                    
+                    if (thunderstormPercent) {
+                        const thunderstormValue = detailedAccuracy.thunderstorm;
+                        thunderstormPercent.textContent = thunderstormValue !== undefined ? `${thunderstormValue}%` : '--%';
+                    }
+                    if (gustPercent) {
+                        const windValue = detailedAccuracy.wind;
+                        gustPercent.textContent = windValue !== undefined ? `${windValue}%` : '--%';
                     }
                     
-                    // Debug: Check if table headers are visible
-                    console.log("Table element:", adwrnFinalReportTable);
-                    console.log("Table thead:", adwrnFinalReportTable.querySelector('thead'));
-                    console.log("Table headers:", adwrnFinalReportTable.querySelectorAll('th'));
-                    console.log("Container display style:", adwrnFinalReportContainer.style.display);
+                    // Show station info if available
+                    if (data.station_info && stationInfo && stationInfoText) {
+                        stationInfoText.textContent = data.station_info;
+                        stationInfo.style.display = 'block';
+                    } else if (stationInfo) {
+                        stationInfo.style.display = 'none';
+                    }
                     
-
+                                         // Set up download button functionality
+                     const modalDownloadBtn = document.getElementById('adwrn-modal-download-btn');
+                     if (modalDownloadBtn) {
+                         modalDownloadBtn.onclick = function(e) {
+                             e.preventDefault();
+                             downloadAerodromeWarningsTable();
+                         };
+                     }
+                     
+                     // Set up view graph button functionality
+                     const viewGraphBtn = document.getElementById('adwrn-view-graph-btn');
+                     if (viewGraphBtn) {
+                         viewGraphBtn.onclick = function(e) {
+                             e.preventDefault();
+                             // Open bar_chart.html in a new window via Flask route
+                             window.open('/bar_chart', '_blank', 'width=1200,height=800,scrollbars=yes,resizable=yes');
+                         };
+                     }
+                    
+                    // Show the modal
+                    if (modal) {
+                        modal.style.display = 'flex';
+                    }
+                    
                 } else {
                     console.log('Validation failed:', data); // Debug log
                     // Handle validation errors with more specific messaging
@@ -1736,12 +1404,27 @@ if (adwrnVerifyBtn && adwrnFinalReportContainer && adwrnFinalReportTable && adwr
     });
 }
 
-// Add event listener for the download button
+// Add event listeners for the modal
 document.addEventListener('DOMContentLoaded', function() {
-    // Add event listener for the aerodrome warnings table download button
-    const tableDownloadBtn = document.getElementById('adwrn-downloadTableBtn');
-    if (tableDownloadBtn) {
-        tableDownloadBtn.addEventListener('click', downloadAerodromeWarningsTable);
+    // Add event listener for the modal close button
+    const closeModalBtn = document.getElementById('adwrn-close-modal');
+    if (closeModalBtn) {
+        closeModalBtn.addEventListener('click', function() {
+            const modal = document.getElementById('adwrnResultsModal');
+            if (modal) {
+                modal.style.display = 'none';
+            }
+        });
+    }
+    
+    // Close modal when clicking outside of it
+    const modal = document.getElementById('adwrnResultsModal');
+    if (modal) {
+        modal.addEventListener('click', function(e) {
+            if (e.target === modal) {
+                modal.style.display = 'none';
+            }
+        });
     }
 });
 

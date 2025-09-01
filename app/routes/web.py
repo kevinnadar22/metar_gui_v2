@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, jsonify
+from flask import Blueprint, render_template, request, jsonify, send_file
 from app.utils.fetch_metar import fetch_all_metar
 from datetime import datetime
 import os
@@ -84,4 +84,12 @@ def fetch_metar():
             'success': False,
             'error': str(e)
         }), 400
+
+@web.route('/bar_chart')
+def bar_chart():
+    """Serve the bar chart HTML file"""
+    try:
+        return send_file('bar_chart.html', mimetype='text/html')
+    except FileNotFoundError:
+        return jsonify({'error': 'Bar chart file not found'}), 404
 

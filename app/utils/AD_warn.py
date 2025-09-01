@@ -2,7 +2,7 @@ import pandas as pd
 import re
 import os
 
-def parse_warning_file(filepath, station_code="VABB"):
+def parse_warning_file(filepath, station_code=None):
     pd.set_option('display.max_rows', None)
 
     with open(filepath, "r", encoding="utf-8") as f:
@@ -96,8 +96,15 @@ def parse_warning_file(filepath, station_code="VABB"):
         z = 'Z' if timestr.endswith('Z') else ''
         timestr = timestr.rstrip('Z')
         if len(timestr) < 4: return timestr + z
-        prefix, hhmm = timestr[:-4], timestr[-4:]
-        hour, minute = int(hhmm[:2]), int(hhmm[2:])
+        
+        # Handle case where prefix contains day information (e.g., "13" from "132345")
+        if len(timestr) >= 6:  # Format like "132345" or "132345Z"
+            day = int(timestr[:2])
+            hour, minute = int(timestr[2:4]), int(timestr[4:6])
+        else:  # Format like "2345" or "2345Z"
+            day = 1  # Default day
+            hour, minute = int(timestr[-4:-2]), int(timestr[-2:])
+        
         if minute == 0 or minute == 30:
             return timestr + z
         elif minute < 30:
@@ -105,15 +112,31 @@ def parse_warning_file(filepath, station_code="VABB"):
         else:
             hour = (hour + 1) % 24
             minute = 0
-        return f"{prefix}{hour:02d}{minute:02d}{z}"
+            # If hour rolled over to 00, increment the day
+            if hour == 0:
+                day = (day % 30) + 1  # Assuming 30 days max, adjust if needed
+        
+        # Format the result based on original format
+        if len(timestr) >= 6:
+            return f"{day:02d}{hour:02d}{minute:02d}{z}"
+        else:
+            return f"{hour:02d}{minute:02d}{z}"
 
     def fix_2400(timestr):
         z = 'Z' if timestr.endswith('Z') else ''
         timestr = timestr.rstrip('Z')
-        if timestr[-4:] == '2400':
-            prefix = timestr[:-6]
-            day = int(timestr[-6:-4]) + 1
-            return f"{prefix}{day:02d}0000{z}"
+        
+        # Handle case where time is "2400" (should become "0000" of next day)
+        if timestr.endswith('2400'):
+            if len(timestr) >= 6:  # Format like "132400"
+                day = int(timestr[:2])
+                # Extract prefix (everything before the day)
+                prefix = timestr[:-6]
+                new_day = (day % 30) + 1  # Increment day, assuming 30 days max
+                return f"{prefix}{new_day:02d}0000{z}"
+            else:  # Format like "2400"
+                return f"0000{z}"
+        
         return timestr + z
 
     df["Validity from"] = df["Validity from"].astype(str).apply(round_down_to_half_hour).apply(fix_2400)
@@ -123,7 +146,9 @@ def parse_warning_file(filepath, station_code="VABB"):
         f"{val[:2]}/{val[2:]}" if isinstance(val, str) else val
     )
 )
-    df = df[df["Station"] == station_code].reset_index(drop=True)
+    # Only filter by station code if it's provided
+    if station_code:
+        df = df[df["Station"] == station_code].reset_index(drop=True)
     df["Wind dir (deg)"] = pd.to_numeric(df["Wind dir (deg)"], errors="coerce").astype("Int64")
 
     # Save to a file in the same directory as the input file
