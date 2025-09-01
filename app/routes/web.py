@@ -87,9 +87,31 @@ def fetch_metar():
 
 @web.route('/bar_chart')
 def bar_chart():
-    """Serve the bar chart HTML file"""
+    """Run combined_graph.py and serve the generated chart"""
     try:
-        return send_file('bar_chart.html', mimetype='text/html')
-    except FileNotFoundError:
-        return jsonify({'error': 'Bar chart file not found'}), 404
+        import subprocess
+        import sys
+        
+        # Check if the script exists
+        script_path = os.path.join(os.getcwd(), 'combined_graph.py')
+        if not os.path.exists(script_path):
+            return jsonify({'error': 'combined_graph.py script not found'}), 404
+        
+        # Run the combined_graph.py script
+        result = subprocess.run([sys.executable, script_path], 
+                              capture_output=True, text=True, cwd=os.getcwd())
+        
+        if result.returncode == 0:
+            # Check if the combined chart file was generated
+            chart_file = os.path.join(os.getcwd(), 'combined_accuracy_chart.html')
+            if os.path.exists(chart_file):
+                return send_file(chart_file, mimetype='text/html')
+            else:
+                return jsonify({'error': 'Chart file not generated'}), 500
+        else:
+            error_msg = result.stderr if result.stderr else 'Unknown script error'
+            return jsonify({'error': f'Script execution failed: {error_msg}'}), 500
+            
+    except Exception as e:
+        return jsonify({'error': f'Error generating chart: {str(e)}'}), 500
 

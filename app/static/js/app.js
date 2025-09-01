@@ -1362,8 +1362,23 @@ if (adwrnVerifyBtn && adwrnReportLoadingSection) {
                      if (viewGraphBtn) {
                          viewGraphBtn.onclick = function(e) {
                              e.preventDefault();
-                             // Open bar_chart.html in a new window via Flask route
-                             window.open('/bar_chart', '_blank', 'width=1200,height=800,scrollbars=yes,resizable=yes');
+                             
+                             // Prevent multiple clicks
+                             if (viewGraphBtn.disabled) return;
+                             
+                             // Show loading state
+                             const originalText = viewGraphBtn.textContent;
+                             viewGraphBtn.textContent = 'Generating Chart...';
+                             viewGraphBtn.disabled = true;
+                             
+                             // Open combined chart in a new tab via Flask route
+                             window.open('/bar_chart', '_blank');
+                             
+                             // Reset button state after a short delay
+                             setTimeout(() => {
+                                 viewGraphBtn.textContent = originalText;
+                                 viewGraphBtn.disabled = false;
+                             }, 2000);
                          };
                      }
                     
