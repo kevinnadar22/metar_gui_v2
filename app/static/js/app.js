@@ -108,6 +108,75 @@ document.addEventListener('DOMContentLoaded', function () {
     const comparisonTable = document.getElementById('comparisonTable');
     const reportSection = document.getElementById('reportSection');
     const reportLoadingSection = document.getElementById('reportLoadingSection');
+    const reportPopup = document.getElementById('reportPopup');
+    const closeReportPopup = document.getElementById('closeReportPopup');
+
+    // Upper Air Verification Modal
+    const closeUpperAirModal = document.getElementById('closeUpperAirModal');
+    const upperAirVerificationModal = document.getElementById('upperAirVerificationModal');
+
+    // Display Graph Modal
+    const displayGraphBtn = document.getElementById('DisplayGraphBtn');
+    const closeDisplayGraphModal = document.getElementById('closeDisplayGraphModal');
+    const displayGraphModal = document.getElementById('displayGraphModal');
+
+    // Initialize Upper Air Verification Modal
+    if (closeUpperAirModal && upperAirVerificationModal) {
+        closeUpperAirModal.addEventListener('click', function() {
+            upperAirVerificationModal.classList.add('hidden');
+        });
+        
+        // Close modal when clicking outside
+        upperAirVerificationModal.addEventListener('click', function(e) {
+            if (e.target === upperAirVerificationModal) {
+                upperAirVerificationModal.classList.add('hidden');
+            }
+        });
+        
+        // Close modal with Escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && !upperAirVerificationModal.classList.contains('hidden')) {
+                upperAirVerificationModal.classList.add('hidden');
+            }
+        });
+    }
+
+    // Initialize Display Graph Modal
+    if (displayGraphBtn && closeDisplayGraphModal && displayGraphModal) {
+        console.log('Display Graph Modal elements found, setting up event listeners');
+        
+        displayGraphBtn.addEventListener('click', function() {
+            console.log('DisplayGraphBtn clicked, showing modal');
+            displayGraphModal.classList.remove('hidden');
+        });
+        
+        closeDisplayGraphModal.addEventListener('click', function() {
+            console.log('Close Display Graph Modal clicked, hiding modal');
+            displayGraphModal.classList.add('hidden');
+        });
+        
+        // Close modal when clicking outside
+        displayGraphModal.addEventListener('click', function(e) {
+            if (e.target === displayGraphModal) {
+                console.log('Clicked outside modal, hiding modal');
+                displayGraphModal.classList.add('hidden');
+            }
+        });
+        
+        // Close modal with Escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && !displayGraphModal.classList.contains('hidden')) {
+                console.log('Escape key pressed, hiding modal');
+                displayGraphModal.classList.add('hidden');
+            }
+        });
+    } else {
+        console.error('Display Graph Modal elements not found:', {
+            displayGraphBtn: !!displayGraphBtn,
+            closeDisplayGraphModal: !!closeDisplayGraphModal,
+            displayGraphModal: !!displayGraphModal
+        });
+    }
 
     // Aerodrome Warning ICAO autofill
     const adwrnStationInput = document.getElementById('adwrn-station-input');
@@ -603,6 +672,27 @@ document.addEventListener('DOMContentLoaded', function () {
                                     gustPercent = accuracy.includes('%') ? accuracy : `${Math.round(parseFloat(accuracy)*100)}%`;
                                 }
                             }
+// <<<<<<< prod
+                            return response.text();
+                        })
+                        .then(csvText => {
+                            // Get the detailed comparison table
+                            const detailedComparisonTable = document.getElementById('detailedComparisonTable');
+                            populateTableFromCSV(csvText, detailedComparisonTable);
+                            
+                                                // Show report section after both tables are populated
+                    const reportPopup = document.getElementById('reportPopup');
+                    const reportSection = document.getElementById('reportSection');
+                    reportSection.style.display = 'block';
+                    reportPopup.classList.remove('hidden');
+                    reportPopup.classList.add('flex');
+                })
+                .catch(error => {
+                    hideLoadingSection(); // Hide loading on error
+                    console.error('Error downloading CSV data:', error);
+                    showCustomAlert('Failed to load comparison data. Please try again.');
+                });
+// =======
 
                             // Show modal popup
                             document.getElementById('thunderstormPercent').textContent = thunderstormPercent;
@@ -621,6 +711,7 @@ document.addEventListener('DOMContentLoaded', function () {
                             console.error('Error downloading CSV data:', error);
                             showCustomAlert('Failed to load comparison data. Please try again.');
                         });
+// main
                 })
                 .catch(error => {
                     hideLoadingSection(); // Hide loading on error
@@ -631,6 +722,28 @@ document.addEventListener('DOMContentLoaded', function () {
 
             // Show validation error message
             showCustomAlert('Please fill in all required fields and upload a forecast file.');
+        }
+    });
+
+    // Close popup functionality
+    closeReportPopup.addEventListener('click', function() {
+        reportPopup.classList.add('hidden');
+        reportPopup.classList.remove('flex');
+    });
+    
+    // Close popup when clicking outside the modal content
+    reportPopup.addEventListener('click', function(e) {
+        if (e.target === reportPopup) {
+            reportPopup.classList.add('hidden');
+            reportPopup.classList.remove('flex');
+        }
+    });
+    
+    // Close popup with Escape key
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && !reportPopup.classList.contains('hidden')) {
+            reportPopup.classList.add('hidden');
+            reportPopup.classList.remove('flex');
         }
     });
 });
@@ -649,7 +762,7 @@ const upperAirObsFilePreview = document.getElementById('upperAirObsFilePreview')
 const upperAirDatePickerSection = document.getElementById('upperAirDatePickerSection');
 const upperAirDatePicker = document.getElementById('upperAirDatePicker');
 const upperAirHourSelect = document.getElementById('upperAirHourSelect');
-const upperAirFetchBtn = document.getElementById('upperAirFetchBtn');
+// const upperAirFetchBtn = document.getElementById('upperAirFetchBtn');
 const upperAirPreviewSection = document.getElementById('upperAirPreviewSection');
 const upperAirPreviewContent = document.getElementById('upperAirPreviewContent');
 const upperAirLoadingIndicator = document.getElementById('upperAirLoadingIndicator');
@@ -793,50 +906,50 @@ upperAirForecastFilePreview.querySelector('.close-btn').addEventListener('click'
 });
 
 // Fetch observation data from Wyoming
-upperAirFetchBtn.addEventListener('click', function () {
-    const date = upperAirDatePicker.value;
-    const hour = upperAirHourSelect.value;
-    const station = upperAirStationInput.value;
-    if (!date || !hour || !/^\d{5}$/.test(station)) {
-        if (typeof showCustomAlert === 'function') {
-            showCustomAlert('Please select date, hour, and enter a valid 5-digit station ID.');
-        } else {
-            alert('Please select date, hour, and enter a valid 5-digit station ID.');
-        }
-        return;
-    }
-    upperAirPreviewSection.classList.remove('hidden');
-    upperAirLoadingIndicator.classList.remove('hidden');
-    upperAirPreviewContent.textContent = '';
-    const dateTime = `${date} ${hour}:00:00`;
-    fetch(`/api/get_upper_air?datetime=${encodeURIComponent(dateTime)}&station_id=${station}`)
-        .then(async response => {
-            upperAirLoadingIndicator.classList.add('hidden');
-            if (!response.ok) {
-                // Try to parse error JSON
-                let errorMsg = 'Failed to fetch upper air data';
-                try {
-                    const err = await response.json();
-                    errorMsg = err.error || errorMsg;
-                } catch (e) {}
-                throw new Error(errorMsg);
-            }
-            const text = await response.text();
-            // If the response looks like HTML, show a friendly error
-            if (text.trim().toLowerCase().startsWith('<!doctype html') || text.trim().toLowerCase().startsWith('<html')) {
-                throw new Error('No data available for the selected date/time/station.');
-            }
-            upperAirPreviewContent.textContent = text;
-        })
-        .catch(error => {
-            upperAirPreviewSection.classList.add('hidden');
-            if (typeof showCustomAlert === 'function') {
-                showCustomAlert('Error fetching upper air data: ' + error.message);
-            } else {
-                alert('Error fetching upper air data: ' + error.message);
-            }
-        });
-});
+// upperAirFetchBtn.addEventListener('click', function () {
+//     const date = upperAirDatePicker.value;
+//     const hour = upperAirHourSelect.value;
+//     const station = upperAirStationInput.value;
+//     if (!date || !hour || !/^\d{5}$/.test(station)) {
+//         if (typeof showCustomAlert === 'function') {
+//             showCustomAlert('Please select date, hour, and enter a valid 5-digit station ID.');
+//         } else {
+//             alert('Please select date, hour, and enter a valid 5-digit station ID.');
+//         }
+//         return;
+//     }
+//     upperAirPreviewSection.classList.remove('hidden');
+//     upperAirLoadingIndicator.classList.remove('hidden');
+//     upperAirPreviewContent.textContent = '';
+//     const dateTime = `${date} ${hour}:00:00`;
+//     fetch(`/api/get_upper_air?datetime=${encodeURIComponent(dateTime)}&station_id=${station}`)
+//         .then(async response => {
+//             upperAirLoadingIndicator.classList.add('hidden');
+//             if (!response.ok) {
+//                 // Try to parse error JSON
+//                 let errorMsg = 'Failed to fetch upper air data';
+//                 try {
+//                     const err = await response.json();
+//                     errorMsg = err.error || errorMsg;
+//                 } catch (e) {}
+//                 throw new Error(errorMsg);
+//             }
+//             const text = await response.text();
+//             // If the response looks like HTML, show a friendly error
+//             if (text.trim().toLowerCase().startsWith('<!doctype html') || text.trim().toLowerCase().startsWith('<html')) {
+//                 throw new Error('No data available for the selected date/time/station.');
+//             }
+//             upperAirPreviewContent.textContent = text;
+//         })
+//         .catch(error => {
+//             upperAirPreviewSection.classList.add('hidden');
+//             if (typeof showCustomAlert === 'function') {
+//                 showCustomAlert('Error fetching upper air data: ' + error.message);
+//             } else {
+//                 alert('Error fetching upper air data: ' + error.message);
+//             }
+//         });
+// });
 
 // Verification (submit)
 // Replace your current upperAirVerifyBtn click handler with this:
@@ -886,8 +999,9 @@ upperAirVerifyBtn.addEventListener('click', function () {
             return response.json();
         })
         .then(data => {
-            // Show results section
-            upperAirReportSection.style.display = 'block';
+            // Show popup modal instead of results section
+            const modal = document.getElementById('upperAirVerificationModal');
+            modal.classList.remove('hidden');
 
             // Set metadata
             const metaData = data.metadata;
@@ -970,7 +1084,7 @@ upperAirVerifyBtn.addEventListener('click', function () {
     });
 
     // Set download button
-    const downloadBtn = document.querySelector('#upperAirReportSection #downloadCsvBtn');
+    const downloadBtn = document.querySelector('#upperAirVerificationModal #downloadCsvBtn');
     if (downloadBtn && data.file_path && data.file_path.endsWith('.xlsx')) {
         downloadBtn.href = `/api/download/upper_air_csv?file_path=${encodeURIComponent(data.file_path)}`;
         // downloadBtn.textContent = "Download XLSX Report";
