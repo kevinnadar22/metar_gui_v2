@@ -96,7 +96,7 @@
     <h1 class="text-2xl font-bold text-center mt-2 mb-2 text-gray-800">TAKE-OFF Forecast verification</h1>
 
     <!-- Upload Section -->
-    <section class="container  mx-auto px-4 max-w-8xl mt-6 mb-0 pb-0">
+    <section class="container  mx-auto px-4 max-w-7xl mt-6 mb-0 pb-0">
         <div class="pb-0">
 
             
@@ -328,6 +328,7 @@
                     Verify Forecast
                 </button>
                 
+                
             </div>
     </section>
 
@@ -390,7 +391,12 @@
                                 <i class="fas fa-file-csv mr-2"></i>
                                 Download Comparison as CSV
                             </a>
+                            <button id="DisplayGraphBtn"
+                    class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-6 rounded-md shadow transition duration-300 flex items-center justify-center">
+                    Display Graph
+                </button>
                         </div>
+
                     </section>
                 </div>
             </div>
@@ -408,7 +414,7 @@
 
 <h1 class="text-2xl font-bold text-center mt-2 mb-2 text-gray-800">Local Area Forecast verification</h1>
 <!-- Upper Air Section -->
-<section class="container mx-auto px-4 max-w-8xl mt-6 mb-8">
+<section class="container mx-auto px-4 max-w-7xl mt-6 mb-8">
     <div class="">
 
         
@@ -602,6 +608,88 @@
         <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
         <span class="ml-2 text-sm text-gray-600">Processing verification...</span>
     </div>
+
+    <!-- Upper Air Verification Popup Modal -->
+    <div id="upperAirVerificationModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-lg shadow-xl max-w-7xl w-full max-h-[90vh] overflow-y-auto">
+                <!-- Modal Header -->
+                <div class="flex items-center justify-between p-6 border-b border-gray-200">
+                    <h2 id="upperAirReportTitle" class="text-2xl font-bold text-gray-800">UPPER AREA FORECAST VERIFICATION RESULTS</h2>
+                    <button id="closeUpperAirModal" class="text-gray-400 hover:text-gray-600 transition-colors duration-200">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+
+                <!-- Modal Content -->
+                <div class="p-6">
+                    <!-- Summary Cards -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                        <div class="bg-gray-50 rounded-lg shadow-md p-6">
+                            <h3 class="text-lg font-semibold text-gray-800 mb-4">Temperature Forecast Accuracy</h3>
+                            <div class="text-3xl font-bold text-blue-600" id="tempAccuracy">--</div>
+                            <p class="text-sm text-gray-600 mt-2">Percentage of temperature forecasts within ±2°C</p>
+                        </div>
+                        <div class="bg-gray-50 rounded-lg shadow-md p-6">
+                            <h3 class="text-lg font-semibold text-gray-800 mb-4">Wind Speed Forecast Accuracy</h3>
+                            <div class="text-3xl font-bold text-green-600" id="windAccuracy">--</div>
+                            <p class="text-sm text-gray-600 mt-2">Percentage of wind speed forecasts within ±10 knots</p>
+                        </div>
+                        <div class="bg-gray-50 rounded-lg shadow-md p-6">
+                            <h3 class="text-lg font-semibold text-gray-800 mb-4">Wind Direction Forecast Accuracy</h3>
+                            <div class="text-3xl font-bold text-green-600" id="windDirAccuracy">--</div>
+                            <p class="text-sm text-gray-600 mt-2">Percentage of wind direction forecasts within ±30 degrees</p>
+                        </div>
+                        <div class="bg-gray-50 rounded-lg shadow-md p-6">
+                            <h3 class="text-lg font-semibold text-gray-800 mb-4">Weather Forecast Accuracy</h3>
+                            <div class="text-3xl font-bold text-green-600" id="weatherAccuracy">--</div>
+                            <p class="text-sm text-gray-600 mt-2">Weather accuracy is calculated by comparing the forecast weather with the observed weather</p>
+                        </div>
+                    </div>
+
+                    <!-- Detailed Comparison Table -->
+                    <div class="w-full hidden overflow-x-auto mt-4">
+                        <table id="verificationTable" class="w-full border-collapse border border-gray-300 min-w-[900px] text-sm">
+                            <thead class="bg-gray-100">
+                                <tr>
+                                    <th rowspan="2" class="border px-2 py-1">Date</th>
+                                    <th rowspan="2" class="border px-2 py-1">Validity (UTC)</th>
+                                    <th colspan="4" class="border px-2 py-1">Forecast & Elements Verified</th>
+                                    <th colspan="3" class="border px-2 py-1">Realised & Elements Verified</th>
+                                    <th colspan="3" class="border px-2 py-1">Accuracy</th>
+                                </tr>
+                                <tr>
+                                    <th class="border px-2 py-1">FL</th>
+                                    <th class="border px-2 py-1">Wind Dir</th>
+                                    <th class="border px-2 py-1">Speed</th>
+                                    <th class="border px-2 py-1">Temp</th>
+                                    <th class="border px-2 py-1">Wind Dir</th>
+                                    <th class="border px-2 py-1">Speed (KT)</th>
+                                    <th class="border px-2 py-1">Temp</th>
+                                    <th class="border px-2 py-1">Wind Dir</th>
+                                    <th class="border px-2 py-1">Speed</th>
+                                    <th class="border px-2 py-1">Temp</th>
+                                </tr>
+                            </thead>
+                            <tbody id="upperAirTableBody">
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Download Section -->
+                    <div class="flex flex-col sm:flex-row justify-center gap-4 mt-8 pt-6 border-t border-gray-200">
+                        <a href="#" id="downloadCsvBtn"
+                            class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-6 rounded-md shadow transition duration-300 flex items-center justify-center">
+                            <i class="fas fa-file-csv mr-2"></i>
+                            Download Upper Air Verification Results
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
 
     <div id="upperAirReportSection" style="display: none;">
         <!-- Verification Results -->
@@ -1001,6 +1089,29 @@
             <p>© 2025 Forecast verification Dashboard. All rights reserved.</p>
         </div>
     </footer>
+
+    <!-- Display Graph Popup Modal -->
+    <div id="displayGraphModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-lg shadow-xl max-w-7xl w-full max-h-[90vh] overflow-y-auto">
+                <!-- Modal Header -->
+                <div class="flex items-center justify-between p-6 border-b border-gray-200">
+                    <h2 class="text-2xl font-bold text-gray-800">Display Graph</h2>
+                    <button id="closeDisplayGraphModal" class="text-gray-400 hover:text-gray-600 transition-colors duration-200">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+                
+                <!-- Modal Content -->
+                <div class="p-6">
+                    <!-- Content will be added by the user -->
+                    <div id="displayGraphContent" class="min-h-[60vh]">
+                        <!-- User will add content here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
 </body>

@@ -111,6 +111,73 @@ document.addEventListener('DOMContentLoaded', function () {
     const reportPopup = document.getElementById('reportPopup');
     const closeReportPopup = document.getElementById('closeReportPopup');
 
+    // Upper Air Verification Modal
+    const closeUpperAirModal = document.getElementById('closeUpperAirModal');
+    const upperAirVerificationModal = document.getElementById('upperAirVerificationModal');
+
+    // Display Graph Modal
+    const displayGraphBtn = document.getElementById('DisplayGraphBtn');
+    const closeDisplayGraphModal = document.getElementById('closeDisplayGraphModal');
+    const displayGraphModal = document.getElementById('displayGraphModal');
+
+    // Initialize Upper Air Verification Modal
+    if (closeUpperAirModal && upperAirVerificationModal) {
+        closeUpperAirModal.addEventListener('click', function() {
+            upperAirVerificationModal.classList.add('hidden');
+        });
+        
+        // Close modal when clicking outside
+        upperAirVerificationModal.addEventListener('click', function(e) {
+            if (e.target === upperAirVerificationModal) {
+                upperAirVerificationModal.classList.add('hidden');
+            }
+        });
+        
+        // Close modal with Escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && !upperAirVerificationModal.classList.contains('hidden')) {
+                upperAirVerificationModal.classList.add('hidden');
+            }
+        });
+    }
+
+    // Initialize Display Graph Modal
+    if (displayGraphBtn && closeDisplayGraphModal && displayGraphModal) {
+        console.log('Display Graph Modal elements found, setting up event listeners');
+        
+        displayGraphBtn.addEventListener('click', function() {
+            console.log('DisplayGraphBtn clicked, showing modal');
+            displayGraphModal.classList.remove('hidden');
+        });
+        
+        closeDisplayGraphModal.addEventListener('click', function() {
+            console.log('Close Display Graph Modal clicked, hiding modal');
+            displayGraphModal.classList.add('hidden');
+        });
+        
+        // Close modal when clicking outside
+        displayGraphModal.addEventListener('click', function(e) {
+            if (e.target === displayGraphModal) {
+                console.log('Clicked outside modal, hiding modal');
+                displayGraphModal.classList.add('hidden');
+            }
+        });
+        
+        // Close modal with Escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && !displayGraphModal.classList.contains('hidden')) {
+                console.log('Escape key pressed, hiding modal');
+                displayGraphModal.classList.add('hidden');
+            }
+        });
+    } else {
+        console.error('Display Graph Modal elements not found:', {
+            displayGraphBtn: !!displayGraphBtn,
+            closeDisplayGraphModal: !!closeDisplayGraphModal,
+            displayGraphModal: !!displayGraphModal
+        });
+    }
+
     // Aerodrome Warning ICAO autofill
     const adwrnStationInput = document.getElementById('adwrn-station-input');
     if (adwrnStationInput) {
@@ -989,8 +1056,9 @@ upperAirVerifyBtn.addEventListener('click', function () {
             return response.json();
         })
         .then(data => {
-            // Show results section
-            upperAirReportSection.style.display = 'block';
+            // Show popup modal instead of results section
+            const modal = document.getElementById('upperAirVerificationModal');
+            modal.classList.remove('hidden');
 
             // Set metadata
             const metaData = data.metadata;
@@ -1073,7 +1141,7 @@ upperAirVerifyBtn.addEventListener('click', function () {
     });
 
     // Set download button
-    const downloadBtn = document.querySelector('#upperAirReportSection #downloadCsvBtn');
+    const downloadBtn = document.querySelector('#upperAirVerificationModal #downloadCsvBtn');
     if (downloadBtn && data.file_path && data.file_path.endsWith('.xlsx')) {
         downloadBtn.href = `/api/download/upper_air_csv?file_path=${encodeURIComponent(data.file_path)}`;
         // downloadBtn.textContent = "Download XLSX Report";
