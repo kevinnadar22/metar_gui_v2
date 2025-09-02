@@ -680,38 +680,18 @@ document.addEventListener('DOMContentLoaded', function () {
                             const detailedComparisonTable = document.getElementById('detailedComparisonTable');
                             populateTableFromCSV(csvText, detailedComparisonTable);
                             
-                                                // Show report section after both tables are populated
-                    const reportPopup = document.getElementById('reportPopup');
-                    const reportSection = document.getElementById('reportSection');
-                    reportSection.style.display = 'block';
-                    reportPopup.classList.remove('hidden');
-                    reportPopup.classList.add('flex');
-                })
-                .catch(error => {
-                    hideLoadingSection(); // Hide loading on error
-                    console.error('Error downloading CSV data:', error);
-                    showCustomAlert('Failed to load comparison data. Please try again.');
-                });
-// =======
-
-                            // Show modal popup
-                            document.getElementById('thunderstormPercent').textContent = thunderstormPercent;
-                            document.getElementById('gustPercent').textContent = gustPercent;
-                            const modal = document.getElementById('warningModal');
-                            modal.style.display = 'flex';
-                            // Set download button href
-                            document.getElementById('modalDownloadBtn').href = downloadUrl;
-                            // Close modal handler
-                            document.getElementById('closeWarningModal').onclick = function() {
-                                modal.style.display = 'none';
-                            };
+                            // Show report section after both tables are populated
+                            const reportPopup = document.getElementById('reportPopup');
+                            const reportSection = document.getElementById('reportSection');
+                            reportSection.style.display = 'block';
+                            reportPopup.classList.remove('hidden');
+                            reportPopup.classList.add('flex');
                         })
                         .catch(error => {
                             hideLoadingSection(); // Hide loading on error
                             console.error('Error downloading CSV data:', error);
                             showCustomAlert('Failed to load comparison data. Please try again.');
                         });
-// main
                 })
                 .catch(error => {
                     hideLoadingSection(); // Hide loading on error
