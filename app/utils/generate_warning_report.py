@@ -43,17 +43,17 @@ def generate_warning_report(ad_warn_output_path, metar_features_path):
         # If the block says FCST/OBS is OBS, skipping extraction
         if metar_block and 'FCST/OBS is OBS, skipping extraction.' in metar_block:
             true_false = 1
-            # Elements logic for OBS rows (just reflect the warning forecast)
-            if has_gust and has_tsra:
-                elements = 'Gust & Thunderstorm warning'
-            elif has_gust:
-                elements = 'Gust warning'
-            elif has_tsra:
-                elements = 'Thunderstorm warning'
-            else:
-                elements = ''
             remark = 'OBS'
-            results.append([sl_no, elements, issue_time, true_false, remark, station, validity_from, validity_to])
+            
+            # Create separate entries for OBS rows too
+            if has_gust and has_tsra:
+                # Create TWO separate entries: one for gust, one for thunderstorm
+                results.append([sl_no, 'Gust warning', issue_time, true_false, remark, station, validity_from, validity_to])
+                results.append([sl_no, 'Thunderstorm warning', issue_time, true_false, remark, station, validity_from, validity_to])
+            elif has_gust:
+                results.append([sl_no, 'Gust warning', issue_time, true_false, remark, station, validity_from, validity_to])
+            elif has_tsra:
+                results.append([sl_no, 'Thunderstorm warning', issue_time, true_false, remark, station, validity_from, validity_to])
             continue
 
         found_gust = False
@@ -96,17 +96,40 @@ def generate_warning_report(ad_warn_output_path, metar_features_path):
             if re.search(r'TSRA', line):
                 tsra_reported = 'TSRA'
 
-        # Elements logic for FCST rows (based on METAR evidence)
-        elements = ''
-        if found_gust and found_cb:
-            elements = 'Gust & Thunderstorm warning'
-        elif found_gust:
-            elements = 'Gust warning'
-        elif found_cb:
-            elements = 'Thunderstorm warning'
-
-        # Logic for true/false and remarks (unchanged)
-        if has_gust and not has_tsra:
+        # Create separate entries for gust and thunderstorm warnings
+        # This prevents double-counting in percentage calculations
+        
+        if has_gust and has_tsra:
+            # Create TWO separate entries: one for gust, one for thunderstorm
+            
+            # 1. Gust warning entry
+            gust_true_false = 0
+            gust_remark = ''
+            if found_gust and found_dir:
+                gust_true_false = 1
+                gust_remark = f'Gust {gust_reported} Dir {dir_reported} matched'
+                if cb_cloud_group:
+                    gust_remark += f' {cb_cloud_group} found'
+            else:
+                gust_remark = 'No gust/direction mismatch'
+            
+            results.append([sl_no, 'Gust warning', issue_time, gust_true_false, gust_remark, station, validity_from, validity_to])
+            
+            # 2. Thunderstorm warning entry
+            tsra_true_false = 0
+            tsra_remark = ''
+            if found_cb:
+                tsra_true_false = 1
+                tsra_remark = ''
+                if cb_cloud_group:
+                    tsra_remark += f' {cb_cloud_group} found'
+            else:
+                tsra_remark = 'Missing CB or direction mismatch'
+            
+            results.append([sl_no, 'Thunderstorm warning', issue_time, tsra_true_false, tsra_remark, station, validity_from, validity_to])
+            
+        elif has_gust and not has_tsra:
+            # Pure gust warning
             if found_gust and found_dir:
                 true_false = 1
                 remark = f'Gust {gust_reported} Dir {dir_reported} matched'
@@ -114,20 +137,11 @@ def generate_warning_report(ad_warn_output_path, metar_features_path):
                     remark += f' {cb_cloud_group} found'
             else:
                 remark = 'No gust/direction mismatch'
-        elif has_gust and has_tsra:
-            if found_gust and found_dir:
-                true_false = 1
-                remark = f'Gust {gust_reported} Dir {dir_reported} matched'
-                if cb_cloud_group:
-                    remark += f' {cb_cloud_group} found'
-            elif found_cb:
-                true_false = 1
-                remark = ''
-                if cb_cloud_group:
-                    remark += f' {cb_cloud_group} found'
-            else:
-                remark = 'Missing CB or direction mismatch'
+            
+            results.append([sl_no, 'Gust warning', issue_time, true_false, remark, station, validity_from, validity_to])
+            
         elif has_tsra:
+            # Pure thunderstorm warning
             if found_cb:
                 true_false = 1
                 remark = ''
@@ -135,18 +149,8 @@ def generate_warning_report(ad_warn_output_path, metar_features_path):
                     remark += f' {cb_cloud_group} found'
             else:
                 remark = 'Missing CB or direction mismatch'
-        else:
-            remark = 'No significant weather matched'
-        
-        if not elements:
-            if has_gust and has_tsra:
-                elements = 'Gust & Thunderstorm warning'
-            elif has_gust:
-                elements = 'Gust warning'
-            elif has_tsra:
-                elements = 'Thunderstorm warning'
-
-        results.append([sl_no, elements, issue_time, true_false, remark, station, validity_from, validity_to])
+            
+            results.append([sl_no, 'Thunderstorm warning', issue_time, true_false, remark, station, validity_from, validity_to])
 
     # Output report
     final_df = pd.DataFrame(results, columns=[
@@ -456,17 +460,26 @@ def generate_aerodrome_warnings_table(ad_warn_output_path, metar_features_path):
             gust_times.append(issue_time)
     
     # Calculate percentages
-    total_thunderstorm = len(thunderstorm_times)
-    total_gust = len(gust_times)
+    # For thunderstorm: count all entries containing 'Thunderstorm'
+    total_thunderstorm = len(final_df[
+        final_df['Elements (Thunderstorm/Surface wind & Gust)'].str.contains('Thunderstorm', na=False)
+    ])
+    
+    # For gust: count ONLY pure 'Gust warning' entries (not 'Gust & Thunderstorm warning')
+    total_gust = len(final_df[
+        final_df['Elements (Thunderstorm/Surface wind & Gust)'] == 'Gust warning'
+    ])
     
     # Count accurate predictions (where true-1 / false-0 = 1)
+    # For thunderstorm: count all entries containing 'Thunderstorm'
     accurate_thunderstorm = len(final_df[
         (final_df['Elements (Thunderstorm/Surface wind & Gust)'].str.contains('Thunderstorm', na=False)) & 
         (final_df['true-1 / false-0'] == 1)
     ])
     
+    # For gust: count ONLY pure 'Gust warning' entries (not 'Gust & Thunderstorm warning')
     accurate_gust = len(final_df[
-        (final_df['Elements (Thunderstorm/Surface wind & Gust)'].str.contains('Gust', na=False)) & 
+        (final_df['Elements (Thunderstorm/Surface wind & Gust)'] == 'Gust warning') & 
         (final_df['true-1 / false-0'] == 1)
     ])
     

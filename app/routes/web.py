@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, jsonify
+from flask import Blueprint, render_template, request, jsonify, send_file
 from app.utils.fetch_metar import fetch_all_metar
 from datetime import datetime
 import os
@@ -84,4 +84,34 @@ def fetch_metar():
             'success': False,
             'error': str(e)
         }), 400
+
+@web.route('/bar_chart')
+def bar_chart():
+    """Run combined_graph.py and serve the generated chart"""
+    try:
+        import subprocess
+        import sys
+        
+        # Check if the script exists
+        script_path = os.path.join(os.getcwd(), 'combined_graph.py')
+        if not os.path.exists(script_path):
+            return jsonify({'error': 'combined_graph.py script not found'}), 404
+        
+        # Run the combined_graph.py script
+        result = subprocess.run([sys.executable, script_path], 
+                              capture_output=True, text=True, cwd=os.getcwd())
+        
+        if result.returncode == 0:
+            # Check if the combined chart file was generated
+            chart_file = os.path.join(os.getcwd(), 'combined_accuracy_chart.html')
+            if os.path.exists(chart_file):
+                return send_file(chart_file, mimetype='text/html')
+            else:
+                return jsonify({'error': 'Chart file not generated'}), 500
+        else:
+            error_msg = result.stderr if result.stderr else 'Unknown script error'
+            return jsonify({'error': f'Script execution failed: {error_msg}'}), 500
+            
+    except Exception as e:
+        return jsonify({'error': f'Error generating chart: {str(e)}'}), 500
 

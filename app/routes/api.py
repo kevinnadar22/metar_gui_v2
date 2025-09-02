@@ -5,7 +5,7 @@ import base64
 from datetime import datetime
 import re
 from werkzeug.utils import secure_filename
-from app.utils import decode_metar_to_csv, extract_data_from_file_with_day_and_wind, compare_weather_data, OgimetAPI, extract_day_month_year_from_filename,extract_month_year_from_date,fetch_upper_air_data,circular_difference,process_weather_accuracy_helper,interpolate_temperature_only,generate_upper_air_verification_xlsx
+from app.utils import decode_metar_to_csv, extract_data_from_file_with_day_and_wind, compare_weather_data, OgimetAPI, extract_day_month_year_from_filename,extract_month_year_from_date,fetch_upper_air_data,circular_difference,process_weather_accuracy_helper,interpolate_temperature_only,generate_upper_air_verification_xlsx,plot_accuracy_chart
 from app.utils.AD_warn import parse_warning_file
 from app.utils.generate_warning_report import generate_warning_report, generate_aerodrome_warnings_table
 from app.utils.extract_metar_features import extract_metar_features
@@ -21,6 +21,8 @@ from urllib.parse import quote
 import sys  
 import subprocess
 import math
+import base64, io
+from PIL import Image
  
 
 api_bp = Blueprint('api', __name__, url_prefix='/api')
@@ -370,6 +372,13 @@ def process_metar():
         
         # Compare weather data
         comparison_df, merged_df = compare_weather_data(df_metar, df_forecast)
+
+        chart_base64 = plot_accuracy_chart(comparison_df, metric="Overall")
+
+        img_bytes = base64.b64decode(chart_base64)
+        img = Image.open(io.BytesIO(img_bytes))
+        img.save("accuracy_chart.png")
+
         
         # Save comparison results to CSV with secure filename
         comparison_csv_filename = secure_filename(f"comparison_{icao}_{timestamp}.csv")
@@ -725,6 +734,7 @@ def process_upper_air():
         600:  "FL 020 (600 M)",
         300:  "FL 010 (300 M)"
         }
+         
         for _, row in min_pairs.iterrows():
             raw_altitude = row.get("Altitude (m)", None)
 
@@ -732,11 +742,9 @@ def process_upper_air():
                 continue  # Skip rows with invalid or missing altitude
 
             altitude_m = int(raw_altitude)
-
-            if altitude_m > 3000:
-                continue  # Skip higher altitudes
+ # Skip higher altitudes
             closest_alt = min(altitude_to_fl.keys(), key=lambda x: abs(x - altitude_m))
-            fl_label = altitude_to_fl[closest_alt]
+            fl_label = altitude_to_fl[closest_alt] if altitude_m <= 3000 else None
 
             data_rows.append({
                 "date": formatted_start.split()[0],
@@ -754,6 +762,10 @@ def process_upper_air():
                 "speed_acc": "CORRECT" if row.get("wind_correct") else "INCORRECT",
                 "temp_acc": "CORRECT" if row.get("temp_correct") else "INCORRECT",
                 "weather_acc": weather_accuracy_point,
+                'temp_accuracy': temp_accuracy,
+                'wind_accuracy': wind_accuracy,
+                'wind_dir_accuracy': wind_dir_accuracy,
+                # 'fl_accuracy_summary': fl_accuracy_summary,
             })
 
         metadata = {"icao": icao, "month_year": start_dt.strftime("%B %Y")}
@@ -768,8 +780,6 @@ def process_upper_air():
 
         generate_upper_air_verification_xlsx(data_rows, metadata, result_xlsx, weather_info=weather_info)
 
-
-
         return jsonify({
             'file_path': result_xlsx,
             'temp_accuracy': temp_accuracy,
@@ -779,6 +789,7 @@ def process_upper_air():
             'weather_forecast': weather_check_result.get("forecast_text", ""),   # string
             'weather_matched': weather_check_result["matched_keywords"],
             'data': data_rows,
+            # 'fl_accuracy_summary': fl_accuracy_summary,
             'metadata': {
                 'station_id': station_id,
                 'icao': icao,
@@ -882,7 +893,16 @@ def upload_ad_warning():
     
     try:
         # Parse the warning file immediately to validate it
-        df = parse_warning_file(warning_file, station_code="VABB")
+        # Extract station code from the warning file using the validation function
+        from app.utils.validation import extract_icao_from_warning
+        station_code = extract_icao_from_warning(warning_file)
+        if not station_code:
+            station_code = "VABB"  # Default fallback
+            print(f"[DEBUG] Could not extract station code from warning file, using default: {station_code}")
+        else:
+            print(f"[DEBUG] Extracted station code from warning file: {station_code}")
+        
+        df = parse_warning_file(warning_file, station_code=station_code)
         
         # Read the file for preview
         with open(warning_file, 'r', encoding='utf-8') as f:

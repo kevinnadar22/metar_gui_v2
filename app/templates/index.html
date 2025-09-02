@@ -338,6 +338,7 @@
         <span class="ml-2 text-sm text-gray-600">Processing...</span>
     </div>
 
+<!-- <<<<<<< prod -->
     <!-- Report Popup Modal -->
     <div id="reportPopup" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center">
         <div class="bg-white rounded-lg shadow-xl w-[90%] h-[90%] flex flex-col">
@@ -404,6 +405,29 @@
     </div>
 
 
+<!-- ======= -->
+
+        <!-- Modal Popup for Warning Percentages -->
+        <div id="warningModal" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-50" style="display:none;">
+            <div class="bg-white rounded-lg shadow-lg p-8 max-w-md w-full text-center">
+                <h2 class="text-2xl font-bold mb-6 text-gray-800">Verification Results</h2>
+                <div class="mb-4">
+                    <p class="text-lg font-semibold text-gray-700">Thunderstorm Warning Accuracy:</p>
+                    <p id="thunderstormPercent" class="text-xl text-blue-600 font-bold">--%</p>
+                </div>
+                <div class="mb-6">
+                    <p class="text-lg font-semibold text-gray-700">Gust Warning Accuracy:</p>
+                    <p id="gustPercent" class="text-xl text-blue-600 font-bold">--%</p>
+                </div>
+                <a href="#" id="modalDownloadBtn"
+                     class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-6 rounded-md shadow transition duration-300 flex items-center justify-center mb-4">
+                    <i class="fas fa-file-csv mr-2"></i>
+                    Download Comparison as CSV
+                </a>
+                <button id="closeWarningModal" class="mt-2 px-4 py-2 bg-gray-300 rounded hover:bg-gray-400">Close</button>
+            </div>
+        </div>
+<!-- >>>>>>> main -->
 
     
     </div>
@@ -931,136 +955,52 @@
                 
 
                 
-                <div id="adwrn-final-report-container" class="mt-8" style="display:none;">
-                    <div id="adwrn-accuracy" style="display:none; font-size:1.75rem; font-weight:600; color:#000000; margin-bottom:1rem; white-space:pre-line; text-align:center;"></div>
+                            <!-- Aerodrome Warning Results Popup Modal -->
+            <div id="adwrnResultsModal" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50" style="display:none;">
+                <div class="bg-white rounded-lg shadow-xl p-8 max-w-md w-full mx-4 relative">
+                    <!-- Close button (X) in top right corner -->
+                    <button id="adwrn-close-modal" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors duration-200">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
                     
-                    <style>
-                        .warning-table {
-                          width: 100%;
-                          border-collapse: collapse;
-                          margin-top: 30px;
-                          font-size: 12px;
-                          table-layout: fixed;
-                        }
-                      
-                        .warning-table th, .warning-table td {
-                          border: 1px solid #999;
-                          padding: 4px 6px;
-                          vertical-align: top;
-                          word-break: break-word;
-                          overflow-wrap: break-word;
-                        }
-                      
-                        .warning-table th {
-                          background-color: #f2f2f2;
-                          text-align: center;
-                          font-weight: bold;
-                          font-size: 11px;
-                          color: #000;
-                          border: 1px solid #999;
-                          padding: 4px 6px;
-                          position: relative;
-                          z-index: 10;
-                        }
-                      
-                        .warning-table td {
-                          text-align: center;
-                          font-size: 11px;
-                        }
-                      
-                        .heading {
-                          font-size: 18px;
-                          margin-top: 40px;
-                          font-weight: bold;
-                          text-align: center;
-                        }
-                        
-                        /* Responsive design for smaller screens */
-                        @media (max-width: 768px) {
-                          .warning-table {
-                            font-size: 10px;
-                          }
-                          .warning-table th, .warning-table td {
-                            padding: 2px 4px;
-                            font-size: 9px;
-                          }
-                          .warning-table th {
-                            font-size: 9px;
-                          }
-                          .heading {
-                            font-size: 16px;
-                          }
-                        }
-                        
-                        /* Container for horizontal scrolling on very small screens */
-                        .table-container {
-                          overflow-x: auto;
-                          max-width: 100%;
-                          margin: 0 auto;
-                        }
-                        
-                        /* Column widths for better fit */
-                        .warning-table th:nth-child(1), .warning-table td:nth-child(1) {
-                          width: 8%;
-                        }
-                        .warning-table th:nth-child(2), .warning-table td:nth-child(2) {
-                          width: 25%;
-                        }
-                        .warning-table th:nth-child(3), .warning-table td:nth-child(3) {
-                          width: 35%;
-                        }
-                        .warning-table th:nth-child(4), .warning-table td:nth-child(4) {
-                          width: 12%;
-                        }
-                        .warning-table th:nth-child(5), .warning-table td:nth-child(5) {
-                          width: 20%;
-                        }
-                        
-                        /* Handle very long warning lists */
-                        .warning-table td:nth-child(3) {
-                          max-width: 0;
-                          overflow: hidden;
-                          text-overflow: ellipsis;
-                        }
-                        
-                        /* Show full content on hover for long warning lists */
-                        .warning-table td:nth-child(3):hover {
-                          overflow: visible;
-                          white-space: normal;
-                          word-break: break-all;
-                          position: relative;
-                          z-index: 10;
-                          background: white;
-                          box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-                        }
-                    </style>
-                    
+                    <div class="text-center">
+                        <h2 class="text-2xl font-bold mb-6 text-gray-800">Verification Results</h2>
+                            
+                            <!-- Station Info -->
+                            <div id="adwrn-modal-station-info" class="mb-6 p-3 bg-blue-50 rounded-lg" style="display:none;">
+                                <p class="text-sm text-blue-700 font-medium"></p>
+                            </div>
+                            
+                            <!-- Thunderstorm Accuracy -->
+                            <div class="mb-6">
+                                <p class="text-lg font-semibold text-gray-700 mb-2">Thunderstorm Warning Accuracy:</p>
+                                <p id="adwrn-thunderstorm-percent" class="text-3xl text-blue-600 font-bold">--%</p>
+                            </div>
+                            
+                            <!-- Gust/Wind Accuracy -->
+                            <div class="mb-8">
+                                <p class="text-lg font-semibold text-gray-700 mb-2">Gust/Wind Warning Accuracy:</p>
+                                <p id="adwrn-gust-percent" class="text-3xl text-green-600 font-bold">--%</p>
+                            </div>
+                            
+                            <!-- Download Button -->
+                            <a href="#" id="adwrn-modal-download-btn"
+                               class="bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-8 rounded-md shadow transition duration-300 flex items-center justify-center mb-4 w-full">
+                                <i class="fas fa-file-excel mr-2"></i>
+                                Download Aerodrome Warnings Table
+                            </a>
+                            
+                            <!-- View Graph Button -->
+                            <button id="adwrn-view-graph-btn"
+                                    class="bg-purple-600 hover:bg-purple-700 text-white font-medium py-3 px-8 rounded-md shadow-lg transition duration-300 flex items-center justify-center mb-4 w-full transform hover:scale-105">
+                                <i class="fas fa-chart-bar mr-2"></i>
+                                View Graph
+                            </button>
+                            
 
-                    
-                    <div class="table-container">
-                        <table class="warning-table" id="adwrn-final-report-table">
-                            <thead>
-                                <tr>
-                                  <th>क्र. सं. /<br>Sr.No.</th>
-                                  <th>तत्त्व /<br>Elements</th>
-                                  <th>
-                                    विमान क्षेत्र चेतावनियों की सं. /<br>
-                                    Warning no 1 Warning no 2................ Warning no.<br>
-                                    (Issue date/Issue Time UTC)
-                                  </th>
-                                  <th>
-                                    रेंज के अंतगर्द आने वाले (पारस) मामलों की प्रतिशतता अथवा सही होने की प्रतिशतता /<br>
-                                    % of cases within range or occurrence<br>
-                                    (% correct)
-                                  </th>
-                                  <th>
-                                    वास्तविक मौसम समयावधि के साथ जिसके लिये चेतावनी जारी नहीं की गयी थी /<br>
-                                    Actual weather with duration for which no warning was issued
-                                  </th>
-                                </tr>
-                              </thead>
-                              <tbody></tbody>
-                        </table>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1070,16 +1010,7 @@
             <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
             <span class="ml-2 text-sm text-gray-600">Processing...</span>
         </div>
-        <div id="adwrn-reportSection" style="display: none;">
-            <section class="container mx-auto px-4 max-w-7xl mb-16">
-                <div class="flex flex-col sm:flex-row justify-center gap-4">
-                    <a href="#" id="adwrn-downloadTableBtn" class="bg-green-600 hover:bg-green-700 text-white font-medium py-2.5 px-6 rounded-md shadow transition duration-300 flex items-center justify-center">
-                        <i class="fas fa-file-excel mr-2"></i>
-                        Download Aerodrome Warnings Table
-                    </a>
-                </div>
-            </section>
-        </div>
+
     </div>
     <!-- END: Aerodrome Warning Verification Tab -->
 
