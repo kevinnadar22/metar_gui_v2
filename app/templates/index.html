@@ -93,7 +93,7 @@
 
     <div class="display active">
 
-    <h1 class="text-2xl font-bold text-center mt-2 mb-2 text-gray-800">TAKE-OFF Forecast verification</h1>
+    <h1 class="text-2xl font-bold text-center mt-0 mb- text-gray-800">TAKE-OFF Forecast verification</h1>
 
     <!-- Upload Section -->
     <section class="container  mx-auto px-4 max-w-7xl mt-6 mb-0 pb-0">
@@ -247,7 +247,7 @@
                         <div class="metar-preview mt-6 hidden">
                             <h3 class="text-sm font-medium text-gray-700 mb-2">METAR Data Preview</h3>
                             <div
-                                class="preview-content bg-gray-50 border border-gray-200 rounded-md p-4 font-mono text-sm whitespace-pre-wrap max-h-[200px] overflow-y-auto">
+                                class="preview-content bg-gray-50 border border-gray-200 rounded-md p-4 font-mono text-sm whitespace-pre-wrap max-h-[150px] overflow-y-auto">
                             </div>
                             <div class="loading-indicator hidden flex items-center justify-center py-4">
                                 <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -306,7 +306,7 @@
                            Forecast File Preview
                         </h3>
                         <div
-                            class="preview-content bg-gray-50 border border-gray-200 rounded-md p-4 font-mono text-sm whitespace-pre-wrap overflow-auto shadow-inner hover:shadow-md transition-shadow duration-300" style="max-height: 150px;"></div>
+                            class="preview-content bg-gray-50 border border-gray-200 rounded-md p-4 font-mono text-sm whitespace-pre-wrap overflow-auto shadow-inner hover:shadow-md transition-shadow duration-300 mb-4" style="max-height: 120px;"></div>
                         <div class="loading-indicator hidden flex items-center justify-center py-4">
                             <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
                             <span class="ml-2 text-gray-600">Loading file content...</span>
@@ -369,18 +369,7 @@
                     </section>
 
                     <!-- Detailed Comparison -->
-                    <section class="container mx-auto px-4 hidden max-w-7xl mt-6 mb-8">
-                        <h2 class="text-2xl font-bold mb-6 text-gray-800 text-center">Hourly Comparison</h2>
-                        <div class="overflow-x-auto bg-white rounded-lg shadow-md">
-
-                            <table class="min-w-full" id="detailedComparisonTable">
-                                <thead class="bg-gray-100">
-                                </thead>
-                                <tbody class="divide-y divide-gray-200">
-                                </tbody>
-                            </table>
-                        </div>
-                    </section>
+                    
 
                     <!-- Download Section -->
                     <section class="container mx-auto px-4 max-w-7xl mb-16">
@@ -407,26 +396,7 @@
 
 <!-- ======= -->
 
-        <!-- Modal Popup for Warning Percentages -->
-        <div id="warningModal" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-50" style="display:none;">
-            <div class="bg-white rounded-lg shadow-lg p-8 max-w-md w-full text-center">
-                <h2 class="text-2xl font-bold mb-6 text-gray-800">Verification Results</h2>
-                <div class="mb-4">
-                    <p class="text-lg font-semibold text-gray-700">Thunderstorm Warning Accuracy:</p>
-                    <p id="thunderstormPercent" class="text-xl text-blue-600 font-bold">--%</p>
-                </div>
-                <div class="mb-6">
-                    <p class="text-lg font-semibold text-gray-700">Gust Warning Accuracy:</p>
-                    <p id="gustPercent" class="text-xl text-blue-600 font-bold">--%</p>
-                </div>
-                <a href="#" id="modalDownloadBtn"
-                     class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-6 rounded-md shadow transition duration-300 flex items-center justify-center mb-4">
-                    <i class="fas fa-file-csv mr-2"></i>
-                    Download Comparison as CSV
-                </a>
-                <button id="closeWarningModal" class="mt-2 px-4 py-2 bg-gray-300 rounded hover:bg-gray-400">Close</button>
-            </div>
-        </div>
+        
 <!-- >>>>>>> main -->
 
     
@@ -589,17 +559,17 @@
                     </div>
                     <h3 class="text-sm font-medium text-gray-700 mb-2 flex items-center">PDF Processing Status</h3>
     
-                    <div class="bg-gray-50 border border-gray-200 rounded-md p-2 text-sm  max-h-[150px] overflow-y-auto shadow-inner hover:shadow-md transition-shadow duration-300">
+                    <div class="bg-gray-50 border border-gray-200 mb-4 rounded-md p-0 text-sm  max-h-[150px] overflow-y-auto shadow-inner hover:shadow-md transition-shadow duration-300">
                         <!-- preview-content  || above class name--> 
-                        <table  id="windTable" style="display:none;border-collapse: collapse; width: 100%; margin-top: 10px;">
-                            <thead id="thead">
-                            <tr id="tr" >
-                            <th style="border: 1px solid #ccc; background-color: #f4f4f4; padding: 6px; text-align: center;" >Altitude 1</th>
-                            <th style="border: 1px solid #ccc; background-color: #f4f4f4; padding: 6px; text-align: center;">Dir/Speed 1</th>
-                            <th style="border: 1px solid #ccc; background-color: #f4f4f4; padding: 6px; text-align: center;">Temp 1</th>
-                            <th style="border: 1px solid #ccc; background-color: #f4f4f4; padding: 6px; text-align: center;">Altitude 2</th>
-                            <th style="border: 1px solid #ccc; background-color: #f4f4f4; padding: 6px; text-align: center;">Dir/Speed 2</th>
-                            <th style="border: 1px solid #ccc; background-color: #f4f4f4; padding: 6px; text-align: center;">Temp 2</th>
+                        <table class="text-xs"  id="windTable" style="display:none;border-collapse: collapse; width: 100%; margin-top: 10px;">
+                            <thead class="text-xs" id="thead">
+                            <tr class="text-xs" id="tr" >
+                            <th class="text-xs" style="border: 1px solid #ccc; font-size: 10px; background-color: #f4f4f4; padding: 6px; text-align: center;" >Altitude 1</th>
+                            <th class="text-xs" style="border: 1px solid #ccc; font-size: 10px; background-color: #f4f4f4; padding: 6px; text-align: center;">Dir/Speed 1</th>
+                            <th class="text-xs" style="border: 1px solid #ccc; font-size: 10px; background-color: #f4f4f4; padding: 6px; text-align: center;">Temp 1</th>
+                            <th class="text-xs" style="border: 1px solid #ccc; font-size: 10px; background-color: #f4f4f4; padding: 6px; text-align: center;">Altitude 2</th>
+                            <th class="text-xs" style="border: 1px solid #ccc; font-size: 10px; background-color: #f4f4f4; padding: 6px; text-align: center;">Dir/Speed 2</th>
+                            <th class="text-xs" style="border: 1px solid #ccc; font-size: 10px; background-color: #f4f4f4; padding: 6px; text-align: center;">Temp 2</th>
                             </tr>
                             </thead>
                         <tbody ></tbody>
@@ -864,9 +834,9 @@
                             </div>
                             <!-- Fetch Button below date/time -->
                             <div class="text-center mt-4">
-                                <button id="adwrn-fetch-btn" type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-10 rounded-md shadow-md transition duration-200">
+                                <!-- <button id="adwrn-fetch-btn" type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-10 rounded-md shadow-md transition duration-200">
                                   Fetch
-                                </button>
+                                </button> -->
                                 <div id="fetch-loading-indicator" class="hidden mt-4 flex items-center justify-center">
                                     <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
                                     <span class="ml-2 text-sm text-gray-600">Fetching data...</span>
@@ -876,7 +846,7 @@
                             <div id="adwrn-metar-preview" class="bg-gray-50 border border-gray-200 rounded-md p-4 font-mono text-sm whitespace-pre-wrap max-h-60 overflow-y-auto mt-4" style="display:none;"></div>
                             <div class="metar-preview mt-6 hidden">
                                 <h3 class="text-sm font-medium text-gray-700 mb-2">METAR Data Preview</h3>
-                                <div class="preview-content bg-gray-50 border border-gray-200 rounded-md p-4 font-mono text-sm whitespace-pre-wrap max-h-[200px] overflow-y-auto"></div>
+                                <div class="preview-content bg-gray-50 border border-gray-100 rounded-md p-4 font-mono text-sm whitespace-pre-wrap max-h-[200px] overflow-y-auto"></div>
                                 <div class="loading-indicator hidden flex items-center justify-center py-4">
                                     <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
                                     <span class="ml-2 text-gray-600">Fetching METAR data...</span>
@@ -938,7 +908,7 @@
                                 </p>
                             </div>
                             <h3 class="text-sm font-medium text-gray-700 mb-2 flex items-center">Forecast File Preview</h3>
-                            <div class="preview-content bg-gray-50 border border-gray-200 rounded-md p-4 font-mono text-sm whitespace-pre-wrap overflow-y-auto shadow-inner hover:shadow-md transition-shadow duration-300" style="height: 450px;"></div>
+                            <div class="preview-content bg-gray-50 border border-gray-200 rounded-md p-4 font-mono text-sm whitespace-pre-wrap overflow-y-auto shadow-inner hover:shadow-md transition-shadow duration-300 mb-4" style="height: 150px;"></div>
                             <div class="loading-indicator hidden flex items-center justify-center py-4">
                                 <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
                                 <span class="ml-2 text-gray-600">Loading file content...</span>
@@ -1022,27 +992,7 @@
     </footer>
 
     <!-- Display Graph Popup Modal -->
-    <div id="displayGraphModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden">
-        <div class="flex items-center justify-center min-h-screen p-4">
-            <div class="bg-white rounded-lg shadow-xl max-w-7xl w-full max-h-[90vh] overflow-y-auto">
-                <!-- Modal Header -->
-                <div class="flex items-center justify-between p-6 border-b border-gray-200">
-                    <h2 class="text-2xl font-bold text-gray-800">Display Graph</h2>
-                    <button id="closeDisplayGraphModal" class="text-gray-400 hover:text-gray-600 transition-colors duration-200">
-                        <i class="fas fa-times text-xl"></i>
-                    </button>
-                </div>
-                
-                <!-- Modal Content -->
-                <div class="p-6">
-                    <!-- Content will be added by the user -->
-                    <div id="displayGraphContent" class="min-h-[60vh]">
-                        <!-- User will add content here -->
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+    
 
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
 </body>
