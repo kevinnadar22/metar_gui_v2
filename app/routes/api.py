@@ -5,7 +5,7 @@ import base64
 from datetime import datetime
 import re
 from werkzeug.utils import secure_filename
-from app.utils import decode_metar_to_csv, extract_data_from_file_with_day_and_wind, compare_weather_data, OgimetAPI, extract_day_month_year_from_filename,extract_month_year_from_date,fetch_upper_air_data,circular_difference,process_weather_accuracy_helper,interpolate_temperature_only,generate_upper_air_verification_xlsx,plot_accuracy_chart
+from app.utils import decode_metar_to_csv, extract_data_from_file_with_day_and_wind, compare_weather_data, OgimetAPI, extract_day_month_year_from_filename,extract_month_year_from_date,fetch_upper_air_data,circular_difference,process_weather_accuracy_helper,interpolate_temperature_only,generate_upper_air_verification_xlsx
 from app.utils.AD_warn import parse_warning_file
 from app.utils.generate_warning_report import generate_warning_report, generate_aerodrome_warnings_table
 from app.utils.extract_metar_features import extract_metar_features
@@ -372,12 +372,17 @@ def process_metar():
         
         # Compare weather data
         comparison_df, merged_df = compare_weather_data(df_metar, df_forecast)
+        
+        # Store last comparison results globally (so /accuracy_chart can access it)
+        global last_comparison_df
+        last_comparison_df = comparison_df.copy()
 
-        chart_base64 = plot_accuracy_chart(comparison_df, metric="Overall")
 
-        img_bytes = base64.b64decode(chart_base64)
-        img = Image.open(io.BytesIO(img_bytes))
-        img.save("accuracy_chart.png")
+        # chart_base64 = plot_accuracy_chart(comparison_df, metric="Overall")
+
+        # img_bytes = base64.b64decode(chart_base64)
+        # img = Image.open(io.BytesIO(img_bytes))
+        # img.save("accuracy_chart.png")
 
         
         # Save comparison results to CSV with secure filename
@@ -511,6 +516,45 @@ def download_file(file_type):
         return jsonify({
             "error": f"An error occurred while downloading the file: {str(e)}"
         }), 500
+        
+from flask import Response
+import plotly.express as px
+
+# Global storage
+last_comparison_df = None
+        
+@api_bp.route("/accuracy_chart", methods=["GET"])
+def accuracy_chart():
+    global last_comparison_df
+    metric = request.args.get("metric", "Overall")
+
+    if last_comparison_df is None:
+        return jsonify({"error": "No comparison data available. Run /process_metar first."}), 400
+
+    # Prepare DataFrame for chart
+    df = last_comparison_df.copy()
+    df[metric] = df[metric].str.extract(r'(\d+\.?\d*)').astype(float)
+    df = df[~df["DAY"].isin(["Whole Month", "ICAO Requirement"])]
+
+    # Build interactive chart
+    fig = px.bar(
+        df,
+        x="DAY",
+        y=metric,
+        text=metric,
+        labels={"DAY": "Day", metric: f"{metric} Accuracy (%)"},
+        title=f"{metric} Accuracy per Day",
+        color=metric,
+        color_continuous_scale="Blues"
+    )
+    fig.update_traces(
+        texttemplate="%{y:.1f}%",
+        textposition="outside",
+        hovertemplate="Day %{x}<br>Accuracy: %{y:.1f}%<extra></extra>"
+    )
+    fig.update_layout(yaxis_range=[0, 100])
+
+    return Response(fig.to_html(full_html=False), mimetype="text/html")
 
 def parse_forecast_pdf(pdf_path):
     reader = PdfReader(pdf_path)
