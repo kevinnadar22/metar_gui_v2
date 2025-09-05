@@ -709,7 +709,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 .catch(error => {
                     hideLoadingSection(); // Hide loading on error
                     console.error('Error processing METAR data:', error);
-                    showCustomAlert('Error processing METAR data. Please try again.');
+                    // showCustomAlert('Error processing METAR data. Please try again.');
                 });
         } else {
 
