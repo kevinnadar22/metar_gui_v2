@@ -864,9 +864,14 @@
                             </div>
                             <!-- Fetch Button below date/time -->
                             <div class="text-center mt-4">
-                                <button id="adwrn-fetch-btn" type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-10 rounded-md shadow-md transition duration-200">
+                                <button id="adwrn-fetch-btn" type="button" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-10 rounded-md shadow-md transition duration-200">
                                   Fetch
                                 </button>
+                                <!-- Error message for validation -->
+                                <div id="adwrn-fetch-error" class="hidden mt-3 p-3 bg-red-50 border border-red-200 rounded-md text-red-700 text-sm">
+                                    <i class="fas fa-exclamation-triangle mr-2"></i>
+                                    <span id="adwrn-error-message">Please enter the station code and select both start and end dates.</span>
+                                </div>
                                 <div id="fetch-loading-indicator" class="hidden mt-4 flex items-center justify-center">
                                     <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
                                     <span class="ml-2 text-sm text-gray-600">Fetching data...</span>

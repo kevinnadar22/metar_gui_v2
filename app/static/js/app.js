@@ -1189,6 +1189,14 @@ const adwrnMetarPreview = document.getElementById('adwrn-metar-preview');
 const adwrnFetchBtn = document.getElementById('adwrn-fetch-btn');
 if (adwrnForm && adwrnMessage && adwrnMetarPreview && adwrnFetchBtn) {
     let isResetMode = false;
+    
+    // Add click event listener to the fetch button
+    adwrnFetchBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        // Trigger form submission
+        adwrnForm.dispatchEvent(new Event('submit'));
+    });
+    
     adwrnForm.addEventListener('submit', function(e) {
         e.preventDefault();
         if (isResetMode) {
@@ -1208,9 +1216,51 @@ if (adwrnForm && adwrnMessage && adwrnMetarPreview && adwrnFetchBtn) {
             uploadArea.classList.remove('opacity-50', 'pointer-events-none');
             uploadArea.querySelector('input[type="file"]').disabled = false;
             
+            // Hide error message
+            const errorDiv = document.getElementById('adwrn-fetch-error');
+            if (errorDiv) errorDiv.classList.add('hidden');
+            
             isResetMode = false;
             return;
         }
+        
+        // Validation: Check required fields
+        console.log('Validating aerodrome fetch fields...');
+        const stationCode = document.getElementById('adwrn-station-input').value.trim();
+        const startDate = adwrnForm.querySelector('input[name="start_date"]').value.trim();
+        const endDate = adwrnForm.querySelector('input[name="end_date"]').value.trim();
+        const errorDiv = document.getElementById('adwrn-fetch-error');
+        const errorMessage = document.getElementById('adwrn-error-message');
+        
+        console.log('Station code:', stationCode);
+        console.log('Start date:', startDate);
+        console.log('End date:', endDate);
+        
+        let validationErrors = [];
+        
+        if (!stationCode) {
+            validationErrors.push("Station code (ICAO INDEX)");
+        }
+        if (!startDate) {
+            validationErrors.push("Start date");
+        }
+        if (!endDate) {
+            validationErrors.push("End date");
+        }
+        
+        if (validationErrors.length > 0) {
+            console.log('Validation errors found:', validationErrors);
+            const errorText = `Please fill in the following required fields: ${validationErrors.join(', ')}.`;
+            if (errorMessage) errorMessage.textContent = errorText;
+            if (errorDiv) errorDiv.classList.remove('hidden');
+            console.log('Error message shown');
+            return; // Stop execution here
+        }
+        
+        console.log('Validation passed');
+        // Hide error message if validation passes
+        if (errorDiv) errorDiv.classList.add('hidden');
+        
         adwrnMessage.textContent = '';
         adwrnMetarPreview.style.display = 'none';
         adwrnMetarPreview.textContent = '';

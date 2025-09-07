@@ -3,6 +3,16 @@ import plotly.graph_objects as go
 
 # 1. Load and process the data from the CSV file, skipping the title row
 try:
+    # First, read the first line to extract month information
+    with open('./ad_warn_data/final_warning_report.csv', 'r') as f:
+        first_line = f.readline().strip()
+    
+    # Extract month from the first line (e.g., "Aerodrome warning for station VABB for July 2025")
+    import re
+    month_match = re.search(r'for (\w+) \d{4}', first_line)
+    month_name = month_match.group(1) if month_match else "Unknown Month"
+    
+    # Now read the CSV data skipping the title row
     df = pd.read_csv('./ad_warn_data/final_warning_report.csv', skiprows=1)
 except FileNotFoundError:
     print("Error: 'final_warning_report.csv' not found. Please ensure the file is in the correct directory.")
@@ -51,7 +61,7 @@ fig.add_trace(go.Bar(
     hovertemplate="<b>Thunderstorm</b><br>Day %{x}<br>Accuracy: %{y:.1f}%<extra></extra>",
     marker=dict(
         color=df_ts['Accuracy'],      # Color bars by accuracy value
-        colorscale='Blues',           # Use Blues color scale
+        colorscale='Blues',           # Use Blues color scale (original)
         showscale=True,               # Show the color bar legend
         colorbar=dict(
             title="TS Accuracy",
@@ -71,12 +81,12 @@ fig.add_trace(go.Bar(
     textposition='outside',
     hovertemplate="<b>Wind</b><br>Day %{x}<br>Accuracy: %{y:.1f}%<extra></extra>",
     marker=dict(
-        color=df_gust['Accuracy'],      # Color bars by accuracy value
-        colorscale='Reds',            # Use Reds color scale
+        color=df_gust['Accuracy'],    # Color bars by accuracy value
+        colorscale='Reds',            # Use Reds color scale (original)
         showscale=True,               # Show the color bar legend
         colorbar=dict(
             title="Gust Accuracy",
-            x=1.0,                    # Position color bar to the right
+            x=1.04,                   # Position color bar further to the right
             thickness=15
         )
     )
@@ -84,7 +94,12 @@ fig.add_trace(go.Bar(
 
 # 5. Style and format the chart
 fig.update_layout(
-    title_text="Daily Accuracy of Thunderstorm vs. Gust Warnings",
+    title={
+        'text': f"Daily Accuracy of Thunderstorm and Gust Warning for the Month of {month_name}",
+        'x': 0.5,  # Center the title
+        'xanchor': 'center',
+        'font': {'size': 18, 'color': 'black'}  # Black title for light theme
+    },
     xaxis_title_text="Day",
     yaxis_title_text="Accuracy (%)",
     barmode='group',
@@ -92,7 +107,9 @@ fig.update_layout(
     legend_title_text='Warning Type',
     legend=dict(x=0.01, y=0.98), # Position legend inside the plot
     uniformtext_minsize=8,
-    uniformtext_mode='hide'
+    uniformtext_mode='hide',
+    plot_bgcolor='rgba(128, 128, 128, 0.3)',  # Medium gray plot background to make all hue colors visible
+    paper_bgcolor='white'  # White paper background (light theme)
 )
 
 # 6. Save the chart to a single HTML file
