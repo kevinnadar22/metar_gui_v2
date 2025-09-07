@@ -179,45 +179,51 @@ import os
 
 def extract_data_from_file_with_day_and_wind(file_path):
     """
-    Extracts data from a file, including day (from filename or file content), time, and separated wind direction/speed.
+    Extracts data from a file, including day (from filename or file content), time,
+    and separated wind direction/speed.
+
+    Supports both daily and monthly forecast files.
     """
     data = []
 
     print(f"Processing file: {file_path}")
 
-    # Try extracting day, month, and year from filename
     filename = os.path.basename(file_path)
     print(f"Processing file: {filename}")
     day_from_name, month_from_name, year_from_name, _ = extract_day_month_year_from_filename(filename)
     print(f"Extracted from filename: Day={day_from_name}, Month={month_from_name}, Year={year_from_name}")
-    use_day_from_filename = day_from_name is not None
-    current_day = day_from_name if use_day_from_filename else 1
+
+    # Decide strategy:
+    # - daily files: use the day from filename
+    # - monthly files: detect days inside file
+    use_day_from_filename = bool(day_from_name and month_from_name and year_from_name and day_from_name != "01")
+    current_day = int(day_from_name) if use_day_from_filename else None
 
     try:
         with open(file_path, "r") as file:
             lines = file.readlines()
 
-            # Skip first line only if day is NOT taken from filename
-            if not use_day_from_filename:
-                lines = lines[1:]  # skip header
+            # Skip first line only if day is not from filename (monthly format often has headers)
+            if not use_day_from_filename and lines:
+                lines = lines[1:]
 
             for line in lines:
                 line = line.strip()
                 if not line:
                     continue
 
-                # If using day from file content (not filename), check for numeric day lines
+                # For monthly files, update current_day whenever we see a day marker (1, 2, … 31)
                 if not use_day_from_filename and re.match(r"^\d{1,2}$", line):
                     current_day = int(line)
                     continue
 
-                # Extract values from valid data lines
+                # Extract data rows like: 0000Z 09010KT 25 1009 1012
                 match = re.match(r"(\d{4}Z)\s+(\S+)\s+(\d+)\s+(\d+)\s+(\d+)", line)
                 if match:
                     time, wind_str, temp, qfe, qnh = match.groups()
                     wind_dir, wind_speed = extract_wind_data(wind_str)
                     data.append({
-                        "DAY": current_day,
+                        "DAY": current_day if current_day else 1,
                         "MONTH": month_from_name,
                         "YEAR": year_from_name,
                         "TIME": time,
@@ -236,6 +242,7 @@ def extract_data_from_file_with_day_and_wind(file_path):
     except Exception as e:
         print(f"An error occurred: {e}")
         return pd.DataFrame()
+
 
 def compare_wind_by_time(df1, df2):
     """
@@ -331,37 +338,73 @@ def circular_difference(dir1, dir2):
     return min(abs(dir1 - dir2), 360 - (abs(dir1 - dir2)))
 
 
+# def extract_day_month_year_from_filename(filename):
+#     """
+#     Extract day, month, and year from a filename following pattern like 'TAKEOFF_Forecast_12092023.txt'
+#     or 'TAKEOFF_Forecast_092023' then return day as 01
+    
+#     Args:
+#         filename (str): The filename to parse
+        
+#     Returns:
+#         tuple: (day, month, year, day_month_year_str) where day_month_year_str is formatted as "DDMMYYYY"
+#                Returns (None, None, None, None) if pattern not found
+#     """
+#     # Pattern: DDMMYYYY without separators
+#     print(f"filename = {filename}")
+#     match = re.search(r'(\d{2})(\d{2})(\d{4})\.txt$', filename)
+#     if match:
+#         day = match.group(1)
+#         month = match.group(2)
+#         year = match.group(3)
+#         return day, month, year, f"{day}{month}{year}"
+    
+#     # Pattern: DD_MM_YYYY with underscores
+#     match = re.search(r'(\d{2})_(\d{2})_(\d{4})\.txt$', filename)
+#     if match:
+#         day = match.group(1)
+#         month = match.group(2)
+#         year = match.group(3)
+#         return day, month, year, f"{day}{month}{year}"
+    
+#     # No pattern matched
+#     return None, None, None, None
+
 def extract_day_month_year_from_filename(filename):
     """
-    Extract day, month, and year from a filename following pattern like 'TAKEOFF_Forecast_12092023.txt'
-    or 'TAKEOFF_Forecast_092023' then return day as 01
-    
-    Args:
-        filename (str): The filename to parse
-        
-    Returns:
-        tuple: (day, month, year, day_month_year_str) where day_month_year_str is formatted as "DDMMYYYY"
-               Returns (None, None, None, None) if pattern not found
+    Accepts names like:
+      - TAKEOFF_Forecast_12092023.txt  (DDMMYYYY)
+      - TAKEOFF_Forecast_12_09_2023.txt (DD_MM_YYYY)
+      - TAKEOFF_Forecast_092023.txt     (MMYYYY) -> day defaults to "01"
+      - 12092023.txt / 12_09_2023.txt / 092023.txt, etc.
+
+    Returns (day, month, year, "DDMMYYYY") or (None, None, None, None) if no date found.
     """
-    # Pattern: DDMMYYYY without separators
-    print(f"filename = {filename}")
-    match = re.search(r'(\d{2})(\d{2})(\d{4})\.txt$', filename)
-    if match:
-        day = match.group(1)
-        month = match.group(2)
-        year = match.group(3)
+    import os, re
+    name = os.path.basename(filename or "")
+    print(f"filename = {name}")
+
+    # 1) DDMMYYYY anywhere
+    m = re.search(r'(?<!\d)(\d{2})(\d{2})(\d{4})(?=\.txt$|$)', name)
+    if m:
+        day, month, year = m.group(1), m.group(2), m.group(3)
         return day, month, year, f"{day}{month}{year}"
-    
-    # Pattern: DD_MM_YYYY with underscores
-    match = re.search(r'(\d{2})_(\d{2})_(\d{4})\.txt$', filename)
-    if match:
-        day = match.group(1)
-        month = match.group(2)
-        year = match.group(3)
+
+    # 2) DD_MM_YYYY anywhere
+    m = re.search(r'(?<!\d)(\d{2})_(\d{2})_(\d{4})(?=\.txt$|$)', name)
+    if m:
+        day, month, year = m.group(1), m.group(2), m.group(3)
         return day, month, year, f"{day}{month}{year}"
-    
-    # No pattern matched
+
+    # 3) Monthly: MMYYYY anywhere (default day "01")
+    m = re.search(r'(?<!\d)(\d{2})(\d{4})(?=\.txt$|$)', name)
+    if m:
+        month, year = m.group(1), m.group(2)
+        day = "01"
+        return day, month, year, f"{day}{month}{year}"
+
     return None, None, None, None
+
 
 
 def extract_month_year_from_date(date_str, format_str="%Y%m%d%H%M"):
@@ -654,39 +697,39 @@ import matplotlib.pyplot as plt
 import io
 import base64
 
-def plot_accuracy_chart(daily_accuracy, metric="Overall"):
-    """
-    Creates a bar chart for accuracy over days.
+# def plot_accuracy_chart(daily_accuracy, metric="Overall"):
+#     """
+#     Creates a bar chart for accuracy over days.
     
-    Args:
-        daily_accuracy (pd.DataFrame): DataFrame from compare_weather_data.
-        metric (str): Which metric to plot ("Overall", "Wind Direction", "Wind Speed", "Temperature", "QNH").
+#     Args:
+#         daily_accuracy (pd.DataFrame): DataFrame from compare_weather_data.
+#         metric (str): Which metric to plot ("Overall", "Wind Direction", "Wind Speed", "Temperature", "QNH").
     
-    Returns:
-        str: Base64 encoded PNG image (can be sent to frontend).
-    """
-    df = daily_accuracy.copy()
+#     Returns:
+#         str: Base64 encoded PNG image (can be sent to frontend).
+#     """
+#     df = daily_accuracy.copy()
 
-    # Extract only % number
-    df[metric] = df[metric].str.extract(r'(\d+\.?\d*)').astype(float)
+#     # Extract only % number
+#     df[metric] = df[metric].str.extract(r'(\d+\.?\d*)').astype(float)
 
-    # Filter out non-date rows (Whole Month, ICAO Requirement)
-    df = df[~df["DAY"].isin(["Whole Month", "ICAO Requirement"])]
+#     # Filter out non-date rows (Whole Month, ICAO Requirement)
+#     df = df[~df["DAY"].isin(["Whole Month", "ICAO Requirement"])]
 
-    # Plot
-    plt.figure(figsize=(10,5))
-    plt.bar(df["DAY"], df[metric], color="skyblue")
-    plt.xticks(rotation=45)
-    plt.ylim(0, 100)
-    plt.ylabel("Accuracy (%)")
-    plt.xlabel("Day")
-    plt.title(f"{metric} Accuracy per Day")
+#     # Plot
+#     plt.figure(figsize=(10,5))
+#     plt.bar(df["DAY"], df[metric], color="skyblue")
+#     plt.xticks(rotation=45)
+#     plt.ylim(0, 100)
+#     plt.ylabel("Accuracy (%)")
+#     plt.xlabel("Day")
+#     plt.title(f"{metric} Accuracy per Day")
 
-    # Save to base64
-    buf = io.BytesIO()
-    plt.tight_layout()
-    plt.savefig(buf, format="png")
-    buf.seek(0)
-    img_base64 = base64.b64encode(buf.read()).decode("utf-8")
-    plt.close()
-    return img_base64
+#     # Save to base64
+#     buf = io.BytesIO()
+#     plt.tight_layout()
+#     plt.savefig(buf, format="png")
+#     buf.seek(0)
+#     img_base64 = base64.b64encode(buf.read()).decode("utf-8")
+#     plt.close()
+#     return img_base64

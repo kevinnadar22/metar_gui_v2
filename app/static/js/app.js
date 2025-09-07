@@ -49,6 +49,36 @@ function showCustomAlert(message) {
     }
 }
 
+function populateTableFromCSV(csvText, tableElement) {
+    // Parse CSV into rows
+    const rows = csvText.trim().split("\n").map(row => row.split(","));
+
+    // Clear old content
+    tableElement.innerHTML = "";
+
+    // Header
+    const thead = tableElement.createTHead();
+    const headerRow = thead.insertRow();
+    rows[0].forEach(headerText => {
+        const th = document.createElement("th");
+        th.textContent = headerText.trim();
+        th.className = "px-4 py-2 bg-gray-100 text-left font-semibold";
+        headerRow.appendChild(th);
+    });
+
+    // Body
+    const tbody = tableElement.createTBody();
+    rows.slice(1).forEach(row => {
+        const tr = tbody.insertRow();
+        row.forEach(cellText => {
+            const td = tr.insertCell();
+            td.textContent = cellText.trim();
+            td.className = "px-4 py-2 border";
+        });
+    });
+}
+
+
 // Initialize date pickers and file upload functionality
 document.addEventListener('DOMContentLoaded', function () {
     // ===== INITIALIZATION FUNCTIONS =====
@@ -595,6 +625,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
                     const metadata = data.metadata;
                     const metarReportTitle = document.getElementById('metarReportTitle');
+
+                    document.getElementById("downloadCsvBtn").href = 
+    `/api/download/comparison_csv?file_path=${data.file_paths.comparison_csv}`;
+
  document.getElementById('upperAirForecastFileInput').addEventListener('change', async function (e) {
         const file = e.target.files[0];
         if (!file) return;
@@ -655,29 +689,8 @@ document.addEventListener('DOMContentLoaded', function () {
                             return response.text();
                         })
                         .then(csvText => {
-                            // Extract thunderstorm and gust percentages from CSV
-                            let thunderstormPercent = '--';
-                            let gustPercent = '--';
-                            const rows = csvText.split('\n');
-                            const headers = rows[0].split(',');
-                            for (let i = 1; i < rows.length; i++) {
-                                const row = rows[i].split(',');
-                                if (row.length < headers.length) continue;
-                                const element = row[1]?.toLowerCase() || '';
-                                const accuracy = row[3] || row[4] || '';
-                                if (element.includes('thunderstorm') || element.includes('ts')) {
-                                    thunderstormPercent = accuracy.includes('%') ? accuracy : `${Math.round(parseFloat(accuracy)*100)}%`;
-                                }
-                                if (element.includes('gust') || element.includes('wind')) {
-                                    gustPercent = accuracy.includes('%') ? accuracy : `${Math.round(parseFloat(accuracy)*100)}%`;
-                                }
-                            }
-// <<<<<<< prod
-                            return response.text();
-                        })
-                        .then(csvText => {
                             // Get the detailed comparison table
-                            const detailedComparisonTable = document.getElementById('detailedComparisonTable');
+                            const detailedComparisonTable = document.getElementById('comparisonTable');
                             populateTableFromCSV(csvText, detailedComparisonTable);
                             
                             // Show report section after both tables are populated
@@ -726,6 +739,11 @@ document.addEventListener('DOMContentLoaded', function () {
             reportPopup.classList.remove('flex');
         }
     });
+    document.getElementById("DisplayGraphBtn").addEventListener("click", () => {
+    // Open the chart in a new browser tab
+    window.open("/api/accuracy_chart?metric=Overall", "_blank");
+});
+
 });
 
 
