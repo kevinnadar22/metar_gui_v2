@@ -689,9 +689,12 @@ document.addEventListener('DOMContentLoaded', function () {
                             return response.text();
                         })
                         .then(csvText => {
+
+                             const lines = csvText.split("\n");
+                            const cleanedCsv = lines.slice(1).join("\n");
                             // Get the detailed comparison table
                             const detailedComparisonTable = document.getElementById('comparisonTable');
-                            populateTableFromCSV(csvText, detailedComparisonTable);
+                            populateTableFromCSV(cleanedCsv, detailedComparisonTable);
                             
                             // Show report section after both tables are populated
                             const reportPopup = document.getElementById('reportPopup');

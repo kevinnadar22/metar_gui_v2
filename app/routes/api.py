@@ -271,7 +271,11 @@ def process_metar():
         
         # Extract parameters from form data
         start_date = form_data.get('start_date')
-        end_date = form_data.get('end_date') 
+        global start_dt
+        start_dt = start_date
+        end_date = form_data.get('end_date')
+        global end_dt
+        end_dt = end_date
         icao = form_data.get('icao')
         verification_type = request.form.get('verification_type', 'daily')  # default to daily
 
@@ -525,8 +529,12 @@ last_comparison_df = None
         
 @api_bp.route("/accuracy_chart", methods=["GET"])
 def accuracy_chart():
-    global last_comparison_df
+    global last_comparison_df,start_dt,end_dt
     metric = request.args.get("metric", "Overall")
+
+    format_date = lambda x: datetime.strptime(x, "%Y%m%d%H%M").strftime("%d/%m/%Y %H:%M UTC") if x else ""
+    start_dt = format_date(start_dt)
+    end_dt = format_date(end_dt)
 
     if last_comparison_df is None:
         return jsonify({"error": "No comparison data available. Run /process_metar first."}), 400
@@ -543,18 +551,37 @@ def accuracy_chart():
         y=metric,
         text=metric,
         labels={"DAY": "Day", metric: f"{metric} Accuracy (%)"},
-        title=f"{metric} Accuracy per Day",
         color=metric,
         color_continuous_scale="Blues"
     )
+
+    # Apply custom layout
     fig.update_traces(
         texttemplate="%{y:.1f}%",
         textposition="outside",
         hovertemplate="Day %{x}<br>Accuracy: %{y:.1f}%<extra></extra>"
     )
-    fig.update_layout(yaxis_range=[0, 100])
+    fig.update_layout(
+        title={
+            'text': f"Daily {metric} Accuracy from {start_dt} to {end_dt}",
+            'x': 0.5,  # Center the title
+            'xanchor': 'center',
+            'font': {'size': 18, 'color': 'black'}
+        },
+        xaxis_title_text="Day",
+        yaxis_title_text="Accuracy (%)",
+        barmode='group',
+        yaxis_range=[0, 115],  # Allow a bit of headroom above 100%
+        legend_title_text='Accuracy Level',
+        legend=dict(x=0.01, y=0.98),  # Position legend inside plot
+        uniformtext_minsize=8,
+        uniformtext_mode='hide',
+        plot_bgcolor='rgba(128, 128, 128, 0.3)',  # Light gray plot area
+        paper_bgcolor='white'  # White background
+    )
 
     return Response(fig.to_html(full_html=False), mimetype="text/html")
+
 
 def parse_forecast_pdf(pdf_path):
     reader = PdfReader(pdf_path)
