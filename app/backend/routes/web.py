@@ -1,7 +1,8 @@
 from flask import Blueprint, render_template, request, jsonify, send_file
-from app.utils.fetch_metar import fetch_all_metar
+from app.backend.utils.fetch_metar import fetch_all_metar
 from datetime import datetime
 import os
+from app.backend.config import AD_WARN_DIR
 
 web = Blueprint('web', __name__)
 
@@ -30,7 +31,7 @@ def home():
                 # Read the generated file to show preview
                 try:
                     # The file should now be in ad_warn_data directory
-                    ad_warn_dir = os.path.join(os.getcwd(), 'ad_warn_data')
+                    ad_warn_dir = AD_WARN_DIR
                     file_path = os.path.join(ad_warn_dir, output_file)
                     with open(file_path, 'r', encoding='utf-8') as f:
                         file_content = f.read()

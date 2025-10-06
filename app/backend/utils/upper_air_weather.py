@@ -2,7 +2,7 @@ import os
 from PyPDF2 import PdfReader
 import re
 from datetime import datetime, timedelta
-from app.utils.ogimet import OgimetAPI
+from app.backend.utils.ogimet import OgimetAPI
 
 
 def get_pdf_text(pdf_path):

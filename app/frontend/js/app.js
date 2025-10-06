@@ -629,50 +629,50 @@ document.addEventListener('DOMContentLoaded', function () {
                     document.getElementById("downloadCsvBtn").href = 
     `/api/download/comparison_csv?file_path=${data.file_paths.comparison_csv}`;
 
- document.getElementById('upperAirForecastFileInput').addEventListener('change', async function (e) {
-        const file = e.target.files[0];
-        if (!file) return;
+//  document.getElementById('upperAirForecastFileInput').addEventListener('change', async function (e) {
+//         const file = e.target.files[0];
+//         if (!file) return;
 
-        const reader = new FileReader();
-        reader.onload = async function () {
-          const typedarray = new Uint8Array(this.result);
+//         const reader = new FileReader();
+//         reader.onload = async function () {
+//           const typedarray = new Uint8Array(this.result);
 
-          const pdf = await pdfjsLib.getDocument({ data: typedarray }).promise;
-          let fullText = '';
+//           const pdf = await pdfjsLib.getDocument({ data: typedarray }).promise;
+//           let fullText = '';
 
-          for (let i = 1; i <= pdf.numPages; i++) {
-            const page = await pdf.getPage(i);
-            const textContent = await page.getTextContent();
-            const pageText = textContent.items.map(item => item.str).join(' ');
-            fullText += pageText + '\n';
-          }
+//           for (let i = 1; i <= pdf.numPages; i++) {
+//             const page = await pdf.getPage(i);
+//             const textContent = await page.getTextContent();
+//             const pageText = textContent.items.map(item => item.str).join(' ');
+//             fullText += pageText + '\n';
+//           }
 
-          // Extract "UPPER WINDS" block
-          const upperWindsBlock = fullText.match(/UPPER WINDS([\s\S]+?)WEATHER/i);
-          if (!upperWindsBlock) return alert("No 'Upper Winds' data found.");
+//           // Extract "UPPER WINDS" block
+//           const upperWindsBlock = fullText.match(/UPPER WINDS([\s\S]+?)WEATHER/i);
+//           if (!upperWindsBlock) return alert("No 'Upper Winds' data found.");
 
-          const cleanedText = upperWindsBlock[1].replace(/[\=]/g, '').trim();
-          const dataArray = cleanedText.split(/\s+/);
+//           const cleanedText = upperWindsBlock[1].replace(/[\=]/g, '').trim();
+//           const dataArray = cleanedText.split(/\s+/);
 
-          // Convert into rows of 3 (Altitude, Dir/Speed, Temp)
-          const table = document.getElementById("windTable");
-          const tbody = table.querySelector("tbody");
-          tbody.innerHTML = "";
-          for (let i = 0; i < dataArray.length; i += 6) {
-            const row = document.createElement("tr");
-            for (let j = 0; j < 6; j++) {
-              const cell = document.createElement("td");
-              cell.textContent = dataArray[i + j] || "";
-              row.appendChild(cell);
-            }
-            tbody.appendChild(row);
-          }
+//           // Convert into rows of 3 (Altitude, Dir/Speed, Temp)
+//           const table = document.getElementById("windTable");
+//           const tbody = table.querySelector("tbody");
+//           tbody.innerHTML = "";
+//           for (let i = 0; i < dataArray.length; i += 6) {
+//             const row = document.createElement("tr");
+//             for (let j = 0; j < 6; j++) {
+//               const cell = document.createElement("td");
+//               cell.textContent = dataArray[i + j] || "";
+//               row.appendChild(cell);
+//             }
+//             tbody.appendChild(row);
+//           }
 
-          table.style.display = "table";
-        };
+//           table.style.display = "table";
+//         };
 
-        reader.readAsArrayBuffer(file);
-      });
+//         reader.readAsArrayBuffer(file);
+//       });
 
                     let update_string = `VERIFICATION RESULT OF TAKE-OFF FORECAST <br> ${metadata.icao}`
                     if (metadata.start_time && metadata.end_time) {
@@ -831,30 +831,8 @@ upperAirObsFilePreview.querySelector('.close-btn').addEventListener('click', fun
     upperAirDatePickerSection.style.display = 'block';
 });
 
-// Forecast file upload
-upperAirForecastFileInput.addEventListener('change', function () {
-    const file = this.files[0];
-    if (!file) return;
-    if (!file.name.endsWith('.pdf')) {
-        showCustomAlert('Please upload a PDF file for upper air forecast.');
-        return;
-    }
-    upperAirForecastFilePreview.querySelector('.file-name-container span').textContent = file.name;
-    upperAirForecastFilePreview.classList.remove('hidden');
-    const previewContent = upperAirForecastFilePreview.querySelector('.preview-content');
-    const loadingIndicator = upperAirForecastFilePreview.querySelector('.loading-indicator');
-    loadingIndicator.classList.remove('hidden');
-    previewContent.textContent = '';
-    if (file.type === 'application/pdf') {
-        loadingIndicator.classList.add('hidden');
-        previewContent.innerHTML = '<p class="text-gray-600">PDF uploaded successfully. Upper winds data will be extracted for verification.</p>';
-    } else {
-        loadingIndicator.classList.add('hidden');
-        previewContent.textContent = 'Please upload a PDF file.';
-    }
-});
 
- document.getElementById('upperAirForecastFileInput').addEventListener('change', async function (e) {
+document.getElementById('upperAirForecastFileInput').addEventListener('change', async function (e) {
         const file = e.target.files[0];
         if (!file) return;
 
@@ -906,61 +884,12 @@ upperAirForecastFilePreview.querySelector('.close-btn').addEventListener('click'
     upperAirForecastFileInput.value = '';
 });
 
-// Fetch observation data from Wyoming
-// upperAirFetchBtn.addEventListener('click', function () {
-//     const date = upperAirDatePicker.value;
-//     const hour = upperAirHourSelect.value;
-//     const station = upperAirStationInput.value;
-//     if (!date || !hour || !/^\d{5}$/.test(station)) {
-//         if (typeof showCustomAlert === 'function') {
-//             showCustomAlert('Please select date, hour, and enter a valid 5-digit station ID.');
-//         } else {
-//             alert('Please select date, hour, and enter a valid 5-digit station ID.');
-//         }
-//         return;
-//     }
-//     upperAirPreviewSection.classList.remove('hidden');
-//     upperAirLoadingIndicator.classList.remove('hidden');
-//     upperAirPreviewContent.textContent = '';
-//     const dateTime = `${date} ${hour}:00:00`;
-//     fetch(`/api/get_upper_air?datetime=${encodeURIComponent(dateTime)}&station_id=${station}`)
-//         .then(async response => {
-//             upperAirLoadingIndicator.classList.add('hidden');
-//             if (!response.ok) {
-//                 // Try to parse error JSON
-//                 let errorMsg = 'Failed to fetch upper air data';
-//                 try {
-//                     const err = await response.json();
-//                     errorMsg = err.error || errorMsg;
-//                 } catch (e) {}
-//                 throw new Error(errorMsg);
-//             }
-//             const text = await response.text();
-//             // If the response looks like HTML, show a friendly error
-//             if (text.trim().toLowerCase().startsWith('<!doctype html') || text.trim().toLowerCase().startsWith('<html')) {
-//                 throw new Error('No data available for the selected date/time/station.');
-//             }
-//             upperAirPreviewContent.textContent = text;
-//         })
-//         .catch(error => {
-//             upperAirPreviewSection.classList.add('hidden');
-//             if (typeof showCustomAlert === 'function') {
-//                 showCustomAlert('Error fetching upper air data: ' + error.message);
-//             } else {
-//                 alert('Error fetching upper air data: ' + error.message);
-//             }
-//         });
-// });
-
-// Verification (submit)
-// Replace your current upperAirVerifyBtn click handler with this:
 upperAirVerifyBtn.addEventListener('click', function () {
     const station = upperAirStationInput.value;
     const forecastFile = upperAirForecastFileInput.files[0];
     const obsFile = upperAirObsFileInput.files[0];
     const date = upperAirDatePicker.value;
     const hour = upperAirHourSelect.value;
-    // const tempValue = document.getElementById('upperAirTempInput').value; // <-- get temp
 
     if (!/^\d{5}$/.test(station)) {
         alert('Please enter a valid 5-digit station ID.');
@@ -984,11 +913,7 @@ upperAirVerifyBtn.addEventListener('click', function () {
         const dateTime = `${date} ${hour}:00:00`;
         formData.append('datetime', dateTime);
     }
-    // if (tempValue !== '') {
-    //     formData.append('reference_temp', tempValue); // <-- send temp to backend
-    // }
-
-    // Show loading, hide report
+   
     upperAirReportSection.style.display = 'none';
 
     fetch('/api/process_upper_air', {
@@ -1018,28 +943,6 @@ upperAirVerifyBtn.addEventListener('click', function () {
             document.getElementById('windDirAccuracy').textContent = data.wind_dir_accuracy !== undefined ? `${data.wind_dir_accuracy}%` : '--';
             document.getElementById('weatherAccuracy').textContent = data.weather_accuracy !== undefined ? `${data.weather_accuracy}%` : '--';
 
-            // Fetch and populate the verification table
-//             if (data.file_path) {
-//                 fetch(`/api/download/upper_air_csv?file_path=${encodeURIComponent(data.file_path)}`)
-//                     .then(response => {
-//                         if (!response.ok) throw new Error('Failed to download verification CSV');
-//                         return response.text();
-//                     })
-//                     .then(csvText => {
-//                         populateUpperAirVerificationTable(csvText);
-//                     })
-//                     .catch(error => {
-//                         showCustomAlert('Failed to load verification data. Please try again.');
-//                     });
-
-//                 // Set download button
-//                 const downloadBtn = document.querySelector('#upperAirReportSection #downloadCsvBtn');
-// if (downloadBtn && data.file_path.endsWith('.xlsx')) {
-//     downloadBtn.href = `/api/download/upper_air_csv?file_path=${encodeURIComponent(data.file_path)}`;
-//     downloadBtn.textContent = "Download XLSX Report";
-// }
-
-//             }
 
     const tableBody = document.getElementById('upperAirTableBody');
     tableBody.innerHTML = ''; // Clear previous data
@@ -1088,7 +991,6 @@ upperAirVerifyBtn.addEventListener('click', function () {
     const downloadBtn = document.querySelector('#upperAirVerificationModal #downloadCsvBtn');
     if (downloadBtn && data.file_path && data.file_path.endsWith('.xlsx')) {
         downloadBtn.href = `/api/download/upper_air_csv?file_path=${encodeURIComponent(data.file_path)}`;
-        // downloadBtn.textContent = "Download XLSX Report";
         downloadBtn.style.display = 'inline-block';
     }
         })
@@ -1177,9 +1079,9 @@ function setupDragAndDrop(uploadAreaId, fileInputId, fileType) {
     });
 
     // Optional: clicking the area opens the file dialog
-    uploadArea.addEventListener('click', function () {
-        fileInput.click();
-    });
+    // uploadArea.addEventListener('click', function () {
+    //     fileInput.click();
+    // });
 }
 
 
@@ -1200,7 +1102,7 @@ const showDisplay = (index) => {
 
 
 // Setup drag and drop for both areas
-setupDragAndDrop('upperAirObsUploadArea', 'upperAirObsFileInput', 'csv');
+// setupDragAndDrop('upperAirObsUploadArea', 'upperAirObsFileInput', 'csv');
 setupDragAndDrop('upperAirForecastUploadArea', 'upperAirForecastFileInput', 'pdf');
 
 // === Aerodrome Warning AJAX Fetch & Verify ===

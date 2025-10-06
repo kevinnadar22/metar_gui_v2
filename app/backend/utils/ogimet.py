@@ -12,7 +12,7 @@ from typing import List, Dict, Optional, Union, Any
 import random
 import string
 import os
-from app.config import METAR_DATA_DIR
+from app.backend.config import METAR_DATA_DIR
 
 class OgimetAPI:
     """

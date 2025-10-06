@@ -5,21 +5,17 @@ import base64
 from datetime import datetime
 import re
 from werkzeug.utils import secure_filename
-from app.utils import decode_metar_to_csv, extract_data_from_file_with_day_and_wind, compare_weather_data, OgimetAPI, extract_day_month_year_from_filename,extract_month_year_from_date,fetch_upper_air_data,circular_difference,process_weather_accuracy_helper,interpolate_temperature_only,generate_upper_air_verification_xlsx
-from app.utils.AD_warn import parse_warning_file
-from app.utils.generate_warning_report import generate_warning_report, generate_aerodrome_warnings_table
-from app.utils.extract_metar_features import extract_metar_features
-from app.utils.validation import validate_files
-from app.config import METAR_DATA_DIR, UPPER_AIR_DATA_DIR
+from app.backend.utils import decode_metar_to_csv, extract_data_from_file_with_day_and_wind, compare_weather_data, OgimetAPI, extract_day_month_year_from_filename,extract_month_year_from_date,fetch_upper_air_data,circular_difference,process_weather_accuracy_helper,interpolate_temperature_only,generate_upper_air_verification_xlsx
+from app.backend.utils.AD_warn import parse_warning_file
+from app.backend.utils.generate_warning_report import generate_warning_report, generate_aerodrome_warnings_table
+from app.backend.utils.extract_metar_features import extract_metar_features
+from app.backend.utils.validation import validate_files
+from app.backend.config import METAR_DATA_DIR, UPPER_AIR_DATA_DIR, DOCKER_VOLUME_MOUNT_POINT, AD_WARN_DIR
 import tempfile
 import pandas as pd
 import numpy as np
-import re
 from PyPDF2 import PdfReader
-import requests
 from urllib.parse import quote
-import sys  
-import subprocess
 import math
 import base64, io
 from PIL import Image
@@ -381,13 +377,6 @@ def process_metar():
         global last_comparison_df
         last_comparison_df = comparison_df.copy()
 
-
-        # chart_base64 = plot_accuracy_chart(comparison_df, metric="Overall")
-
-        # img_bytes = base64.b64decode(chart_base64)
-        # img = Image.open(io.BytesIO(img_bytes))
-        # img.save("accuracy_chart.png")
-
         
         # Save comparison results to CSV with secure filename
         comparison_csv_filename = secure_filename(f"comparison_{icao}_{timestamp}.csv")
@@ -483,7 +472,7 @@ def download_file(file_type):
             
         # Validate file path to prevent directory traversal
         normalized_path = os.path.normpath(file_path)
-        valid_prefixes = ['uploads', 'downloads', 'app/static/metar_data/downloads']
+        valid_prefixes = ['uploads', 'downloads']
         
         if not any(normalized_path.startswith(prefix) for prefix in valid_prefixes):
             # Also check for absolute paths that might contain our valid directories
@@ -724,35 +713,6 @@ def process_upper_air():
             else:
                 raise KeyError(f"Column '{col}' not found in forecast data.")
 
-        # --- Merge and Calculate ---
-        # actual_df["key"] = 1
-        # forecast_df["key"] = 1
-
-        # merged = pd.merge(actual_df, forecast_df, on="key").drop("key", axis=1)
-        # merged["height_diff"] = (merged["geopotential height_m"] - merged["Altitude (m)"]).abs()
-        # min_pairs = merged.loc[merged.groupby("Altitude (m)")["height_diff"].idxmin()]
-
-        # min_pairs["wind speed_kt_actual"] = min_pairs["wind speed_m/s"] * 1.94384
-        # min_pairs["temp_diff"] = (min_pairs["Temperature (°C)"] - min_pairs["temperature_C"]).abs()
-        # min_pairs["wind_diff"] = (min_pairs["Wind Speed (kt)"] - min_pairs["wind speed_kt_actual"]).abs()
-        # if "wind direction_degree" in min_pairs.columns and "Wind Direction" in min_pairs.columns:
-        #     min_pairs["wind_dir_diff"] = min_pairs.apply(
-        #         lambda row: circular_difference(
-        #             float(row["wind direction_degree"]),
-        #             float(row["Wind Direction"])
-        #         ) if pd.notnull(row["wind direction_degree"]) and pd.notnull(row["Wind Direction"]) else np.nan,
-        #         axis=1
-        #     )
-
-        #     wind_dir_threshold = 30
-        #     min_pairs["wind_dir_correct"] = min_pairs["wind_dir_diff"].apply(
-        #         lambda diff: not pd.isnull(diff) and diff <= wind_dir_threshold
-        #     )       
-        #     wind_dir_accuracy = round(min_pairs["wind_dir_correct"].mean() * 100, 2)
-        # else:
-        #     wind_dir_accuracy = None
-
-        # Replaces merge + min_pairs logic
 
         min_pairs = interpolate_temperature_only(actual_df, forecast_df)
 
@@ -947,7 +907,7 @@ def upload_ad_warning():
         return jsonify({'error': 'Only .txt files are allowed'}), 400
     
     # Create a directory for AD warning files if it doesn't exist
-    ad_warn_dir = os.path.join(os.getcwd(), 'ad_warn_data')
+    ad_warn_dir = os.path.join(DOCKER_VOLUME_MOUNT_POINT, 'ad_warn_data')
     os.makedirs(ad_warn_dir, exist_ok=True)
     
     # Save the warning file
@@ -955,7 +915,9 @@ def upload_ad_warning():
     file.save(warning_file)
     
     # Also copy metar.txt to ad_warn_data directory if it exists
-    metar_source = os.path.join(os.getcwd(), 'metar.txt')
+    metar_source = os.path.join(METAR_DATA_DIR, 'metar.txt')
+    # metar_dest = os.path.join(ad_warn_dir, 'metar.txt')
+
     if os.path.exists(metar_source):
         metar_dest = os.path.join(ad_warn_dir, 'metar.txt')
         import shutil
@@ -965,7 +927,7 @@ def upload_ad_warning():
     try:
         # Parse the warning file immediately to validate it
         # Extract station code from the warning file using the validation function
-        from app.utils.validation import extract_icao_from_warning
+        from app.backend.utils.validation import extract_icao_from_warning
         station_code = extract_icao_from_warning(warning_file)
         if not station_code:
             station_code = "VABB"  # Default fallback
@@ -991,7 +953,7 @@ def upload_ad_warning():
 def adwrn_verify():
     try:
         # Define base directory and ensure it exists
-        ad_warn_dir = os.path.join(os.getcwd(), 'ad_warn_data')
+        ad_warn_dir = AD_WARN_DIR
         os.makedirs(ad_warn_dir, exist_ok=True)
         
         # Define input and output paths
@@ -1179,7 +1141,7 @@ def adwrn_verify():
 def download_metar():
     """Download the METAR data file"""
     try:
-        ad_warn_dir = os.path.join(os.getcwd(), 'ad_warn_data')
+        ad_warn_dir = AD_WARN_DIR
         metar_file = os.path.join(ad_warn_dir, 'metar.txt')
         
         if os.path.exists(metar_file):
@@ -1194,14 +1156,14 @@ def download_adwrn_report():
     """Download the aerodrome warning report CSV file"""
     try:
         # Look for the generated report file - check both possible locations
-        report_file = os.path.join(METAR_DATA_DIR, 'ad_warn_data', 'final_warning_report.csv')
+        report_file = os.path.join(AD_WARN_DIR, 'final_warning_report.csv')
         print(f"[DEBUG] Looking for report file in METAR_DATA_DIR: {report_file}")
         print(f"[DEBUG] File exists: {os.path.exists(report_file)}")
         
         # If not found in METAR_DATA_DIR, check in the root ad_warn_data directory
         if not os.path.exists(report_file):
             # Check in the root directory
-            root_ad_warn_dir = os.path.join(os.getcwd(), 'ad_warn_data')
+            root_ad_warn_dir = AD_WARN_DIR
             report_file = os.path.join(root_ad_warn_dir, 'final_warning_report.csv')
             print(f"[DEBUG] Looking for report file in root: {report_file}")
             print(f"[DEBUG] File exists: {os.path.exists(report_file)}")
@@ -1249,7 +1211,7 @@ def download_adwrn_table():
     """Download the aerodrome warnings table in the exact format requested"""
     try:
         # Define base directory and ensure it exists
-        ad_warn_dir = os.path.join(os.getcwd(), 'ad_warn_data')
+        ad_warn_dir = AD_WARN_DIR
         
         # Define input and output paths
         ad_warn_output = os.path.join(ad_warn_dir, 'AD_warn_output.csv')
