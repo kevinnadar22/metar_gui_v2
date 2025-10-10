@@ -11,7 +11,7 @@ services:
     volumes:
       - ./app/data:/app/data
     expose:
-      - 5000
+      - "5000"
 
   nginx:
     image: nginx:latest

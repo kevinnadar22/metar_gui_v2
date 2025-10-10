@@ -3,12 +3,12 @@ from datetime import datetime
 import re
 import sys
 import os
-from app.backend.config import METAR_DATA_DIR
+from app.backend.config import AD_WARN_DIR,METAR_DATA_DIR
 
 def fetch_all_metar(icao, start_dt, end_dt, output_file="metar.txt"):
     # Ensure output file is saved in ad_warn_data directory
-    # ad_warn_dir = os.path.join(os.getcwd(), 'ad_warn_data')
-    # os.makedirs(ad_warn_dir, exist_ok=True)
+    ad_warn_dir = METAR_DATA_DIR
+    os.makedirs(ad_warn_dir, exist_ok=True)
     
     # If output_file doesn't have a path, save it in ad_warn_data directory
     if not os.path.dirname(output_file):
@@ -46,12 +46,7 @@ def fetch_all_metar(icao, start_dt, end_dt, output_file="metar.txt"):
 
 icao = sys.argv[1] if len(sys.argv) > 1 else "VABB"
 
-# # Set the date range
-# start_dt = datetime(2025, 6, 1, 0)   # June 1, 2025 at 00:00
-# end_dt = datetime(2025, 7, 1, 3)   # June 30, 2025 at 23:00
 
-# # Call the function
-# fetch_all_metar("VABB", start_dt, end_dt)
 
 
 

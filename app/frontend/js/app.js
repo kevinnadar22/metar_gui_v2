@@ -1195,10 +1195,16 @@ if (adwrnForm && adwrnMessage && adwrnMetarPreview && adwrnFetchBtn) {
         adwrnFetchBtn.classList.add('opacity-50', 'cursor-not-allowed');
         
         const formData = new FormData(adwrnForm);
-        fetch('/', {
-            method: 'POST',
-            body: formData
-        })
+        fetch('/web/', {  
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+        icao: formData.get('icao'),
+        start_date: formData.get('start_date'),
+        end_date: formData.get('end_date'),
+        output_file: 'metar.txt'
+    })
+})
         .then(response => response.json())
         .then(data => {
             // Hide loading indicator
@@ -1439,7 +1445,7 @@ if (adwrnVerifyBtn && adwrnReportLoadingSection) {
                              viewGraphBtn.disabled = true;
                              
                              // Open combined chart in a new tab via Flask route
-                             window.open('/bar_chart', '_blank');
+                             window.open('/web/bar_chart', '_blank');
                              
                              // Reset button state after a short delay
                              setTimeout(() => {

@@ -905,42 +905,49 @@ def upload_ad_warning():
         return jsonify({'error': 'No selected file'}), 400
     if not file.filename.lower().endswith('.txt'):
         return jsonify({'error': 'Only .txt files are allowed'}), 400
-    
+
     # Create a directory for AD warning files if it doesn't exist
     ad_warn_dir = os.path.join(DOCKER_VOLUME_MOUNT_POINT, 'ad_warn_data')
     os.makedirs(ad_warn_dir, exist_ok=True)
-    
-    # Save the warning file
+
+    # Save the uploaded warning file
     warning_file = os.path.join(ad_warn_dir, 'AD_warning.txt')
     file.save(warning_file)
-    
-    # Also copy metar.txt to ad_warn_data directory if it exists
-    metar_source = os.path.join(METAR_DATA_DIR, 'metar.txt')
-    # metar_dest = os.path.join(ad_warn_dir, 'metar.txt')
 
+    # Define METAR source and destination
+    metar_source = os.path.join(METAR_DATA_DIR, 'metar.txt')
+    metar_dest = os.path.join(ad_warn_dir, 'metar.txt')
+
+    # Copy the METAR file safely with retries
     if os.path.exists(metar_source):
-        metar_dest = os.path.join(ad_warn_dir, 'metar.txt')
-        import shutil
-        shutil.copy2(metar_source, metar_dest)
-        print(f"[DEBUG] Copied METAR file to: {metar_dest}")
-    
+        import shutil, time
+        for attempt in range(5):
+            try:
+                shutil.copy2(metar_source, metar_dest)
+                print(f"[DEBUG] Copied METAR file to: {metar_dest}")
+                break
+            except PermissionError:
+                print(f"[WARN] METAR file is in use, retrying ({attempt+1}/5)...")
+                time.sleep(1)
+        else:
+            print(f"[ERROR] Could not copy METAR file after multiple attempts.")
+
     try:
         # Parse the warning file immediately to validate it
-        # Extract station code from the warning file using the validation function
         from app.backend.utils.validation import extract_icao_from_warning
         station_code = extract_icao_from_warning(warning_file)
         if not station_code:
             station_code = "VABB"  # Default fallback
-            print(f"[DEBUG] Could not extract station code from warning file, using default: {station_code}")
+            print(f"[DEBUG] Could not extract station code, using default: {station_code}")
         else:
-            print(f"[DEBUG] Extracted station code from warning file: {station_code}")
-        
+            print(f"[DEBUG] Extracted station code: {station_code}")
+
         df = parse_warning_file(warning_file, station_code=station_code)
-        
+
         # Read the file for preview
         with open(warning_file, 'r', encoding='utf-8') as f:
             preview = f.read()
-            
+
         return jsonify({
             'message': 'File uploaded and parsed successfully',
             'preview': preview
@@ -953,12 +960,12 @@ def upload_ad_warning():
 def adwrn_verify():
     try:
         # Define base directory and ensure it exists
-        ad_warn_dir = AD_WARN_DIR
+        ad_warn_dir = os.path.join(DOCKER_VOLUME_MOUNT_POINT, 'ad_warn_data')
         os.makedirs(ad_warn_dir, exist_ok=True)
         
         # Define input and output paths
         warning_file = os.path.join(ad_warn_dir, 'AD_warning.txt')
-        metar_file = os.path.join(ad_warn_dir, 'metar.txt')
+        metar_file = os.path.join(METAR_DATA_DIR, 'metar.txt')
         ad_warn_output = os.path.join(ad_warn_dir, 'AD_warn_output.csv')
         metar_features = os.path.join(ad_warn_dir, 'metar_extracted_features.txt')
         
@@ -1141,7 +1148,7 @@ def adwrn_verify():
 def download_metar():
     """Download the METAR data file"""
     try:
-        ad_warn_dir = AD_WARN_DIR
+        ad_warn_dir = os.path.join(DOCKER_VOLUME_MOUNT_POINT, 'ad_warn_data')
         metar_file = os.path.join(ad_warn_dir, 'metar.txt')
         
         if os.path.exists(metar_file):

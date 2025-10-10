@@ -2,9 +2,9 @@ from flask import Blueprint, render_template, request, jsonify, send_file
 from app.backend.utils.fetch_metar import fetch_all_metar
 from datetime import datetime
 import os
-from app.backend.config import AD_WARN_DIR
+from app.backend.config import AD_WARN_DIR,METAR_DATA_DIR
 
-web = Blueprint('web', __name__)
+web = Blueprint('web', __name__, url_prefix='/web')
 
 @web.route('/', methods=['GET', 'POST'])
 def home():
@@ -31,7 +31,7 @@ def home():
                 # Read the generated file to show preview
                 try:
                     # The file should now be in ad_warn_data directory
-                    ad_warn_dir = AD_WARN_DIR
+                    ad_warn_dir = METAR_DATA_DIR
                     file_path = os.path.join(ad_warn_dir, output_file)
                     with open(file_path, 'r', encoding='utf-8') as f:
                         file_content = f.read()
@@ -94,17 +94,21 @@ def bar_chart():
         import sys
         
         # Check if the script exists
-        script_path = os.path.join(os.getcwd(), 'combined_graph.py')
+        # Compute path relative to this file (web.py)
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        script_path = os.path.join(base_dir, 'combined_graph.py')
+
         if not os.path.exists(script_path):
             return jsonify({'error': 'combined_graph.py script not found'}), 404
         
         # Run the combined_graph.py script
         result = subprocess.run([sys.executable, script_path], 
-                              capture_output=True, text=True, cwd=os.getcwd())
+                              capture_output=True, text=True, cwd=base_dir)
         
         if result.returncode == 0:
             # Check if the combined chart file was generated
-            chart_file = os.path.join(os.getcwd(), 'combined_accuracy_chart.html')
+            chart_file = os.path.join(base_dir, 'combined_accuracy_chart.html')
+
             if os.path.exists(chart_file):
                 return send_file(chart_file, mimetype='text/html')
             else:
