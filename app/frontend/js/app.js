@@ -146,9 +146,114 @@ document.addEventListener('DOMContentLoaded', function () {
     const upperAirVerificationModal = document.getElementById('upperAirVerificationModal');
 
     // Display Graph Modal
-    const displayGraphBtn = document.getElementById('DisplayGraphBtn');
-    const closeDisplayGraphModal = document.getElementById('closeDisplayGraphModal');
-    const displayGraphModal = document.getElementById('displayGraphModal');
+    // Replace the existing Display Graph Modal section with this:
+
+// Display Graph Modal Functions
+const displayGraphModal = document.getElementById('displayGraphModal');
+const closeDisplayGraphModalBtn = document.querySelectorAll('#closeDisplayGraphModal');
+
+function openDisplayGraphModal() {
+    if (displayGraphModal) {
+        displayGraphModal.classList.remove('hidden');
+        loadGraph();
+    }
+}
+
+function closeDisplayGraphModalFunc() {
+    if (displayGraphModal) {
+        displayGraphModal.classList.add('hidden');
+    }
+}
+
+// Close modal when X button or close button is clicked
+closeDisplayGraphModalBtn.forEach(btn => {
+    btn.addEventListener('click', closeDisplayGraphModalFunc);
+});
+
+// Close modal when clicking outside
+displayGraphModal?.addEventListener('click', (e) => {
+    if (e.target === displayGraphModal) {
+        closeDisplayGraphModalFunc();
+    }
+});
+
+// Load and display the graph with cache busting
+// Load and display the graph with cache busting
+async function loadGraph() {
+    try {
+        const graphContainer = document.getElementById('graphContainer');
+        
+        // 1. First load the base template
+        const templateResponse = await fetch('/web/chart_template');
+        if (!templateResponse.ok) {
+            throw new Error(`Failed to fetch template: ${templateResponse.status}`);
+        }
+        const templateHtml = await templateResponse.text();
+        
+        // 2. Fetch fresh chart data
+        const timestamp = new Date().getTime();
+        const dataResponse = await fetch(`/web/bar_chart?t=${timestamp}`);
+        if (!dataResponse.ok) {
+            throw new Error(`Failed to fetch chart data: ${dataResponse.status}`);
+        }
+        const chartData = await dataResponse.json();
+        
+        // 3. Parse chart JSON and template
+        const figureJson = JSON.parse(chartData.data);
+        const parser = new DOMParser();
+        const templateDoc = parser.parseFromString(templateHtml, 'text/html');
+        
+        // 4. Find the plot div in template
+        const plotDiv = templateDoc.querySelector('[id^="plot"]') || templateDoc.querySelector('div[id*="graph"]') || templateDoc.body;
+        
+        // 5. Inject template into container
+        graphContainer.innerHTML = templateDoc.body.innerHTML;
+        
+        // 6. Use Plotly to render chart in the plot div
+        const targetDiv = graphContainer.querySelector('[id^="plot"]') || graphContainer.querySelector('div[id*="graph"]') || graphContainer.querySelector('div');
+        
+        if (window.Plotly) {
+            window.Plotly.newPlot(targetDiv.id || 'plotContainer', figureJson.data, figureJson.layout, {responsive: true});
+        } else {
+            // Fallback if Plotly not loaded
+            throw new Error('Plotly library not found');
+        }
+
+    } catch (error) {
+        console.error('Error loading graph:', error);
+        if (document.getElementById('graphContainer')) {
+            document.getElementById('graphContainer').innerHTML = `
+                <div class="text-center text-red-600 p-8">
+                    <p class="font-bold">Failed to load graph: ${error.message}</p>
+                </div>
+            `;
+        }
+    }
+}
+// Download graph with cache busting
+async function downloadGraph() {
+    try {
+        const timestamp = new Date().getTime();
+        const response = await fetch(`/web/bar_chart?t=${timestamp}`);
+        if (!response.ok) throw new Error('Failed to fetch graph');
+        
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `accuracy_chart_${new Date().toISOString().split('T')[0]}.html`;
+        a.click();
+        window.URL.revokeObjectURL(url);
+    } catch (error) {
+        console.error('Error downloading graph:', error);
+        showCustomAlert('Failed to download graph');
+    }
+}
+
+const downloadGraphBtn = document.getElementById('downloadGraphBtn');
+if (downloadGraphBtn) {
+    downloadGraphBtn.addEventListener('click', downloadGraph);
+}
 
     // Initialize Upper Air Verification Modal
     if (closeUpperAirModal && upperAirVerificationModal) {
@@ -172,41 +277,41 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     // Initialize Display Graph Modal
-    if (displayGraphBtn && closeDisplayGraphModal && displayGraphModal) {
-        console.log('Display Graph Modal elements found, setting up event listeners');
+    // if (displayGraphBtn && closeDisplayGraphModal && displayGraphModal) {
+    //     console.log('Display Graph Modal elements found, setting up event listeners');
         
-        displayGraphBtn.addEventListener('click', function() {
-            console.log('DisplayGraphBtn clicked, showing modal');
-            displayGraphModal.classList.remove('hidden');
-        });
+    //     displayGraphBtn.addEventListener('click', function() {
+    //         console.log('DisplayGraphBtn clicked, showing modal');
+    //         displayGraphModal.classList.remove('hidden');
+    //     });
         
-        closeDisplayGraphModal.addEventListener('click', function() {
-            console.log('Close Display Graph Modal clicked, hiding modal');
-            displayGraphModal.classList.add('hidden');
-        });
+    //     closeDisplayGraphModal.addEventListener('click', function() {
+    //         console.log('Close Display Graph Modal clicked, hiding modal');
+    //         displayGraphModal.classList.add('hidden');
+    //     });
         
-        // Close modal when clicking outside
-        displayGraphModal.addEventListener('click', function(e) {
-            if (e.target === displayGraphModal) {
-                console.log('Clicked outside modal, hiding modal');
-                displayGraphModal.classList.add('hidden');
-            }
-        });
+    //     // Close modal when clicking outside
+    //     displayGraphModal.addEventListener('click', function(e) {
+    //         if (e.target === displayGraphModal) {
+    //             console.log('Clicked outside modal, hiding modal');
+    //             displayGraphModal.classList.add('hidden');
+    //         }
+    //     });
         
-        // Close modal with Escape key
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape' && !displayGraphModal.classList.contains('hidden')) {
-                console.log('Escape key pressed, hiding modal');
-                displayGraphModal.classList.add('hidden');
-            }
-        });
-    } else {
-        console.error('Display Graph Modal elements not found:', {
-            displayGraphBtn: !!displayGraphBtn,
-            closeDisplayGraphModal: !!closeDisplayGraphModal,
-            displayGraphModal: !!displayGraphModal
-        });
-    }
+    //     // Close modal with Escape key
+    //     document.addEventListener('keydown', function(e) {
+    //         if (e.key === 'Escape' && !displayGraphModal.classList.contains('hidden')) {
+    //             console.log('Escape key pressed, hiding modal');
+    //             displayGraphModal.classList.add('hidden');
+    //         }
+    //     });
+    // } else {
+    //     console.error('Display Graph Modal elements not found:', {
+    //         displayGraphBtn: !!displayGraphBtn,
+    //         closeDisplayGraphModal: !!closeDisplayGraphModal,
+    //         displayGraphModal: !!displayGraphModal
+    //     });
+    // }
 
     // Aerodrome Warning ICAO autofill
     const adwrnStationInput = document.getElementById('adwrn-station-input');

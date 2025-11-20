@@ -1,6 +1,6 @@
 # app/backend/__init__.py
 
-from flask import Flask
+from flask import Flask, render_template, request, jsonify
 import os
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FRONTEND_DIR = os.path.join(BASE_DIR, 'frontend')
@@ -15,6 +15,11 @@ def create_app():
     from .routes.web import web
 
     app.register_blueprint(api_bp, url_prefix='/api')
-    app.register_blueprint(web)
+    app.register_blueprint(web, url_prefix='/web')
+    
+    # Root route to serve frontend - GET only
+    @app.route('/', methods=['GET'])
+    def index():
+        return render_template('index.html')
 
     return app

@@ -77,7 +77,10 @@ def interpolate_temperature_only(actual_df, forecast_df):
         t1, t2 = lower["temperature_C"], upper["temperature_C"]
 
         # Interpolate temperature
-        interp_temp = ((h2 - forecast_alt) * t1 + (forecast_alt - h1) * t2) / (h2 - h1)
+        if h2 - h1 != 0:
+            interp_temp = ((h2 - forecast_alt) * t1 + (forecast_alt - h1) * t2) / (h2 - h1)
+        else:
+            interp_temp = t1
         print(f"[DEBUG] Interpolated temperature at {forecast_alt} m: {interp_temp:.2f} C")
 
         # For other parameters, take the closer one (nearest actual level)

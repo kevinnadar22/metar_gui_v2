@@ -1,21 +1,27 @@
+import os
 import pandas as pd
 import plotly.graph_objects as go
+import re
 
+
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__)))
+CSV_PATH = os.path.abspath(os.path.join(BASE_DIR, '..', '..', 'data', 'ad_warn_data', 'final_warning_report.csv'))
+OUT_HTML = os.path.join(BASE_DIR, 'combined_accuracy_chart.html')
 # 1. Load and process the data from the CSV file, skipping the title row
 try:
     # First, read the first line to extract month information
-    with open('./ad_warn_data/final_warning_report.csv', 'r') as f:
+    with open(CSV_PATH, 'r', encoding='utf-8') as f:
         first_line = f.readline().strip()
-    
+
     # Extract month from the first line (e.g., "Aerodrome warning for station VABB for July 2025")
-    import re
     month_match = re.search(r'for (\w+) \d{4}', first_line)
     month_name = month_match.group(1) if month_match else "Unknown Month"
-    
+    print(f"Extracted month: {month_name}")
+
     # Now read the CSV data skipping the title row
-    df = pd.read_csv('./ad_warn_data/final_warning_report.csv', skiprows=1)
+    df = pd.read_csv(CSV_PATH, skiprows=1)
 except FileNotFoundError:
-    print("Error: 'final_warning_report.csv' not found. Please ensure the file is in the correct directory.")
+    print(f"Error: '{CSV_PATH}' not found. Please ensure the file is in the correct directory.")
     exit()
 
 # 2. Rename columns for easier access and clean them
@@ -113,7 +119,7 @@ fig.update_layout(
 )
 
 # 6. Save the chart to a single HTML file
-fig.write_html("combined_accuracy_chart.html")
+fig.write_html(OUT_HTML)
 
 print("Successfully generated the HTML file: combined_accuracy_chart.html")
 
