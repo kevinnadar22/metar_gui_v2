@@ -19,8 +19,6 @@ from urllib.parse import quote
 import math
 import base64, io
 from PIL import Image
-import time
-import shutil
  
 
 api_bp = Blueprint('api', __name__, url_prefix='/api')
@@ -959,457 +957,294 @@ def upload_ad_warning():
         return jsonify({'error': f'Failed to process file: {str(e)}'}), 500
 
 @api_bp.route('/adwrn_verify', methods=['POST'])
-# def adwrn_verify():
-#     try:
-#         # Define base directory and ensure it exists
-#         ad_warn_dir = os.path.join(DOCKER_VOLUME_MOUNT_POINT, 'ad_warn_data')
-#         os.makedirs(ad_warn_dir, exist_ok=True)
-        
-#         # Define input and output paths
-#         warning_file = os.path.join(ad_warn_dir, 'AD_warning.txt')
-#         metar_file = None
-#         candidates = []
-#         for f in os.listdir(ad_warn_dir):
-#             if f == 'AD_warning.txt':
-#                 continue
-#             if f.lower().endswith('.txt'):
-#                 candidates.append(f)
-
-#         # Prefer files with 'metar' in name (case-insensitive)
-#         metar_candidates = [f for f in candidates if 'metar' in f.lower()]
-#         if metar_candidates:
-#             metar_candidates.sort(key=lambda x: os.path.getmtime(os.path.join(ad_warn_dir, x)), reverse=True)
-#             metar_file = os.path.join(ad_warn_dir, metar_candidates[0])
-#         elif candidates:
-#             # fallback: newest txt file (excluding AD_warning.txt)
-#             candidates.sort(key=lambda x: os.path.getmtime(os.path.join(ad_warn_dir, x)), reverse=True)
-#             metar_file = os.path.join(ad_warn_dir, candidates[0])
-
-#         if not metar_file or not os.path.exists(metar_file):
-#             return jsonify({
-#                 'success': False,
-#                 'error': 'No METAR file found. Please fetch METAR using OGIMET first.'
-#             }), 404
-
-#         # --- Diagnostics & freshness checks ---
-#         try:
-#             mtime = os.path.getmtime(metar_file)
-#             print(f"[DEBUG] Selected METAR file: {metar_file}")
-#             print(f"[DEBUG] METAR mtime: {datetime.fromtimestamp(mtime).isoformat()}")
-#             # extract internal date range (helper already in file)
-#             internal_month_year = extract_date_from_metar_file(metar_file)
-#             print(f"[DEBUG] METAR internal month/year (from content): {internal_month_year}")
-#             # show first few lines for quick debugging
-#             with open(metar_file, 'r', encoding='utf-8') as mf:
-#                 preview_lines = [next(mf).strip() for _ in range(5)]
-#             print(f"[DEBUG] METAR preview (first 5 lines): {preview_lines}")
-#         except Exception as diag_e:
-#             print(f"[WARN] Could not read METAR diagnostics: {diag_e}")
-
-#         import shutil
-#         metar_canonical = os.path.join(ad_warn_dir, 'metar.txt')
-#         try:
-#             shutil.copy2(metar_file, metar_canonical)
-#             print(f"[DEBUG] Copied selected METAR to canonical path: {metar_canonical}")
-#             # use canonical path from now on
-#             metar_file = metar_canonical
-#         except Exception as e:
-#             print(f"[WARN] Failed to copy selected METAR to canonical path: {e}")
-
-#         # remove stale intermediate files so generation is fresh
-#         stale_files = [
-#             os.path.join(ad_warn_dir, 'AD_warn_output.csv'),
-#             os.path.join(ad_warn_dir, 'metar_extracted_features.txt'),
-#             os.path.join(ad_warn_dir, 'final_warning_report.csv')
-#         ]
-#         for p in stale_files:
-#             try:
-#                 if os.path.exists(p):
-#                     os.remove(p)
-#                     print(f"[DEBUG] Removed stale file: {p}")
-#             except Exception as rem_e:
-#                 print(f"[WARN] Could not remove stale file {p}: {rem_e}")
-        
-#         print(f"[DEBUG] Checking paths:")
-#         print(f"Warning file: {warning_file} (exists: {os.path.exists(warning_file)})")
-#         print(f"METAR file: {metar_file} (exists: {os.path.exists(metar_file)})")
-        
-#         # Check if required files exist
-#         if not os.path.exists(warning_file):
-#             return jsonify({'success': False, 'error': 'Warning file not found. Please upload it first.'}), 404
-            
-#         if not os.path.exists(metar_file):
-#             return jsonify({'success': False, 'error': 'METAR file not found. Please ensure it exists.'}), 404
-        
-#         # Perform validation before processing
-#         validation_result = validate_files(metar_file, warning_file)
-        
-#         if not validation_result['success']:
-#             return jsonify({
-#                 'success': False, 
-#                 'error': validation_result['error'],
-#                 'validation_failed': True,
-#                 'metar_code': validation_result.get('metar_code'),
-#                 'warning_code': validation_result.get('warning_code')
-#             }), 400
-        
-#         # Parse warning file
-#         print("[DEBUG] Parsing warning file...")
-#         df = parse_warning_file(warning_file, station_code=validation_result['metar_code'])
-
-#         ad_warn_output = os.path.join(ad_warn_dir, 'AD_warn_output.csv')
-#         metar_features = os.path.join(ad_warn_dir, 'metar_extracted_features.txt')
-        
-#         print(f"[DEBUG] AD warn output saved to: {ad_warn_output}")
-        
-#         # Extract METAR features
-#         print("[DEBUG] Extracting METAR features...")
-#         try:
-#             extract_metar_features(ad_warn_output, metar_file, metar_features)
-#             print(f"[DEBUG] METAR features saved to: {metar_features}")
-#         except Exception as e:
-#             print(f"[ERROR] Failed to extract METAR features: {str(e)}")
-#             raise
-        
-#         # Verify files exist after extraction
-#         print(f"[DEBUG] Checking if files were created:")
-#         print(f"AD warn output exists: {os.path.exists(ad_warn_output)}")
-#         print(f"METAR features exists: {os.path.exists(metar_features)}")
-        
-#         # Generate warning report
-#         print("[DEBUG] Generating warning report...")
-#         final_df, accuracy = generate_warning_report(ad_warn_output, metar_features)
-        
-#         # Debug accuracy value
-#         print(f"[DEBUG] Accuracy type: {type(accuracy)}, value: {accuracy}")
-        
-#         # Read the report content
-#         report_file = os.path.join(ad_warn_dir, 'final_warning_report.csv')
-#         print(f"[DEBUG] Report file: {report_file} (exists: {os.path.exists(report_file)})")
-        
-#         if not os.path.exists(report_file):
-#             return jsonify({'success': False, 'error': 'Failed to generate report file'}), 500
-            
-#         with open(report_file, 'r', encoding='utf-8') as f:
-#             report_content = f.read()
-            
-#         # Calculate detailed accuracy percentages
-#         thunderstorm_accuracy = 0
-#         wind_accuracy = 0
-#         overall_accuracy = 0
-        
-#         try:
-#             # Parse the CSV to get detailed accuracy
-#             import csv
-#             from io import StringIO
-            
-#             csv_data = StringIO(report_content)
-#             csv_reader = csv.DictReader(csv_data)
-            
-#             thunderstorm_count = 0
-#             thunderstorm_correct = 0
-#             wind_count = 0
-#             wind_correct = 0
-#             total_count = 0
-#             total_correct = 0
-            
-#             for row in csv_reader:
-#                 element = row.get('Elements (Thunderstorm/Surface wind & Gust)', '')
-#                 accuracy = row.get('true-1 / false-0', '0')
-                
-#                 if 'thunderstorm' in element or 'गर्जन' in element:
-#                     thunderstorm_count += 1
-#                     total_count += 1
-#                     if accuracy == '1':
-#                         thunderstorm_correct += 1
-#                         total_correct += 1
-#                 elif 'wind' in element or 'gust' in element or 'पवन' in element:
-#                     wind_count += 1
-#                     total_count += 1
-#                     if accuracy == '1':
-#                         wind_correct += 1
-#                         total_correct += 1
-            
-#             if thunderstorm_count > 0:
-#                 thunderstorm_accuracy = int((thunderstorm_correct / thunderstorm_count) * 100)
-            
-#             if wind_count > 0:
-#                 wind_accuracy = int((wind_correct / wind_count) * 100)
-            
-#             if total_count > 0:
-#                 overall_accuracy = int((total_correct / total_count) * 100)
-                
-#             print(f"[DEBUG] Detailed accuracy calculation:")
-#             print(f"  Thunderstorm: {thunderstorm_correct}/{thunderstorm_count} = {thunderstorm_accuracy}%")
-#             print(f"  Wind: {wind_correct}/{wind_count} = {wind_accuracy}%")
-#             print(f"  Overall: {total_correct}/{total_count} = {overall_accuracy}%")
-                
-#         except Exception as e:
-#             print(f"Error calculating detailed accuracy: {e}")
-        
-#         # Ensure accuracy is properly formatted
-#         try:
-#             if isinstance(accuracy, (int, float)):
-#                 accuracy_str = f"{accuracy:.0f}"
-#             else:
-#                 accuracy_str = str(accuracy)
-#         except Exception as e:
-#             print(f"[DEBUG] Error formatting accuracy: {e}")
-#             accuracy_str = str(accuracy)
-        
-#         # Extract station and date information from METAR file
-#         station_info = ""
-#         validity_info = ""
-#         try:
-#             # Get station code from validation result
-#             station = validation_result.get('metar_code', 'VABB')
-            
-#             # Extract date information from METAR file
-#             month_year = extract_date_from_metar_file(metar_file)
-            
-#             if station and month_year:
-#                 station_info = f"Aerodrome warning for station {station} for {month_year}"
-#             elif station:
-#                 station_info = f"Aerodrome warning for station {station}"
-                
-#             print(f"[DEBUG] Extracted station info: {station_info}")
-            
-#         except Exception as e:
-#             print(f"[DEBUG] Error extracting station info: {e}")
-        
-#         response_data = {
-#             'success': True, 
-#             'report': report_content, 
-#             'accuracy': f"{overall_accuracy}",
-#             'detailed_accuracy': {
-#                 'thunderstorm': thunderstorm_accuracy,
-#                 'wind': wind_accuracy,
-#                 'overall': overall_accuracy
-#             },
-#             'validation': {
-#                 'metar_code': validation_result['metar_code'],
-#                 'warning_code': validation_result['warning_code']
-#             },
-#             'station_info': station_info,
-#             'validity_info': validity_info
-#         }
-        
-#         print(f"[DEBUG] Sending response with detailed accuracy: {response_data['detailed_accuracy']}")
-        
-#         # After generating the report and extracting station_info, prepend the heading to the CSV file
-#         if station_info:
-#             report_file = os.path.join(ad_warn_dir, 'final_warning_report.csv')
-#             temp_file = os.path.join(ad_warn_dir, 'final_warning_report_tmp.csv')
-
-#             try:
-#                 # Read original content quickly (read lock is allowed)
-#                 with open(report_file, 'r', encoding='utf-8') as f:
-#                     content = f.read()
-
-#                 # Write to a temp file instead of modifying locked file
-#                 with open(temp_file, 'w', encoding='utf-8') as f:
-#                     f.write(station_info + '\n' + content)
-
-#                 # Atomic replace (works even when file is locked)
-#                 os.replace(temp_file, report_file)
-
-#                 print("[DEBUG] Successfully wrote station_info using temp file swap")
-
-#             except Exception as e:
-#                 print(f"[ERROR] Failed to prepend station info: {e}")
-
-
-        
-#         return jsonify(response_data)
-#     except Exception as e:
-#         print(f"[ERROR] Error in adwrn_verify: {str(e)}")
-#         return jsonify({'success': False, 'error': str(e)}), 500
 def adwrn_verify():
     try:
-        # -------------------------------
-        # BASE DIRECTORY
-        # -------------------------------
-        ad_warn_dir = os.path.join(DOCKER_VOLUME_MOUNT_POINT, "ad_warn_data")
+        # Define base directory and ensure it exists
+        ad_warn_dir = os.path.join(DOCKER_VOLUME_MOUNT_POINT, 'ad_warn_data')
         os.makedirs(ad_warn_dir, exist_ok=True)
-
-        warning_file = os.path.join(ad_warn_dir, "AD_warning.txt")
-
-        # -------------------------------
-        # FIND MOST RECENT METAR FILE
-        # -------------------------------
+        
+        # Define input and output paths
+        warning_file = os.path.join(ad_warn_dir, 'AD_warning.txt')
         metar_file = None
-        metar_candidates = []
-
+        candidates = []
         for f in os.listdir(ad_warn_dir):
-            if f.lower().endswith(".txt") and f != "AD_warning.txt":
-                metar_candidates.append(f)
+            if f == 'AD_warning.txt':
+                continue
+            if f.lower().endswith('.txt'):
+                candidates.append(f)
 
-        if not metar_candidates:
-            return jsonify({"success": False, "error": "No METAR file found"}), 404
+        # Prefer files with 'metar' in name (case-insensitive)
+        metar_candidates = [f for f in candidates if 'metar' in f.lower()]
+        if metar_candidates:
+            metar_candidates.sort(key=lambda x: os.path.getmtime(os.path.join(ad_warn_dir, x)), reverse=True)
+            metar_file = os.path.join(ad_warn_dir, metar_candidates[0])
+        elif candidates:
+            # fallback: newest txt file (excluding AD_warning.txt)
+            candidates.sort(key=lambda x: os.path.getmtime(os.path.join(ad_warn_dir, x)), reverse=True)
+            metar_file = os.path.join(ad_warn_dir, candidates[0])
 
-        # Prefer “metar” named files
-        preferred = [f for f in metar_candidates if "metar" in f.lower()]
-        files_to_sort = preferred if preferred else metar_candidates
-
-        files_to_sort.sort(
-            key=lambda x: os.path.getmtime(os.path.join(ad_warn_dir, x)),
-            reverse=True
-        )
-
-        metar_file = os.path.join(ad_warn_dir, files_to_sort[0])
-
-        # Copy to canonical "metar.txt"
-        meta_canonical = os.path.join(ad_warn_dir, "metar.txt")
-        shutil.copy2(metar_file, meta_canonical)
-        metar_file = meta_canonical
-
-        # -------------------------------
-        # DELETE STALE FILES
-        # -------------------------------
-        for old in [
-            "AD_warn_output.csv",
-            "metar_extracted_features.txt",
-            "final_warning_report.csv"
-        ]:
-            p = os.path.join(ad_warn_dir, old)
-            if os.path.exists(p):
-                try:
-                    os.remove(p)
-                except Exception as e:
-                    print(f"[WARN] Cannot remove stale {p}: {e}")
-
-        # -------------------------------
-        # VALIDATION
-        # -------------------------------
-        if not os.path.exists(warning_file):
-            return jsonify({'success': False, 'error': 'Warning file not found'}), 404
-
-        validation_result = validate_files(metar_file, warning_file)
-
-        if not validation_result["success"]:
+        if not metar_file or not os.path.exists(metar_file):
             return jsonify({
-                "success": False,
-                "error": validation_result["error"],
-                "validation_failed": True,
-                "metar_code": validation_result.get("metar_code"),
-                "warning_code": validation_result.get("warning_code")
-            }), 400
+                'success': False,
+                'error': 'No METAR file found. Please fetch METAR using OGIMET first.'
+            }), 404
 
-        station_code = validation_result["metar_code"]
-
-        # -------------------------------
-        # PARSE WARNING FILE
-        # -------------------------------
-        parse_warning_file(warning_file, station_code=station_code)
-
-        ad_warn_csv = os.path.join(ad_warn_dir, "AD_warn_output.csv")
-        metar_features = os.path.join(ad_warn_dir, "metar_extracted_features.txt")
-
-        # -------------------------------
-        # METAR FEATURE EXTRACTION
-        # -------------------------------
-        extract_metar_features(ad_warn_csv, metar_file, metar_features)
-
-        # -------------------------------
-        # GENERATE FINAL REPORT
-        # -------------------------------
-        final_df, accuracy = generate_warning_report(ad_warn_csv, metar_features)
-
-        report_file = os.path.join(ad_warn_dir, "final_warning_report.csv")
-
-        if not os.path.exists(report_file):
-            return jsonify({"success": False, "error": "Report generation failed"}), 500
-
-        with open(report_file, "r", encoding="utf-8") as f:
-            report_content = f.read()
-
-        # -------------------------------
-        # ACCURACY BREAKDOWN
-        # -------------------------------
-        thunderstorm_correct = thunderstorm_total = 0
-        wind_correct = wind_total = 0
-        overall_correct = overall_total = 0
-
-        import csv
-        from io import StringIO
-
-        reader = csv.DictReader(StringIO(report_content))
-
-        for row in reader:
-            elem = (row.get("Elements (Thunderstorm/Surface wind & Gust)", "") or "").lower()
-            ok = (row.get("true-1 / false-0", "0") == "1")
-
-            if "thunderstorm" in elem or "ts" in elem:
-                thunderstorm_total += 1
-                if ok:
-                    thunderstorm_correct += 1
-
-            if "wind" in elem or "gust" in elem:
-                wind_total += 1
-                if ok:
-                    wind_correct += 1
-
-            overall_total += 1
-            if ok:
-                overall_correct += 1
-
-        def pct(a, b):
-            return int((a / b) * 100) if b > 0 else 0
-
-        thunderstorm_accuracy = pct(thunderstorm_correct, thunderstorm_total)
-        wind_accuracy = pct(wind_correct, wind_total)
-        overall_accuracy = pct(overall_correct, overall_total)
-
-        # -------------------------------
-        # STATION INFO PREPEND (WINDOWS-SAFE)
-        # -------------------------------
-        month_year = extract_date_from_metar_file(metar_file)
-        station_info = (
-            f"Aerodrome warning for station {station_code} for {month_year}"
-            if month_year else
-            f"Aerodrome warning for station {station_code}"
-        )
-
-        temp_file = os.path.join(ad_warn_dir, "final_warning_report_tmp.csv")
-
+        # --- Diagnostics & freshness checks ---
         try:
-            # read original
-            with open(report_file, "r", encoding="utf-8") as f:
-                content = f.read()
+            mtime = os.path.getmtime(metar_file)
+            print(f"[DEBUG] Selected METAR file: {metar_file}")
+            print(f"[DEBUG] METAR mtime: {datetime.fromtimestamp(mtime).isoformat()}")
+            # extract internal date range (helper already in file)
+            internal_month_year = extract_date_from_metar_file(metar_file)
+            print(f"[DEBUG] METAR internal month/year (from content): {internal_month_year}")
+            # show first few lines for quick debugging
+            with open(metar_file, 'r', encoding='utf-8') as mf:
+                preview_lines = [next(mf).strip() for _ in range(5)]
+            print(f"[DEBUG] METAR preview (first 5 lines): {preview_lines}")
+        except Exception as diag_e:
+            print(f"[WARN] Could not read METAR diagnostics: {diag_e}")
 
-            # write to temp
-            with open(temp_file, "w", encoding="utf-8") as f:
-                f.write(station_info + "\n" + content)
-
-            # atomic replace (WINDOWS-SAFE)
-            os.replace(temp_file, report_file)
-
+        import shutil
+        metar_canonical = os.path.join(ad_warn_dir, 'metar.txt')
+        try:
+            shutil.copy2(metar_file, metar_canonical)
+            print(f"[DEBUG] Copied selected METAR to canonical path: {metar_canonical}")
+            # use canonical path from now on
+            metar_file = metar_canonical
         except Exception as e:
-            print(f"[ERROR] station-info prepend failed: {e}")
+            print(f"[WARN] Failed to copy selected METAR to canonical path: {e}")
 
-        # -------------------------------
-        # RESPONSE
-        # -------------------------------
-        return jsonify({
-            "success": True,
-            "accuracy": overall_accuracy,
-            "detailed_accuracy": {
-                "thunderstorm": thunderstorm_accuracy,
-                "wind": wind_accuracy,
-                "overall": overall_accuracy
-            },
-            "validation": {
-                "metar_code": station_code,
-                "warning_code": validation_result.get("warning_code")
-            },
-            "station_info": station_info,
-            "report": report_content
-        })
+        # remove stale intermediate files so generation is fresh
+        stale_files = [
+            os.path.join(ad_warn_dir, 'AD_warn_output.csv'),
+            os.path.join(ad_warn_dir, 'metar_extracted_features.txt'),
+            os.path.join(ad_warn_dir, 'final_warning_report.csv')
+        ]
+        for p in stale_files:
+            try:
+                if os.path.exists(p):
+                    os.remove(p)
+                    print(f"[DEBUG] Removed stale file: {p}")
+            except Exception as rem_e:
+                print(f"[WARN] Could not remove stale file {p}: {rem_e}")
+        
+        print(f"[DEBUG] Checking paths:")
+        print(f"Warning file: {warning_file} (exists: {os.path.exists(warning_file)})")
+        print(f"METAR file: {metar_file} (exists: {os.path.exists(metar_file)})")
+        
+        # Check if required files exist
+        if not os.path.exists(warning_file):
+            return jsonify({'success': False, 'error': 'Warning file not found. Please upload it first.'}), 404
+            
+        if not os.path.exists(metar_file):
+            return jsonify({'success': False, 'error': 'METAR file not found. Please ensure it exists.'}), 404
+        
+        # Perform validation before processing
+        validation_result = validate_files(metar_file, warning_file)
+        
+        if not validation_result['success']:
+            return jsonify({
+                'success': False, 
+                'error': validation_result['error'],
+                'validation_failed': True,
+                'metar_code': validation_result.get('metar_code'),
+                'warning_code': validation_result.get('warning_code')
+            }), 400
+        
+        # Parse warning file
+        print("[DEBUG] Parsing warning file...")
+        df = parse_warning_file(warning_file, station_code=validation_result['metar_code'])
 
+        ad_warn_output = os.path.join(ad_warn_dir, 'AD_warn_output.csv')
+        metar_features = os.path.join(ad_warn_dir, 'metar_extracted_features.txt')
+        
+        print(f"[DEBUG] AD warn output saved to: {ad_warn_output}")
+        
+        # Extract METAR features
+        print("[DEBUG] Extracting METAR features...")
+        try:
+            extract_metar_features(ad_warn_output, metar_file, metar_features)
+            print(f"[DEBUG] METAR features saved to: {metar_features}")
+        except Exception as e:
+            print(f"[ERROR] Failed to extract METAR features: {str(e)}")
+            raise
+        
+        # Verify files exist after extraction
+        print(f"[DEBUG] Checking if files were created:")
+        print(f"AD warn output exists: {os.path.exists(ad_warn_output)}")
+        print(f"METAR features exists: {os.path.exists(metar_features)}")
+        
+        # Generate warning report
+        print("[DEBUG] Generating warning report...")
+        final_df, accuracy = generate_warning_report(ad_warn_output, metar_features)
+        
+        # Debug accuracy value
+        print(f"[DEBUG] Accuracy type: {type(accuracy)}, value: {accuracy}")
+        
+        # Read the report content
+        report_file = os.path.join(ad_warn_dir, 'final_warning_report.csv')
+        print(f"[DEBUG] Report file: {report_file} (exists: {os.path.exists(report_file)})")
+        
+        if not os.path.exists(report_file):
+            return jsonify({'success': False, 'error': 'Failed to generate report file'}), 500
+             
+        # Calculate detailed accuracy percentages
+        thunderstorm_accuracy = 0
+        wind_accuracy = 0
+        overall_accuracy = 0
+        
+        try:
+            # Parse the CSV to get detailed accuracy
+            import csv
+            from io import StringIO
+
+            with open(report_file, 'r', encoding='utf-8') as f:
+                report_content = f.read()
+            
+            csv_data = StringIO(report_content)
+            csv_reader = csv.DictReader(csv_data)
+            
+            thunderstorm_count = 0
+            thunderstorm_correct = 0
+            wind_count = 0
+            wind_correct = 0
+            total_count = 0
+            total_correct = 0
+            
+            for row in csv_reader:
+                element = row.get('Elements (Thunderstorm/Surface wind & Gust)', '')
+                accuracy_val = row.get('true-1 / false-0', '0')
+                
+                # For thunderstorm: count all entries containing 'Thunderstorm'
+                if 'Thunderstorm' in element:
+                    thunderstorm_count += 1
+                    total_count += 1
+                    if accuracy_val == '1':
+                        thunderstorm_correct += 1
+                        total_correct += 1
+                        
+                # For gust: count ONLY pure 'Gust warning' entries (not combined entries)
+                elif element == 'Gust warning':
+                    wind_count += 1
+                    total_count += 1
+                    if accuracy_val == '1':
+                        wind_correct += 1
+                        total_correct += 1
+            
+            # Calculate percentages (same logic as Excel generation)
+            if thunderstorm_count > 0:
+                thunderstorm_accuracy = int((thunderstorm_correct / thunderstorm_count) * 100)
+            
+            if wind_count > 0:
+                wind_accuracy = int((wind_correct / wind_count) * 100)
+            
+            if total_count > 0:
+                overall_accuracy = int((total_correct / total_count) * 100)
+                
+            print(f"[DEBUG] Detailed accuracy calculation (matching Excel logic):")
+            print(f"  Thunderstorm: {thunderstorm_correct}/{thunderstorm_count} = {thunderstorm_accuracy}%")
+            print(f"  Wind (pure Gust warning only): {wind_correct}/{wind_count} = {wind_accuracy}%")
+            print(f"  Overall: {total_correct}/{total_count} = {overall_accuracy}%")
+                
+        except Exception as e:
+            print(f"Error calculating detailed accuracy: {e}")
+        # Ensure accuracy is properly formatted
+        try:
+            if isinstance(accuracy, (int, float)):
+                accuracy_str = f"{accuracy:.0f}"
+            else:
+                accuracy_str = str(accuracy)
+        except Exception as e:
+            print(f"[DEBUG] Error formatting accuracy: {e}")
+            accuracy_str = str(accuracy)
+        
+        # Extract station and date information from METAR file
+        station_info = ""
+        validity_info = ""
+        try:
+            # Get station code from validation result
+            station = validation_result.get('metar_code', 'VABB')
+            
+            # Extract date information from METAR file
+            month_year = extract_date_from_metar_file(metar_file)
+            
+            if station and month_year:
+                station_info = f"Aerodrome warning for station {station} for {month_year}"
+            elif station:
+                station_info = f"Aerodrome warning for station {station}"
+                
+            print(f"[DEBUG] Extracted station info: {station_info}")
+            
+        except Exception as e:
+            print(f"[DEBUG] Error extracting station info: {e}")
+        
+        if station_info:
+            import time
+            max_retries = 5
+            retry_count = 0
+            success = False
+            
+            while retry_count < max_retries and not success:
+                try:
+                    with open(report_file, 'r', encoding='utf-8') as f:
+                        original_content = f.read()
+                    
+                    time.sleep(0.2)
+                    
+                    with open(report_file, 'w', encoding='utf-8') as f:
+                        f.write(station_info + '\n')
+                        f.write(original_content)
+                    
+                    success = True
+                    print(f"[DEBUG] Successfully prepended station info to report file")
+                    
+                except PermissionError as e:
+                    retry_count += 1
+                    if retry_count < max_retries:
+                        wait_time = 0.5 * (2 ** (retry_count - 1))
+                        print(f"[WARN] Report file locked ({retry_count}/{max_retries}), waiting {wait_time}s...")
+                        time.sleep(wait_time)
+                    else:
+                        print(f"[ERROR] Could not write station info after {max_retries} attempts")
+                        print(f"[WARN] Report saved without station info header")
+                        break
+                        
+                except Exception as e:
+                    print(f"[ERROR] Unexpected error prepending station info: {e}")
+                    break
+
+
+        response_data = {
+            'success': True, 
+            'report': report_content, 
+            'accuracy': f"{overall_accuracy}",
+            'detailed_accuracy': {
+                'thunderstorm': thunderstorm_accuracy,
+                'wind': wind_accuracy,
+                'overall': overall_accuracy
+            },
+            'validation': {
+                'metar_code': validation_result['metar_code'],
+                'warning_code': validation_result['warning_code']
+            },
+            'station_info': station_info,
+            'validity_info': validity_info
+        }
+        
+        print(f"[DEBUG] Sending response with detailed accuracy: {response_data['detailed_accuracy']}")
+        
+        # After generating the report and extracting station_info, prepend the heading to the CSV file
+        # if station_info:
+        #     with open(report_file, 'r', encoding='utf-8') as f:
+        #         original_content = f.read()
+        #     with open(report_file, 'w', encoding='utf-8') as f:
+        #         f.write(station_info + '\n')
+        #         f.write(original_content)
+        
+        return jsonify(response_data)
     except Exception as e:
-        print(f"[ERROR] adwrn_verify failed: {e}")
-        return jsonify({"success": False, "error": str(e)}), 500
-
+        print(f"[ERROR] Error in adwrn_verify: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 @api_bp.route('/download_metar', methods=['GET'])
 def download_metar():
