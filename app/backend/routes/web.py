@@ -3,7 +3,7 @@ from app.backend.utils.ogimet_adwarn import OgimetAPIAdWarn
 from datetime import datetime
 import os
 import shutil
-from app.backend.config import METAR_DATA_DIR, AD_WARN_DIR
+from app.backend.config import METAR_DATA_DIR, AD_WARN_DIR, DOCKER_VOLUME_MOUNT_POINT
 
 
 web = Blueprint('web', __name__)
@@ -174,39 +174,208 @@ def fetch_metar():
         }), 400
 
 @web.route('/bar_chart')
+# def bar_chart():
+#     """Run combined_graph.py and serve the generated chart"""
+#     try:
+#         import subprocess
+#         import sys
+
+#         # script path in the same folder as this web.py
+#         script_path = os.path.join(os.path.dirname(__file__), 'combined_graph.py')
+
+#         if not os.path.exists(script_path):
+#             return jsonify({'error': 'combined_graph.py script not found'}), 404
+
+#         # Run the combined_graph.py script with cwd = script dir so output lands next to script
+#         result = subprocess.run([sys.executable, script_path],
+#                                 capture_output=True, text=True,
+#                                 cwd=os.path.dirname(script_path))
+
+#         if result.returncode == 0:
+#             # Chart file expected in the same folder as script
+#             chart_file = os.path.join(os.path.dirname(script_path), 'combined_accuracy_chart.html')
+
+#             if os.path.exists(chart_file):
+#                 # Serve file without conditional caching and set no-cache headers
+#                 resp = make_response(send_file(chart_file, mimetype='text/html', conditional=False))
+#                 resp.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+#                 resp.headers['Pragma'] = 'no-cache'
+#                 resp.headers['Expires'] = '0'
+#                 return resp
+#             else:
+#                 return jsonify({'error': 'Chart file not generated'}), 500
+#         else:
+#             error_msg = result.stderr if result.stderr else 'Unknown script error'
+#             return jsonify({'error': f'Script execution failed: {error_msg}'}), 500
+
+#     except Exception as e:
+#         return jsonify({'error': f'Error generating chart: {str(e)}'}), 500
+@web.route('/bar_chart')
 def bar_chart():
-    """Run combined_graph.py and serve the generated chart"""
+    """
+    Generate the combined accuracy chart directly here (no external script).
+    """
     try:
-        import subprocess
-        import sys
+        import pandas as pd
+        import plotly.graph_objects as go
+        import re
+        import os
 
-        # script path in the same folder as this web.py
-        script_path = os.path.join(os.path.dirname(__file__), 'combined_graph.py')
+        # Paths
+        ad_warn_dir = os.path.join(DOCKER_VOLUME_MOUNT_POINT, 'ad_warn_data')
+        report_csv = os.path.join(ad_warn_dir, 'final_warning_report.csv')
+        output_chart = os.path.join(ad_warn_dir, 'combined_accuracy_chart.html')
 
-        if not os.path.exists(script_path):
-            return jsonify({'error': 'combined_graph.py script not found'}), 404
+        # Ensure report exists
+        if not os.path.exists(report_csv):
+            return jsonify({'error': 'Final warning report not found. Run ADWRN verify first.'}), 404
 
-        # Run the combined_graph.py script with cwd = script dir so output lands next to script
-        result = subprocess.run([sys.executable, script_path],
-                                capture_output=True, text=True,
-                                cwd=os.path.dirname(script_path))
+        # Read first line (station header)
+        with open(report_csv, 'r', encoding='utf-8') as f:
+            first_line = f.readline().strip()
 
-        if result.returncode == 0:
-            # Chart file expected in the same folder as script
-            chart_file = os.path.join(os.path.dirname(script_path), 'combined_accuracy_chart.html')
+        # Extract month name
+        month_match = re.search(r'for (\w+) \d{4}', first_line)
+        month_name = month_match.group(1) if month_match else "Unknown Month"
 
-            if os.path.exists(chart_file):
-                # Serve file without conditional caching and set no-cache headers
-                resp = make_response(send_file(chart_file, mimetype='text/html', conditional=False))
-                resp.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
-                resp.headers['Pragma'] = 'no-cache'
-                resp.headers['Expires'] = '0'
-                return resp
-            else:
-                return jsonify({'error': 'Chart file not generated'}), 500
-        else:
-            error_msg = result.stderr if result.stderr else 'Unknown script error'
-            return jsonify({'error': f'Script execution failed: {error_msg}'}), 500
+        # Load CSV skipping the first station_info line
+        df = pd.read_csv(report_csv, skiprows=1)
+
+        # Normalize column names
+        df.columns = df.columns.str.strip()
+        df.rename(columns={
+            'Warning issue Time': 'Warning_issue_Time',
+            'true-1 / false-0': 'Is_Correct',
+        }, inplace=True)
+
+        # Ensure required columns exist
+        required = ['Warning_issue_Time', 'Warning_Type', 'Is_Correct']
+        if not all(c in df.columns for c in required):
+            return jsonify({'error': 'CSV missing required columns for graph generation.'}), 500
+
+        # Extract day from warning time (e.g., "03/1200" → 3)
+        df['Day'] = df['Warning_issue_Time'].astype(str).str.split('/').str[0].astype(int)
+
+        # Filter valid warning types
+        df = df[df['Warning_Type'].isin(['Thunderstorm', 'Wind'])]
+
+        # Group by day + warning type
+        grouped = df.groupby(['Day', 'Warning_Type'])['Is_Correct'].agg(
+            correct='sum',
+            total='count'
+        ).reset_index()
+
+        grouped['Accuracy'] = (grouped['correct'] / grouped['total']) * 100
+
+        df_thunder = grouped[grouped['Warning_Type'] == 'Thunderstorm']
+        df_wind = grouped[grouped['Warning_Type'] == 'Wind']
+
+        # Create Plotly chart
+        fig = go.Figure()
+
+        fig.add_trace(
+            go.Bar(
+                x=df_thunder["Day"],
+                y=df_thunder["Accuracy"],
+                name="Thunderstorm",
+                text=df_thunder["Accuracy"],
+                texttemplate="%{y:.1f}%",
+                textposition="outside",
+                marker=dict(
+                    color=df_thunder["Accuracy"],
+                    colorscale="Blues",
+                    showscale=True,
+                    colorbar=dict(
+                        title="TS Accuracy",
+                        x=1.14,          # Position on far right
+                        thickness=15,
+                        len=0.75
+                    )
+                )
+            )
+        )
+
+
+        fig.add_trace(
+            go.Bar(
+                x=df_wind["Day"],
+                y=df_wind["Accuracy"],
+                name="Wind",
+                text=df_wind["Accuracy"],
+                texttemplate="%{y:.1f}%",
+                textposition="outside",
+                marker=dict(
+                    color=df_wind["Accuracy"],
+                    colorscale="Reds",
+                    showscale=True,
+                    colorbar=dict(
+                        title="Gust Accuracy",
+                        x=1.02,          # Closer to the bars
+                        thickness=15,
+                        len=0.75
+                    )
+                )
+            )
+        )
+
+        fig.update_layout(
+
+            title=dict(
+                text=(
+                    f"Daily Accuracy of Thunderstorm and Gust Warning "
+                    f"for the Month of {month_name}"
+                ),
+                x=0.5,
+                xanchor="center",
+                y=0.95,
+                yanchor="top",
+                font=dict(size=20, family="Arial Black")
+            ),
+
+        
+            xaxis_title="Day",
+            yaxis_title="Accuracy (%)",
+
+            # Axis Limits
+            yaxis=dict(range=[0, 110]),
+
+            # Group bars side-by-side
+            barmode="group",
+
+            
+            plot_bgcolor="#d9d9d9",   # Inner plot background
+            # paper_bgcolor="#d9d9d9",  # Overall page background
+
+            # Global font
+            font=dict(size=14),
+
+            legend=dict(
+                title="Warning Type",
+                x=0.02,
+                y=0.98,
+                bgcolor="rgba(255, 255, 255, 0.6)",
+                bordercolor="black",
+                borderwidth=1
+            ),
+
+            
+            width=1500,
+            height=675,
+
+            # Adjust margins for colorbars + centered title
+            margin=dict(l=50, r=200, t=120, b=50)
+        )
+
+
+        fig.write_html(output_chart)
+
+
+
+        print(f"[DEBUG] Combined accuracy chart generated → {output_chart}")
+
+        return send_file(output_chart, mimetype='text/html')
 
     except Exception as e:
-        return jsonify({'error': f'Error generating chart: {str(e)}'}), 500
+        print("[ERROR] Error generating chart:", e)
+        return jsonify({'error': str(e)}), 500
+
