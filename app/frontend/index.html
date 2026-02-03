@@ -12,6 +12,50 @@
     <link rel="stylesheet" href="/css/style.css">
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+    <script src="/js/auth.js"></script>
+<script>
+  // Wait for authManager initialization then redirect by role
+  if (window.authManager && window.authManager.ready) {
+    window.authManager.ready.then(() => {
+      const user = authManager.user;
+      console.log(user);
+      if (!user) {
+        window.location.replace('/login');
+        return;
+      }
+      const role = user.role;
+      if (role !== 'user') {
+        if (role === 'admin') {
+          window.location.replace('/admin');
+        } else if (role === 'super_admin') {
+          window.location.replace('/superadmin');
+        } else {
+          window.location.replace('/login');
+        }
+      }
+    }).catch(() => {
+      window.location.replace('/login');
+    });
+  } else {
+    // fallback to old behavior
+    (async () => {
+      try {
+          const res = await fetch('/auth/me', { credentials: 'include' });
+          if (!res.ok) { window.location.replace('/login'); return; }
+          const data = await res.json();
+          const role = data.user.role;
+          if (role !== 'user') {
+              if (role === 'admin') window.location.replace('/admin');
+              else if (role === 'super_admin') window.location.replace('/superadmin');
+              else window.location.replace('/login');
+          }
+      } catch (err) {
+          window.location.replace('/login');
+      }
+    })();
+  }
+</script>
+
 
     <style>
         ::-webkit-scrollbar{
@@ -72,7 +116,7 @@
 
 <body class="bg-gray-50 min-h-screen">
     <!-- Header Section -->
-    <header class="bg-white flex justify-center text-center shadow-md header-height">
+    <!-- <header class="bg-white flex justify-center text-center shadow-md header-height">
         <div class="container mx-auto px-4 max-w-7xl h-full flex flex-col sm:flex-row items-center justify-center">
             <div class="flex items-center h-full py-3 justify-center w-full">
                 <img src="https://mausam.imd.gov.in/responsive/img/logo/imd_logo_a.png" alt="IMD Logo"
@@ -82,12 +126,129 @@
                         <h1 id="mainHeading" class="text-3xl text-left font-bold text-gray-800">Aviation Forecast verification Dashboard</h1>
                     </div>
                 </div>
+                <div class="ml-auto">
+                    <button id="logoutBtn"
+                        class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md shadow-md transition duration-300">
+                        Logout
+                    </button>
         </div>
-    </header>
+    </header> -->
+    <!-- Header Section -->
+<header class="bg-white flex justify-center text-center shadow-md header-height">
+    <div class="container mx-auto px-4 max-w-7xl h-full flex flex-col sm:flex-row items-center justify-center">
+        <div class="flex items-center h-full py-3 justify-center w-full">
+            <img src="https://mausam.imd.gov.in/responsive/img/logo/imd_logo_a.png" alt="IMD Logo"
+                class="h-full mr-6">
+                <div>
+                    <h3 class="text-2xl text-left pb-0 font-bold text-[#2563EB] " >MWO  Mumbai</h1>
+                    <h1 id="mainHeading" class="text-3xl text-left font-bold text-gray-800">Aviation Forecast verification Dashboard</h1>
+                </div>
+            </div>
+
+            <div class="ml-auto flex items-center gap-4">
+                <!-- Profile menu -->
+                <div class="relative">
+                    <button id="profileToggle" class="flex items-center gap-2 bg-transparent border-none cursor-pointer">
+                        <div id="userAvatar" class="w-9 h-9 rounded-full bg-blue-600 text-white flex items-center justify-center font-semibold"></div>
+                        <span id="userInfo" style="display:none;" class="text-gray-700 font-medium"></span>
+                        <i class="fas fa-caret-down text-gray-500 ml-1"></i>
+                    </button>
+
+                    <div id="profileDropdown" class="hidden absolute right-0 mt-2 w-48 bg-white border rounded shadow-md py-2 z-50">
+                        <div class="px-3 py-2 text-sm text-gray-700">
+                            <div><strong id="userInfoDropdown">User</strong></div>
+                            <div class="text-xs text-gray-500" id="userRole">role</div>
+                        </div>
+                        <div class="border-t my-1"></div>
+                        <button id="profileChangePassword" class="w-full text-left px-3 py-2 hover:bg-gray-100">Change Password</button>
+                        <button id="profileLogout" class="w-full text-left px-3 py-2 hover:bg-gray-100">Logout</button>
+                    </div>
+                </div>
+
+            </div>
+    </div>
+</header>
+
+<script>
+document.addEventListener("DOMContentLoaded", async () => {
+    try {
+        const res = await fetch('/auth/me', { credentials: 'include' });
+        if (res.ok) {
+            const data = await res.json();
+            // populate username in dropdown area
+            const userInfoDropdown = document.getElementById('userInfoDropdown');
+            const userInfo = document.getElementById('userInfo');
+            if (userInfoDropdown) userInfoDropdown.textContent = data.user.username;
+            if (userInfo) {
+                userInfo.textContent = data.user.username;
+                userInfo.style.display = 'inline';
+            }
+            // show logout button
+            document.getElementById('logoutBtn').classList.remove('hidden');
+        }
+    } catch {}
+
+    // profile dropdown toggle
+    document.getElementById('profileToggle')?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const dd = document.getElementById('profileDropdown');
+        if (!dd) return;
+        dd.classList.toggle('hidden');
+    });
+
+    // close dropdown when clicking outside
+    document.addEventListener('click', () => {
+        const dd = document.getElementById('profileDropdown');
+        if (dd && !dd.classList.contains('hidden')) dd.classList.add('hidden');
+    });
+
+    // change password via profile menu
+    document.getElementById('profileChangePassword')?.addEventListener('click', async () => {
+        const current = prompt('Enter current password');
+        if (!current) return;
+        const nw = prompt('Enter new password (min 6 chars)');
+        if (!nw) return;
+        try {
+            const res = await fetch('/auth/change-password', {
+                method: 'POST',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ current_password: current, new_password: nw })
+            });
+            const data = await res.json();
+            if (res.ok) alert('Password changed successfully');
+            else alert(data.error || 'Failed to change password');
+        } catch (err) {
+            alert('Network error');
+        }
+    });
+
+    // logout via profile menu
+    document.getElementById('profileLogout')?.addEventListener('click', async () => {
+        if (window.authManager) await window.authManager.logout();
+        else {
+            await fetch('/auth/logout', { method: 'POST', credentials: 'include' });
+            window.location.href = '/login';
+        }
+    });
+
+    // existing logout button behavior
+    document.getElementById('logoutBtn')?.addEventListener('click', async () => {
+        if (window.authManager) await window.authManager.logout();
+        else {
+            await fetch('/auth/logout', { method: 'POST', credentials: 'include' });
+            localStorage.removeItem('user');
+            window.location.href = '/login';
+        }
+    });
+});
+</script>
     <nav>
         <button class="tab-button active" onclick="showDisplay(0)" >Take-Off Forecast</button>
         <button class="tab-button" onclick="showDisplay(1)" >Local Area forecast </button>
         <button class="tab-button" onclick="showDisplay(2)" >Aerodrome Warning Verification</button>
+        
+
     </nav>
 
 
@@ -200,6 +361,17 @@
                                 </div>
                             </div>
                         </div>
+
+                        <div class="flex justify-center items-center gap-4 mb-2">
+                            <button type="button" class="primary-action-btn fetch-metar-btn">
+                                Fetch
+                            </button>
+                            <button type="button" class="primary-action-btn toggle-input-btn" id="toggleInputBtn"
+                                style="display: none;">
+                                <span class="toggle-to-default">Reset</span>
+                            </button>
+                        </div>
+                        <p class="fetch-metar-status text-sm text-center mt-1 mb-1"></p>
 
                          <!-- Horizontal line before reset button -->
                         <hr class="my-8 border-gray-600">
@@ -338,7 +510,6 @@
         <span class="ml-2 text-sm text-gray-600">Processing...</span>
     </div>
 
-<!-- <<<<<<< prod -->
     <!-- Report Popup Modal -->
     <div id="reportPopup" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center">
         <div class="bg-white rounded-lg shadow-xl w-[90%] h-[90%] flex flex-col">
@@ -385,6 +556,11 @@
                     class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-6 rounded-md shadow transition duration-300 flex items-center justify-center">
                     Display Graph
                 </button>
+                            <a href="#" id="detailsResultBtn"
+                                class="bg-green-600 hover:bg-green-700 text-white font-medium py-2.5 px-6 rounded-md shadow transition duration-300 flex items-center justify-center">
+                                <i class="fas fa-file-csv mr-2"></i>
+                                Detailed Results
+                            </a>
                         </div>
 
                     </section>
@@ -471,11 +647,14 @@
                         <select id="upperAirHourSelect" class="w-60 border border-gray-300 rounded-md p-2.5">
                             <!-- Populated by JS -->
                         </select>
-                        <!-- <button id="upperAirFetchBtn" class="bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded-md shadow transition duration-200">
-                            Fetch 
-                        </button> -->
+                        
                     </div>
-                    <p class="text-xs text-black-500 mt-1 font-bold">Error will occur if data not available</p>
+                    <div class="flex justify-center items-center gap-4 mt-4 mb-2">
+                        <button type="button" class="primary-action-btn" id="upperAirFetchBtn">Fetch</button>
+                        <button type="button" class="primary-action-btn" id="upperAirResetBtn" style="display: none;">Reset</button>
+                    </div>
+                    <p id="upperAirFetchStatus" class="fetch-metar-status text-sm text-center mt-1 mb-1"></p>
+                    <p class="text-xs text-gray-500 mt-1">Upper air data is typically available at 00:00 and 12:00 UTC</p>
                     
                 </div>
 
@@ -587,10 +766,20 @@
 </section>
 
     <!-- loading section -->
-    <div id="reportLoadingSection" class="flex items-center justify-center py-8" style="display: none;">
+    <!-- <div id="reportLoadingSection" class="flex items-center justify-center py-8" style="display: none;">
         <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
         <span class="ml-2 text-sm text-gray-600">Processing verification...</span>
-    </div>
+    </div> -->
+
+    <!-- Upper Air Processing View -->
+<div id="upperAirProcessing"
+     class="hidden flex items-center justify-center gap-3 mt-4 text-blue-600">
+    <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+    <span class="text-sm font-medium">
+        Processing upper air verification...
+    </span>
+</div>
+
 
     <!-- Upper Air Verification Popup Modal -->
     <div id="upperAirVerificationModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden">
@@ -962,6 +1151,13 @@
                                 <i class="fas fa-chart-bar mr-2"></i>
                                 View Graph
                             </button>
+                            
+                            <!-- Details Result Button -->
+                            <a href="#" id="adwrn-details-result-btn"
+                               class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-8 rounded-md shadow transition duration-300 flex items-center justify-center mb-4 w-full">
+                                <i class="fas fa-file-csv mr-2"></i>
+                                Detailed Results
+                            </a>
                             
 
                         </div>

@@ -144,6 +144,7 @@ body {
 }
 
 /* Toggle button styles - enhanced */
+.primary-action-btn,
 .toggle-input-btn {
     position: relative;
     top: auto;
@@ -164,7 +165,7 @@ body {
 }
 
 
-
+.primary-action-btn:hover,
 .toggle-input-btn:hover {
     background-color: #2563eb;
     color: white;
@@ -172,11 +173,22 @@ body {
     transform: translateY(-1px);
 }
 
+.primary-action-btn:active,
 .toggle-input-btn:active {
     transform: translateY(0);
     box-shadow: 0 1px 2px rgba(0,0,0,0.05);
 }
 
+.primary-action-btn:disabled,
+.toggle-input-btn:disabled {
+    background-color: #93c5fd;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.fetch-metar-status {
+    min-height: 0.75rem;
+}
 
 /* Default state highlight */
 .default-state {

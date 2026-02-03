@@ -1,9 +1,15 @@
-// Global custom alert function
+function getTabId() {
+    let tabId = sessionStorage.getItem('tab_id');
+    if (!tabId) {
+        tabId = 'tab_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now();
+        sessionStorage.setItem('tab_id', tabId);
+    }
+    return tabId;
+}
+
 function showCustomAlert(message) {
-    console.log('showCustomAlert called with:', message); // Debug log
-    
+    console.log('showCustomAlert called with:', message);
     try {
-        // Create alert container if it doesn't exist
         let alertContainer = document.getElementById('customAlertContainer');
         if (!alertContainer) {
             alertContainer = document.createElement('div');
@@ -46,6 +52,48 @@ function showCustomAlert(message) {
         console.error('Error creating custom alert:', error);
         // Fallback to browser alert
         alert(message);
+    }
+}
+
+function apiFetch(url, options = {}) {
+    const headers = options.headers || {};
+    headers['X-Tab-ID'] = getTabId();
+    return fetch(url, {
+        ...options,
+        headers,
+        credentials: 'include'
+    });
+}
+
+async function logPageAccess(page) {
+    try {
+        await apiFetch('/api/logs/log-access', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ page })
+        });
+    } catch (error) {
+        console.error('Error logging page access:', error);
+    }
+}
+
+async function logVerificationActivity(verificationType, details) {
+    try {
+        await apiFetch('/api/logs/log-verification', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ 
+                activity_type: 'verification',
+                verification_type: verificationType,
+                details: details
+            })
+        });
+    } catch (error) {
+        console.error('Error logging verification activity:', error);
     }
 }
 
@@ -184,7 +232,7 @@ async function loadGraph() {
         const graphContainer = document.getElementById('graphContainer');
         
         // 1. First load the base template
-        const templateResponse = await fetch('/web/chart_template');
+        const templateResponse = await fetch('/chart_template');
         if (!templateResponse.ok) {
             throw new Error(`Failed to fetch template: ${templateResponse.status}`);
         }
@@ -192,7 +240,7 @@ async function loadGraph() {
         
         // 2. Fetch fresh chart data
         const timestamp = new Date().getTime();
-        const dataResponse = await fetch(`/web/bar_chart?t=${timestamp}`);
+        const dataResponse = await fetch(`/bar_chart?t=${timestamp}`);
         if (!dataResponse.ok) {
             throw new Error(`Failed to fetch chart data: ${dataResponse.status}`);
         }
@@ -234,7 +282,7 @@ async function loadGraph() {
 async function downloadGraph() {
     try {
         const timestamp = new Date().getTime();
-        const response = await fetch(`/web/bar_chart?t=${timestamp}`);
+        const response = await fetch(`/bar_chart?t=${timestamp}`);
         if (!response.ok) throw new Error('Failed to fetch graph');
         
         const blob = await response.blob();
@@ -368,58 +416,58 @@ if (downloadGraphBtn) {
     }
 
     // Check if all fields are filled and fetch METAR data
-    function checkAllFieldsAndFetch() {
-        const startDate = document.querySelectorAll('.date-picker-section .date-time-picker-container')[0];
-        const endDate = document.querySelectorAll('.date-picker-section .date-time-picker-container')[1];
-        const stationCode = stationInput.value;
+    // function checkAllFieldsAndFetch() {
+    //     const startDate = document.querySelectorAll('.date-picker-section .date-time-picker-container')[0];
+    //     const endDate = document.querySelectorAll('.date-picker-section .date-time-picker-container')[1];
+    //     const stationCode = stationInput.value;
 
-        const startDateValue = startDate.querySelector('.date-only-picker').value;
-        const startHour = startDate.querySelector('.hour-select').value;
-        const startMinute = startDate.querySelector('.minute-select').value;
+    //     const startDateValue = startDate.querySelector('.date-only-picker').value;
+    //     const startHour = startDate.querySelector('.hour-select').value;
+    //     const startMinute = startDate.querySelector('.minute-select').value;
 
-        const endDateValue = endDate.querySelector('.date-only-picker').value;
-        const endHour = endDate.querySelector('.hour-select').value;
-        const endMinute = endDate.querySelector('.minute-select').value;
+    //     const endDateValue = endDate.querySelector('.date-only-picker').value;
+    //     const endHour = endDate.querySelector('.hour-select').value;
+    //     const endMinute = endDate.querySelector('.minute-select').value;
 
-        if (startDateValue && startHour !== '' && startMinute !== '' &&
-            endDateValue && endHour !== '' && endMinute !== '' &&
-            isValidICAO(stationCode)) {
+    //     if (startDateValue && startHour !== '' && startMinute !== '' &&
+    //         endDateValue && endHour !== '' && endMinute !== '' &&
+    //         isValidICAO(stationCode)) {
 
-            const startDateTime = formatDate(startDateValue, startHour, startMinute);
-            const endDateTime = formatDate(endDateValue, endHour, endMinute);
+    //         const startDateTime = formatDate(startDateValue, startHour, startMinute);
+    //         const endDateTime = formatDate(endDateValue, endHour, endMinute);
 
-            // Get preview elements
-            const metarPreview = document.querySelector('.metar-preview');
-            const previewContent = metarPreview.querySelector('.preview-content');
-            const loadingIndicator = metarPreview.querySelector('.loading-indicator');
+    //         // Get preview elements
+    //         const metarPreview = document.querySelector('.metar-preview');
+    //         const previewContent = metarPreview.querySelector('.preview-content');
+    //         const loadingIndicator = metarPreview.querySelector('.loading-indicator');
 
-            // Show preview section and loading indicator
-            metarPreview.classList.remove('hidden');
-            loadingIndicator.classList.remove('hidden');
-            previewContent.textContent = '';
+    //         // Show preview section and loading indicator
+    //         metarPreview.classList.remove('hidden');
+    //         loadingIndicator.classList.remove('hidden');
+    //         previewContent.textContent = '';
 
-            // Make API request
-            fetch(`/api/get_metar?start_date=${startDateTime}&end_date=${endDateTime}&icao=${stationCode}`)
-                .then(response => {
-                    if (!response.ok) {
-                        return response.json().then(err => {
-                            throw new Error(err.error || 'Failed to fetch METAR data');
-                        });
-                    }
-                    return response.text();
-                })
-                .then(data => {
-                    // Hide loading indicator and show data
-                    loadingIndicator.classList.add('hidden');
-                    previewContent.textContent = data;
-                })
-                .catch(error => {
-                    // Hide preview section on error
-                    metarPreview.classList.add('hidden');
-                    console.error('Error fetching METAR data:', error);
-                });
-        }
-    }
+    //         // Make API request
+    //         fetch(`/api/get_metar?start_date=${startDateTime}&end_date=${endDateTime}&icao=${stationCode}`)
+    //             .then(response => {
+    //                 if (!response.ok) {
+    //                     return response.json().then(err => {
+    //                         throw new Error(err.error || 'Failed to fetch METAR data');
+    //                     });
+    //                 }
+    //                 return response.text();
+    //             })
+    //             .then(data => {
+    //                 // Hide loading indicator and show data
+    //                 loadingIndicator.classList.add('hidden');
+    //                 previewContent.textContent = data;
+    //             })
+    //             .catch(error => {
+    //                 // Hide preview section on error
+    //                 metarPreview.classList.add('hidden');
+    //                 console.error('Error fetching METAR data:', error);
+    //             });
+    //     }
+    // }
 
     // Helper functions for loading section
     function showLoadingSection() {
@@ -651,6 +699,79 @@ if (downloadGraphBtn) {
         area.addEventListener('drop', handleDrop, false);
     });
 
+
+    const fetchMetarBtn = document.querySelector('.fetch-metar-btn');
+    const fetchMetarStatus = document.querySelector('.fetch-metar-status');
+    
+    if (fetchMetarBtn) {
+        fetchMetarBtn.addEventListener('click', function() {
+            const startDate = document.querySelectorAll('.date-picker-section .date-time-picker-container')[0];
+            const endDate = document.querySelectorAll('.date-picker-section .date-time-picker-container')[1];
+            const stationCode = stationInput.value;
+
+            const startDateValue = startDate.querySelector('.date-only-picker').value;
+            const startHour = startDate.querySelector('.hour-select').value;
+            const startMinute = startDate.querySelector('.minute-select').value;
+
+            const endDateValue = endDate.querySelector('.date-only-picker').value;
+            const endHour = endDate.querySelector('.hour-select').value;
+            const endMinute = endDate.querySelector('.minute-select').value;
+
+            // Validate fields
+            if (!startDateValue || startHour === '' || startMinute === '' ||
+                !endDateValue || endHour === '' || endMinute === '' ||
+                !isValidICAO(stationCode)) {
+                fetchMetarStatus.innerHTML = '<span class="text-red-600">Please fill all fields with valid data</span>';
+                return;
+            }
+
+            const startDateTime = formatDate(startDateValue, startHour, startMinute);
+            const endDateTime = formatDate(endDateValue, endHour, endMinute);
+
+            // Get preview elements
+            const metarPreview = document.querySelector('.metar-preview');
+            const previewContent = metarPreview.querySelector('.preview-content');
+            const loadingIndicator = metarPreview.querySelector('.loading-indicator');
+
+            // Disable button and show loading
+            fetchMetarBtn.disabled = true;
+            fetchMetarBtn.textContent = 'Fetching...';
+            fetchMetarStatus.innerHTML = '<span class="text-blue-600">Fetching METAR data...</span>';
+            
+            // Show preview section and loading indicator
+            metarPreview.classList.remove('hidden');
+            loadingIndicator.classList.remove('hidden');
+            previewContent.textContent = '';
+
+            // Make API request
+            fetch(`/api/get_metar?start_date=${startDateTime}&end_date=${endDateTime}&icao=${stationCode}`)
+                .then(response => {
+                    if (!response.ok) {
+                        return response.json().then(err => {
+                            throw new Error(err.error || 'Failed to fetch METAR data');
+                        });
+                    }
+                    return response.text();
+                })
+                .then(data => {
+                    // Hide loading indicator and show data
+                    loadingIndicator.classList.add('hidden');
+                    previewContent.textContent = data;
+                    fetchMetarBtn.disabled = false;
+                    fetchMetarBtn.textContent = 'Fetch';
+                    fetchMetarStatus.innerHTML = '<span class="text-green-600">✓ METAR data fetched successfully</span>';
+                })
+                .catch(error => {
+                    // Hide preview section on error
+                    metarPreview.classList.add('hidden');
+                    fetchMetarBtn.disabled = false;
+                    fetchMetarBtn.textContent = 'Fetch';
+                    fetchMetarStatus.innerHTML = `<span class="text-red-600">✗ Error: ${error.message}</span>`;
+                    console.error('Error fetching METAR data:', error);
+                });
+        });
+    }
+
     // event handler for compareBtn
     compareBtn.addEventListener('click', function () {
         const startDate = document.querySelectorAll('.date-picker-section .date-time-picker-container')[0];
@@ -703,6 +824,9 @@ if (downloadGraphBtn) {
             formData.append('forecast_file', forecastFile);
             formData.append('observation_file', observationFile);
 
+            // Log verification activity
+            logVerificationActivity('METAR Verification', `Station: ${stationCode}, Period: ${startDateTime} to ${endDateTime}`);
+
             // Make API request to process METAR data
             showLoadingSection(); // Show loading before fetch
             fetch('/api/process_metar', {
@@ -734,50 +858,56 @@ if (downloadGraphBtn) {
                     document.getElementById("downloadCsvBtn").href = 
     `/api/download/comparison_csv?file_path=${data.file_paths.comparison_csv}`;
 
-//  document.getElementById('upperAirForecastFileInput').addEventListener('change', async function (e) {
-//         const file = e.target.files[0];
-//         if (!file) return;
+                    // Set up Details Result button for merged CSV
+                    const detailsResultBtn = document.getElementById('detailsResultBtn');
+                    if (detailsResultBtn && data.file_paths.merged_csv) {
+                        detailsResultBtn.href = `/api/download/merged_csv?file_path=${data.file_paths.merged_csv}`;
+                    }
 
-//         const reader = new FileReader();
-//         reader.onload = async function () {
-//           const typedarray = new Uint8Array(this.result);
+ document.getElementById('upperAirForecastFileInput').addEventListener('change', async function (e) {
+        const file = e.target.files[0];
+        if (!file) return;
 
-//           const pdf = await pdfjsLib.getDocument({ data: typedarray }).promise;
-//           let fullText = '';
+        const reader = new FileReader();
+        reader.onload = async function () {
+          const typedarray = new Uint8Array(this.result);
 
-//           for (let i = 1; i <= pdf.numPages; i++) {
-//             const page = await pdf.getPage(i);
-//             const textContent = await page.getTextContent();
-//             const pageText = textContent.items.map(item => item.str).join(' ');
-//             fullText += pageText + '\n';
-//           }
+          const pdf = await pdfjsLib.getDocument({ data: typedarray }).promise;
+          let fullText = '';
 
-//           // Extract "UPPER WINDS" block
-//           const upperWindsBlock = fullText.match(/UPPER WINDS([\s\S]+?)WEATHER/i);
-//           if (!upperWindsBlock) return alert("No 'Upper Winds' data found.");
+          for (let i = 1; i <= pdf.numPages; i++) {
+            const page = await pdf.getPage(i);
+            const textContent = await page.getTextContent();
+            const pageText = textContent.items.map(item => item.str).join(' ');
+            fullText += pageText + '\n';
+          }
 
-//           const cleanedText = upperWindsBlock[1].replace(/[\=]/g, '').trim();
-//           const dataArray = cleanedText.split(/\s+/);
+          // Extract "UPPER WINDS" block
+          const upperWindsBlock = fullText.match(/UPPER WINDS([\s\S]+?)WEATHER/i);
+          if (!upperWindsBlock) return alert("No 'Upper Winds' data found.");
 
-//           // Convert into rows of 3 (Altitude, Dir/Speed, Temp)
-//           const table = document.getElementById("windTable");
-//           const tbody = table.querySelector("tbody");
-//           tbody.innerHTML = "";
-//           for (let i = 0; i < dataArray.length; i += 6) {
-//             const row = document.createElement("tr");
-//             for (let j = 0; j < 6; j++) {
-//               const cell = document.createElement("td");
-//               cell.textContent = dataArray[i + j] || "";
-//               row.appendChild(cell);
-//             }
-//             tbody.appendChild(row);
-//           }
+          const cleanedText = upperWindsBlock[1].replace(/[\=]/g, '').trim();
+          const dataArray = cleanedText.split(/\s+/);
 
-//           table.style.display = "table";
-//         };
+          // Convert into rows of 3 (Altitude, Dir/Speed, Temp)
+          const table = document.getElementById("windTable");
+          const tbody = table.querySelector("tbody");
+          tbody.innerHTML = "";
+          for (let i = 0; i < dataArray.length; i += 6) {
+            const row = document.createElement("tr");
+            for (let j = 0; j < 6; j++) {
+              const cell = document.createElement("td");
+              cell.textContent = dataArray[i + j] || "";
+              row.appendChild(cell);
+            }
+            tbody.appendChild(row);
+          }
 
-//         reader.readAsArrayBuffer(file);
-//       });
+          table.style.display = "table";
+        };
+
+        reader.readAsArrayBuffer(file);
+      });
 
                     let update_string = `VERIFICATION RESULT OF TAKE-OFF FORECAST <br> ${metadata.icao}`
                     if (metadata.start_time && metadata.end_time) {
@@ -868,7 +998,8 @@ const upperAirObsFilePreview = document.getElementById('upperAirObsFilePreview')
 const upperAirDatePickerSection = document.getElementById('upperAirDatePickerSection');
 const upperAirDatePicker = document.getElementById('upperAirDatePicker');
 const upperAirHourSelect = document.getElementById('upperAirHourSelect');
-// const upperAirFetchBtn = document.getElementById('upperAirFetchBtn');
+const upperAirFetchBtn = document.getElementById('upperAirFetchBtn');
+const upperAirFetchStatus = document.getElementById('upperAirFetchStatus');
 const upperAirPreviewSection = document.getElementById('upperAirPreviewSection');
 const upperAirPreviewContent = document.getElementById('upperAirPreviewContent');
 const upperAirLoadingIndicator = document.getElementById('upperAirLoadingIndicator');
@@ -926,15 +1057,28 @@ upperAirObsFileInput.addEventListener('change', function () {
     };
     reader.readAsText(file);
     // Hide date picker section
-    upperAirDatePickerSection.style.display = 'none';
+    if (upperAirDatePickerSection) upperAirDatePickerSection.style.display = 'none';
+    if (upperAirFetchStatus) upperAirFetchStatus.innerHTML = '';
+    if (upperAirFetchBtn) {
+        upperAirFetchBtn.disabled = true;
+        upperAirFetchBtn.classList.add('opacity-50', 'cursor-not-allowed');
+    }
+    if (upperAirResetBtn) upperAirResetBtn.style.display = 'inline-flex';
 });
 
 // Close button for obs preview
-upperAirObsFilePreview.querySelector('.close-btn').addEventListener('click', function () {
-    upperAirObsFilePreview.classList.add('hidden');
-    upperAirObsFileInput.value = '';
-    upperAirDatePickerSection.style.display = 'block';
-});
+if (upperAirObsFilePreview) {
+    upperAirObsFilePreview.querySelector('.close-btn').addEventListener('click', function () {
+        upperAirObsFilePreview.classList.add('hidden');
+        if (upperAirObsFileInput) upperAirObsFileInput.value = '';
+        if (upperAirDatePickerSection) upperAirDatePickerSection.style.display = 'block';
+        if (upperAirFetchBtn) {
+            upperAirFetchBtn.disabled = false;
+            upperAirFetchBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+        }
+        if (upperAirResetBtn) upperAirResetBtn.style.display = 'none';
+    });
+}
 
 
 document.getElementById('upperAirForecastFileInput').addEventListener('change', async function (e) {
@@ -982,6 +1126,99 @@ document.getElementById('upperAirForecastFileInput').addEventListener('change', 
         reader.readAsArrayBuffer(file);
       });
 
+      if (upperAirFetchBtn && upperAirFetchStatus && upperAirPreviewSection && upperAirPreviewContent && upperAirLoadingIndicator) {
+        upperAirFetchBtn.addEventListener('click', function () {
+            if (!upperAirDatePicker || !upperAirHourSelect || !upperAirStationInput) return;
+    
+            const station = upperAirStationInput.value.trim();
+            const date = upperAirDatePicker.value;
+            const hour = upperAirHourSelect.value;
+    
+            if (!/^\d{5}$/.test(station)) {
+                upperAirFetchStatus.innerHTML = '<span class="text-red-600">Please enter a valid 5-digit station ID.</span>';
+                return;
+            }
+    
+            if (!date || hour === '') {
+                upperAirFetchStatus.innerHTML = '<span class="text-red-600">Please select both date and hour before fetching.</span>';
+                return;
+            }
+    
+            if (upperAirObsFileInput && upperAirObsFileInput.files.length > 0) {
+                upperAirFetchStatus.innerHTML = '<span class="text-red-600">Remove the uploaded CSV to fetch directly from the server.</span>';
+                return;
+            }
+    
+            const dateTime = `${date} ${hour}:00:00`;
+    
+            upperAirFetchBtn.disabled = true;
+            upperAirFetchBtn.textContent = 'Fetching...';
+            upperAirFetchBtn.classList.add('opacity-50', 'cursor-wait');
+            upperAirResetBtn && (upperAirResetBtn.style.display = 'none');
+    
+            upperAirFetchStatus.innerHTML = '<span class="text-blue-600">Fetching upper air data...</span>';
+            upperAirPreviewSection.classList.remove('hidden');
+            upperAirLoadingIndicator.classList.remove('hidden');
+            upperAirPreviewContent.textContent = '';
+    
+            fetch(`/api/get_upper_air?datetime=${encodeURIComponent(dateTime)}&station_id=${encodeURIComponent(station)}`)
+                .then(async response => {
+                    if (!response.ok) {
+                        let errorMsg = 'Failed to fetch upper air data';
+                        try {
+                            const err = await response.json();
+                            errorMsg = err.error || errorMsg;
+                        } catch (e) {}
+                        throw new Error(errorMsg);
+                    }
+                    return response.text();
+                })
+                .then(text => {
+                    upperAirLoadingIndicator.classList.add('hidden');
+                    if (text.trim().toLowerCase().startsWith('<!doctype html') || text.trim().toLowerCase().startsWith('<html')) {
+                        throw new Error('No data available for the selected date/time/station.');
+                    }
+                    upperAirPreviewContent.textContent = text;
+                    upperAirFetchStatus.innerHTML = '<span class="text-green-600">✓ Upper air data fetched successfully.</span>';
+                    upperAirResetBtn && (upperAirResetBtn.style.display = 'inline-flex');
+                })
+                .catch(error => {
+                    upperAirPreviewSection.classList.add('hidden');
+                    upperAirLoadingIndicator.classList.add('hidden');
+                    upperAirFetchStatus.innerHTML = `<span class="text-red-600">✗ ${error.message}</span>`;
+                })
+                .finally(() => {
+                    upperAirFetchBtn.disabled = false;
+                    upperAirFetchBtn.textContent = 'Fetch';
+                    upperAirFetchBtn.classList.remove('opacity-50', 'cursor-wait', 'cursor-not-allowed');
+                });
+        });
+    
+        if (upperAirResetBtn) {
+            upperAirResetBtn.addEventListener('click', function () {
+                if (upperAirDatePicker && upperAirDatePicker._flatpickr) {
+                    upperAirDatePicker._flatpickr.clear();
+                } else if (upperAirDatePicker) {
+                    upperAirDatePicker.value = '';
+                }
+    
+                if (upperAirHourSelect) upperAirHourSelect.selectedIndex = 0;
+    
+                if (upperAirObsFileInput) upperAirObsFileInput.value = '';
+                if (upperAirObsFilePreview) upperAirObsFilePreview.classList.add('hidden');
+                if (upperAirDatePickerSection) upperAirDatePickerSection.style.display = 'block';
+    
+                upperAirPreviewSection.classList.add('hidden');
+                upperAirLoadingIndicator.classList.add('hidden');
+                upperAirPreviewContent.textContent = '';
+                upperAirFetchStatus.innerHTML = '';
+    
+                upperAirFetchBtn.disabled = false;
+                upperAirFetchBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                upperAirResetBtn.style.display = 'none';
+            });
+        }
+    }
 
 // Close button for forecast preview
 upperAirForecastFilePreview.querySelector('.close-btn').addEventListener('click', function () {
@@ -989,7 +1226,119 @@ upperAirForecastFilePreview.querySelector('.close-btn').addEventListener('click'
     upperAirForecastFileInput.value = '';
 });
 
+if (upperAirFetchBtn && upperAirFetchStatus && upperAirPreviewSection && upperAirPreviewContent && upperAirLoadingIndicator) {
+    upperAirFetchBtn.addEventListener('click', function () {
+        if (!upperAirDatePicker || !upperAirHourSelect || !upperAirStationInput) return;
+
+        const station = upperAirStationInput.value.trim();
+        const date = upperAirDatePicker.value;
+        const hour = upperAirHourSelect.value;
+
+        if (!/^\d{5}$/.test(station)) {
+            upperAirFetchStatus.innerHTML = '<span class="text-red-600">Please enter a valid 5-digit station ID.</span>';
+            return;
+        }
+
+        if (!date || hour === '') {
+            upperAirFetchStatus.innerHTML = '<span class="text-red-600">Please select both date and hour before fetching.</span>';
+            return;
+        }
+
+        if (upperAirObsFileInput && upperAirObsFileInput.files.length > 0) {
+            upperAirFetchStatus.innerHTML = '<span class="text-red-600">Remove the uploaded CSV to fetch directly from the server.</span>';
+            return;
+        }
+
+        const dateTime = `${date} ${hour}:00:00`;
+
+        upperAirFetchBtn.disabled = true;
+        upperAirFetchBtn.textContent = 'Fetching...';
+        upperAirFetchBtn.classList.add('opacity-50', 'cursor-wait');
+        upperAirResetBtn && (upperAirResetBtn.style.display = 'none');
+
+        upperAirFetchStatus.innerHTML = '<span class="text-blue-600">Fetching upper air data...</span>';
+        upperAirPreviewSection.classList.remove('hidden');
+        upperAirLoadingIndicator.classList.remove('hidden');
+        upperAirPreviewContent.textContent = '';
+
+        fetch(`/api/get_upper_air?datetime=${encodeURIComponent(dateTime)}&station_id=${encodeURIComponent(station)}`)
+            .then(async response => {
+                if (!response.ok) {
+                    let errorMsg = 'Failed to fetch upper air data';
+                    try {
+                        const err = await response.json();
+                        errorMsg = err.error || errorMsg;
+                    } catch (e) {}
+                    throw new Error(errorMsg);
+                }
+                return response.text();
+            })
+            .then(text => {
+                upperAirLoadingIndicator.classList.add('hidden');
+                if (text.trim().toLowerCase().startsWith('<!doctype html') || text.trim().toLowerCase().startsWith('<html')) {
+                    throw new Error('No data available for the selected date/time/station.');
+                }
+                upperAirPreviewContent.textContent = text;
+                upperAirFetchStatus.innerHTML = '<span class="text-green-600">✓ Upper air data fetched successfully.</span>';
+                upperAirResetBtn && (upperAirResetBtn.style.display = 'inline-flex');
+            })
+            .catch(error => {
+                upperAirPreviewSection.classList.add('hidden');
+                upperAirLoadingIndicator.classList.add('hidden');
+                upperAirFetchStatus.innerHTML = `<span class="text-red-600">✗ ${error.message}</span>`;
+            })
+            .finally(() => {
+                upperAirFetchBtn.disabled = false;
+                upperAirFetchBtn.textContent = 'Fetch';
+                upperAirFetchBtn.classList.remove('opacity-50', 'cursor-wait', 'cursor-not-allowed');
+            });
+    });
+
+    if (upperAirResetBtn) {
+        upperAirResetBtn.addEventListener('click', function () {
+            if (upperAirDatePicker && upperAirDatePicker._flatpickr) {
+                upperAirDatePicker._flatpickr.clear();
+            } else if (upperAirDatePicker) {
+                upperAirDatePicker.value = '';
+            }
+
+            if (upperAirHourSelect) upperAirHourSelect.selectedIndex = 0;
+
+            if (upperAirObsFileInput) upperAirObsFileInput.value = '';
+            if (upperAirObsFilePreview) upperAirObsFilePreview.classList.add('hidden');
+            if (upperAirDatePickerSection) upperAirDatePickerSection.style.display = 'block';
+
+            upperAirPreviewSection.classList.add('hidden');
+            upperAirLoadingIndicator.classList.add('hidden');
+            upperAirPreviewContent.textContent = '';
+            upperAirFetchStatus.innerHTML = '';
+
+            upperAirFetchBtn.disabled = false;
+            upperAirFetchBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            upperAirResetBtn.style.display = 'none';
+        });
+    }
+}
+
+function showUpperAirProcessing() {
+    document.getElementById('upperAirProcessing')?.classList.remove('hidden');
+    if (upperAirVerifyBtn) {
+        upperAirVerifyBtn.disabled = true;
+        upperAirVerifyBtn.classList.add('opacity-60', 'cursor-not-allowed');
+    }
+}
+
+function hideUpperAirProcessing() {
+    document.getElementById('upperAirProcessing')?.classList.add('hidden');
+    if (upperAirVerifyBtn) {
+        upperAirVerifyBtn.disabled = false;
+        upperAirVerifyBtn.classList.remove('opacity-60', 'cursor-not-allowed');
+    }
+}
+
+
 upperAirVerifyBtn.addEventListener('click', function () {
+     showUpperAirProcessing();
     const station = upperAirStationInput.value;
     const forecastFile = upperAirForecastFileInput.files[0];
     const obsFile = upperAirObsFileInput.files[0];
@@ -998,14 +1347,17 @@ upperAirVerifyBtn.addEventListener('click', function () {
 
     if (!/^\d{5}$/.test(station)) {
         alert('Please enter a valid 5-digit station ID.');
+        hideUpperAirProcessing();
         return;
     }
     if (!forecastFile || forecastFile.type !== 'application/pdf') {
         alert('Please upload a valid PDF forecast file.');
+        hideUpperAirProcessing();
         return;
     }
     if (!obsFile && (!date || !hour)) {
         alert('Please either upload an observation CSV or select date/time to fetch data.');
+        hideUpperAirProcessing();
         return;
     }
 
@@ -1020,6 +1372,9 @@ upperAirVerifyBtn.addEventListener('click', function () {
     }
    
     upperAirReportSection.style.display = 'none';
+
+    // Log upper air verification activity
+    logVerificationActivity('Upper Air Verification', `Station: ${station}, Period: ${date}`);
 
     fetch('/api/process_upper_air', {
         method: 'POST',
@@ -1098,9 +1453,11 @@ upperAirVerifyBtn.addEventListener('click', function () {
         downloadBtn.href = `/api/download/upper_air_csv?file_path=${encodeURIComponent(data.file_path)}`;
         downloadBtn.style.display = 'inline-block';
     }
+    hideUpperAirProcessing();
         })
         .catch(error => {
             alert('Error processing upper air data: ' + error.message);
+            hideUpperAirProcessing();
         });
 });
 
@@ -1300,7 +1657,7 @@ if (adwrnForm && adwrnMessage && adwrnMetarPreview && adwrnFetchBtn) {
         adwrnFetchBtn.classList.add('opacity-50', 'cursor-not-allowed');
         
         const formData = new FormData(adwrnForm);
-        fetch('/web/', {  
+        fetch('/', {  
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({
@@ -1364,6 +1721,10 @@ document.querySelectorAll('.adwrn-forecast-file-input').forEach(input => {
         // Prepare FormData and send to backend
         const formData = new FormData();
         formData.append('file', file);
+        
+        // Log AD warning file upload
+        logVerificationActivity('AD Warning Upload', `File: ${file.name}`);
+        
         fetch('/api/upload_ad_warning', {
             method: 'POST',
             body: formData
@@ -1485,6 +1846,9 @@ if (adwrnVerifyBtn && adwrnReportLoadingSection) {
     adwrnVerifyBtn.addEventListener('click', function() {
         console.log('Verify button clicked'); // Debug log
         
+        // Log AD warning verification activity
+        logVerificationActivity('AD Warning Verification', 'Verification initiated');
+        
         // Hide any existing modals or containers
         const modal = document.getElementById('adwrnResultsModal');
         if (modal) modal.style.display = 'none';
@@ -1550,13 +1914,58 @@ if (adwrnVerifyBtn && adwrnReportLoadingSection) {
                              viewGraphBtn.disabled = true;
                              
                              // Open combined chart in a new tab via Flask route
-                             window.open('/web/bar_chart', '_blank');
+                             window.open('/bar_chart', '_blank');
                              
                              // Reset button state after a short delay
                              setTimeout(() => {
                                  viewGraphBtn.textContent = originalText;
                                  viewGraphBtn.disabled = false;
                              }, 2000);
+                         };
+                     }
+                     
+                     // Set up details result button functionality
+                     const detailsResultBtn = document.getElementById('adwrn-details-result-btn');
+                     if (detailsResultBtn) {
+                         detailsResultBtn.onclick = function(e) {
+                             e.preventDefault();
+                             
+                             // Show loading state
+                             const originalText = detailsResultBtn.innerHTML;
+                             detailsResultBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Downloading...';
+                             detailsResultBtn.disabled = true;
+                             
+                             // Download the final warning report
+                             fetch('/api/download/adwrn_report')
+                                 .then(response => {
+                                     if (!response.ok) {
+                                         return response.json().then(err => {
+                                             throw new Error(err.error || 'Failed to download report');
+                                         });
+                                     }
+                                     return response.blob();
+                                 })
+                                 .then(blob => {
+                                     const url = window.URL.createObjectURL(blob);
+                                     const a = document.createElement('a');
+                                     a.href = url;
+                                     a.download = 'detailed_aerodrome_wrng_results.csv';
+                                     a.style.display = 'none';
+                                     document.body.appendChild(a);
+                                     a.click();
+                                     window.URL.revokeObjectURL(url);
+                                     document.body.removeChild(a);
+                                     
+                                     // Reset button state
+                                     detailsResultBtn.innerHTML = originalText;
+                                     detailsResultBtn.disabled = false;
+                                 })
+                                 .catch(error => {
+                                     console.error('Download error:', error);
+                                     showCustomAlert('Error downloading report: ' + error.message);
+                                     detailsResultBtn.innerHTML = originalText;
+                                     detailsResultBtn.disabled = false;
+                                 });
                          };
                      }
                     

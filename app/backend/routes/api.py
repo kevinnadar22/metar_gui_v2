@@ -19,6 +19,8 @@ from urllib.parse import quote
 import math
 import base64, io
 from PIL import Image
+from app.backend.auth import require_role, log_activity
+from app.backend.models import UserActivity, User
  
 
 api_bp = Blueprint('api', __name__, url_prefix='/api')
@@ -28,6 +30,12 @@ METAR_UPLOADS_DIR = os.path.join(METAR_DATA_DIR, 'uploads')
 METAR_DOWNLOADS_DIR = os.path.join(METAR_DATA_DIR, 'downloads')
 
 UPPER_AIR_UPLOADS_DIR = os.path.join(UPPER_AIR_DATA_DIR, 'uploads')
+
+# Global variables for download file descriptions
+station = None
+start_dt = None
+end_dt = None
+month_year = None
 UPPER_AIR_DOWNLOADS_DIR = os.path.join(UPPER_AIR_DATA_DIR, 'downloads')
 
 os.makedirs(METAR_UPLOADS_DIR, exist_ok=True)
@@ -37,18 +45,14 @@ os.makedirs(UPPER_AIR_DOWNLOADS_DIR, exist_ok=True)
 
 def encode_file_path(file_path):
     """Encode a file path to a secure token"""
-    # Combine with a random UUID to prevent guessing
     token = f"{uuid.uuid4()}:{file_path}"
-    # Encode to base64
     encoded = base64.urlsafe_b64encode(token.encode()).decode()
     return encoded
 
 def decode_file_path(encoded_path):
     """Decode a secure token back to a file path"""
     try:
-        # Decode from base64
         decoded = base64.urlsafe_b64decode(encoded_path.encode()).decode()
-        # Extract the file path (remove the UUID part)
         _, file_path = decoded.split(':', 1)
         return file_path
     except Exception:
@@ -57,10 +61,8 @@ def decode_file_path(encoded_path):
 def parse_validity_to_month_year(validity_str):
     """Parse validity string like '202506010000' to month and year format"""
     try:
-        # Remove 'Z' suffix if present
         validity_str = validity_str.rstrip('Z')
         
-        # Check if it's a 12-digit format (YYYYMMDDHHMM)
         if len(validity_str) == 12:
             year = int(validity_str[:4])
             month = int(validity_str[4:6])
@@ -71,13 +73,11 @@ def parse_validity_to_month_year(validity_str):
             from datetime import datetime
             date_obj = datetime(year, month, day, hour, minute)
             
-        # Check if it's a 6-digit format (DDHHMM) - legacy format
         elif len(validity_str) == 6:
             day = int(validity_str[:2])
             hour = int(validity_str[2:4])
             minute = int(validity_str[4:6])
             
-            # For 6-digit format, we need to determine the month and year
             from datetime import datetime
             year = 2024  # Based on the data context
             month = 1  # January
@@ -85,29 +85,24 @@ def parse_validity_to_month_year(validity_str):
             try:
                 date_obj = datetime(year, month, day, hour, minute)
             except ValueError:
-                # If day is invalid for January, try February
                 month = 2
                 date_obj = datetime(year, month, day, hour, minute)
             
-        # Check if it's an 8-digit format (DDHHMMYY)
         elif len(validity_str) == 8:
             day = int(validity_str[:2])
             hour = int(validity_str[2:4])
             minute = int(validity_str[4:6])
             year = int(validity_str[6:8])
             
-            # Convert 2-digit year to 4-digit year
             if year < 50:  # Assume 20xx for years 00-49
                 year += 2000
             else:  # Assume 19xx for years 50-99
                 year += 1900
             
-            # Use current month as default, adjust if needed
             from datetime import datetime
             current_date = datetime.now()
             date_obj = datetime(year, current_date.month, day, hour, minute)
             
-        # Check if it's a 10-digit format (DDHHMMYYYY)
         elif len(validity_str) == 10:
             day = int(validity_str[:2])
             hour = int(validity_str[2:4])
@@ -119,10 +114,8 @@ def parse_validity_to_month_year(validity_str):
             date_obj = datetime(year, current_date.month, day, hour, minute)
             
         else:
-            # If format is not recognized, return the original string
             return validity_str
         
-        # Format as "Month Year"
         month_names = [
             "January", "February", "March", "April", "May", "June",
             "July", "August", "September", "October", "November", "December"
@@ -149,16 +142,13 @@ def extract_date_from_metar_file(metar_file_path):
         if not lines:
             return None
             
-        # Look for the first line with date information
         for line in lines:
             line = line.strip()
             if line and len(line) >= 12:
-                # Check if the line starts with a date format (YYYYMMDDHHMM)
                 if line[:12].isdigit():
                     date_str = line[:12]
                     return parse_validity_to_month_year(date_str)
                     
-        # If no date found in first 12 characters, try to find date in the line
         for line in lines:
             line = line.strip()
             if line and 'METAR' in line:
@@ -273,6 +263,8 @@ def process_metar():
         global end_dt
         end_dt = end_date
         icao = form_data.get('icao')
+        global station
+        station = icao
         verification_type = request.form.get('verification_type', 'daily')  # default to daily
 
         is_date_time_provided = start_date and end_date
@@ -489,20 +481,69 @@ def download_file(file_type):
         if file_type == 'metar':
             mime_type = 'text/plain'
             filename = secure_filename(os.path.basename(file_path))
-        elif file_type in ['metar_csv', 'comparison_csv', 'merged_csv']:
+            return send_file(
+                file_path,
+                mimetype=mime_type,
+                as_attachment=True,
+                download_name=filename
+            )
+        elif file_type in ['metar_csv', 'comparison_csv']:
             mime_type = 'text/csv'
             filename = secure_filename(os.path.basename(file_path))
+            return send_file(
+                file_path,
+                mimetype=mime_type,
+                as_attachment=True,
+                download_name=filename
+            )
+        elif file_type == 'merged_csv':
+            # For merged_csv, add description line and rename file
+            import io
+            
+            # Read the CSV file and add description line at the top
+            with open(file_path, 'r', encoding='utf-8') as f:
+                csv_content = f.read()
+            
+            # Get global variables for description
+            global station, start_dt, end_dt
+            
+            # Format dates for display
+            start_date_str = "N/A"
+            end_date_str = "N/A"
+            if start_dt:
+                try:
+                    start_date_obj = datetime.strptime(start_dt, "%Y%m%d%H%M")
+                    start_date_str = start_date_obj.strftime("%d/%m/%Y %H:%M UTC")
+                except:
+                    start_date_str = start_dt
+            if end_dt:
+                try:
+                    end_date_obj = datetime.strptime(end_dt, "%Y%m%d%H%M")
+                    end_date_str = end_date_obj.strftime("%d/%m/%Y %H:%M UTC")
+                except:
+                    end_date_str = end_dt
+            
+            station_code = station if station else "N/A"
+            
+            # Create new content with description line
+            description = f"Detailed takeoff forecast verification results for station {station_code} for date {start_date_str} to {end_date_str}."
+            new_content = f"{description}\n{csv_content}"
+            
+            # Create a BytesIO object with the modified content
+            output = io.BytesIO()
+            output.write(new_content.encode('utf-8'))
+            output.seek(0)
+            
+            return send_file(
+                output,
+                mimetype='text/csv',
+                as_attachment=True,
+                download_name='detailed_takeoff_results.csv'
+            )
         else:
             return jsonify({
                 "error": f"Invalid file type: {file_type}. Valid types are 'metar', 'metar_csv', 'comparison_csv', and 'merged_csv'."
             }), 400
-        
-        return send_file(
-            file_path,
-            mimetype=mime_type,
-            as_attachment=True,
-            download_name=filename
-        )
         
     except Exception as e:
         print(f"Error in download_file: {str(e)}")
@@ -660,17 +701,10 @@ def process_upper_air():
     try:
         station_id = request.form['station_id']
         datetime_str = request.form.get('datetime')
-        # reference_temp = request.form.get('reference_temp', None)
-        # print(reference_temp)
-        # try:
-        #     reference_temp = float(reference_temp)
-        # except (TypeError, ValueError):
-        #     reference_temp = 2.0  # Default value
 
         observation_file = request.files.get('observation_file')
         forecast_file = request.files.get('forecast_file')
 
-        # --- Handle Forecast File ---
         forecast_df = None
         if forecast_file:
             forecast_filename = secure_filename(forecast_file.filename)
@@ -773,7 +807,6 @@ def process_upper_air():
                 continue  # Skip rows with invalid or missing altitude
 
             altitude_m = int(raw_altitude)
- # Skip higher altitudes
             closest_alt = min(altitude_to_fl.keys(), key=lambda x: abs(x - altitude_m))
             fl_label = altitude_to_fl[closest_alt] if altitude_m <= 3000 else None
 
@@ -796,11 +829,9 @@ def process_upper_air():
                 'temp_accuracy': temp_accuracy,
                 'wind_accuracy': wind_accuracy,
                 'wind_dir_accuracy': wind_dir_accuracy,
-                # 'fl_accuracy_summary': fl_accuracy_summary,
             })
 
         metadata = {"icao": icao, "month_year": start_dt.strftime("%B %Y")}
-        # Build weather_info dict to pass to Excel writer
         weather_info = {
             f"{formatted_start.split()[0]}_{validity_code}": {
                 'weather_forecast': weather_check_result.get("forecast_text", ""),
@@ -820,7 +851,6 @@ def process_upper_air():
             'weather_forecast': weather_check_result.get("forecast_text", ""),   # string
             'weather_matched': weather_check_result["matched_keywords"],
             'data': data_rows,
-            # 'fl_accuracy_summary': fl_accuracy_summary,
             'metadata': {
                 'station_id': station_id,
                 'icao': icao,
@@ -881,7 +911,6 @@ def validate_forecast_weather_with_metar(forecast_pdf_path):
             "match_percentage": match_percentage,
             "matched_keywords": list(set(found_keywords)),
             "forecast_text": forecast_weather,
-            # "found_keywords": list(set(found_keywords))
         }
 
     except Exception as e:
@@ -906,11 +935,9 @@ def upload_ad_warning():
     if not file.filename.lower().endswith('.txt'):
         return jsonify({'error': 'Only .txt files are allowed'}), 400
 
-    # Create a directory for AD warning files if it doesn't exist
     ad_warn_dir = os.path.join(DOCKER_VOLUME_MOUNT_POINT, 'ad_warn_data')
     os.makedirs(ad_warn_dir, exist_ok=True)
 
-    # Save the uploaded warning file
     warning_file = os.path.join(ad_warn_dir, 'AD_warning.txt')
     file.save(warning_file)
 
@@ -989,7 +1016,6 @@ def adwrn_verify():
                 'error': 'No METAR file found. Please fetch METAR using OGIMET first.'
             }), 404
 
-        # --- Diagnostics & freshness checks ---
         try:
             mtime = os.path.getmtime(metar_file)
             print(f"[DEBUG] Selected METAR file: {metar_file}")
@@ -1163,6 +1189,7 @@ def adwrn_verify():
         validity_info = ""
         try:
             # Get station code from validation result
+            global station, month_year
             station = validation_result.get('metar_code', 'VABB')
             
             # Extract date information from METAR file
@@ -1233,13 +1260,7 @@ def adwrn_verify():
         
         print(f"[DEBUG] Sending response with detailed accuracy: {response_data['detailed_accuracy']}")
         
-        # After generating the report and extracting station_info, prepend the heading to the CSV file
-        # if station_info:
-        #     with open(report_file, 'r', encoding='utf-8') as f:
-        #         original_content = f.read()
-        #     with open(report_file, 'w', encoding='utf-8') as f:
-        #         f.write(station_info + '\n')
-        #         f.write(original_content)
+    
         
         return jsonify(response_data)
     except Exception as e:
@@ -1300,20 +1321,38 @@ def download_adwrn_report():
         if not os.path.exists(report_file):
             return jsonify({"error": "Aerodrome warning report not found"}), 404
         
+        # Read the CSV file and add description line at the top
+        import io
+        
+        with open(report_file, 'r', encoding='utf-8') as f:
+            csv_content = f.read()
+        
+        # Get global variables for description
+        global station, month_year
+        
+        station_code = station if station else "N/A"
+        month_year_str = month_year if month_year else "N/A"
+        
+        # Create new content with description line
+        # description = f"Detailed Aerodrome warning results of station {station_code} for {month_year_str}"
+        new_content = f"{csv_content}"
+        
+        # Create a BytesIO object with the modified content
+        output = io.BytesIO()
+        output.write(new_content.encode('utf-8'))
+        output.seek(0)
+        
         print(f"[DEBUG] Sending file: {report_file}")
         return send_file(
-            report_file,
+            output,
             mimetype='text/csv',
             as_attachment=True,
-            download_name='aerodrome_warning_report.csv'
+            download_name='detailed_aerodrome_wrng_results.csv'
         )
     except Exception as e:
         print(f"Error downloading aerodrome warning report: {str(e)}")
         return jsonify({"error": f"An error occurred while downloading the report: {str(e)}"}), 500
 
- 
-
- 
 
 @api_bp.route('/download/adwrn_table', methods=['GET'])
 def download_adwrn_table():
@@ -1349,3 +1388,200 @@ def download_adwrn_table():
     except Exception as e:
         print(f"Error downloading aerodrome warnings table: {str(e)}")
         return jsonify({"error": f"An error occurred while downloading the table: {str(e)}"}), 500
+
+
+@api_bp.route("/logs/user/<int:user_id>", methods=["GET"])
+@require_role("admin")
+def get_user_logs(user_id, current_user):
+    """Admin endpoint to get specific user's activity logs"""
+    try:
+        user = User.query.get_or_404(user_id)
+        
+        if user.role != "user":
+            return jsonify({"error": "Can only view user logs"}), 403
+        
+        page = request.args.get("page", 1, type=int)
+        per_page = request.args.get("per_page", 50, type=int)
+        
+        logs = UserActivity.query.filter_by(user_id=user_id)\
+            .order_by(UserActivity.timestamp.desc())\
+            .paginate(page=page, per_page=per_page, error_out=False)
+        
+        return jsonify({
+            "user": {
+                "id": user.id,
+                "username": user.username,
+                "station": user.station_code
+            },
+            "logs": [log.to_dict() for log in logs.items],
+            "total": logs.total,
+            "pages": logs.pages,
+            "current_page": page
+        }), 200
+    except Exception as e:
+        print(f"Error fetching user logs: {e}")
+        return jsonify({"error": "Failed to fetch logs"}), 500
+
+
+@api_bp.route("/logs/all", methods=["GET"])
+@require_role("admin")
+def get_all_logs(current_user):
+    """Admin endpoint to get all users' activity logs. Super admin can filter by user_id"""
+    try:
+        page = request.args.get("page", 1, type=int)
+        per_page = request.args.get("per_page", 100, type=int)
+        activity_type = request.args.get("activity_type", None)  # Optional filter
+        user_id = request.args.get("user_id", None)  # Optional filter for super admin
+        
+        # Build base query and join User so role-based filtering is possible
+        query = UserActivity.query.join(User)
+
+        # Admins should only see logs for normal users (role == 'user')
+        if current_user.role == "admin":
+            query = query.filter(User.role == "user")
+
+        if activity_type:
+            query = query.filter_by(activity_type=activity_type)
+
+        # Super admins can filter by specific user id
+        if user_id and current_user.role == "super_admin":
+            try:
+                user_id = int(user_id)
+                query = query.filter_by(user_id=user_id)
+            except ValueError:
+                pass
+
+        logs = query.order_by(UserActivity.timestamp.desc())\
+            .paginate(page=page, per_page=per_page, error_out=False)
+
+        return jsonify({
+            "logs": [log.to_dict() for log in logs.items],
+            "total": logs.total,
+            "pages": logs.pages,
+            "current_page": page
+        }), 200
+    except Exception as e:
+        print(f"Error fetching all logs: {e}")
+        return jsonify({"error": "Failed to fetch logs"}), 500
+
+
+@api_bp.route("/logs/stats", methods=["GET"])
+@require_role("admin")
+def get_log_stats(current_user):
+    """Admin endpoint to get activity statistics"""
+    try:
+        # Build base query joined with User so we can apply role-based filters
+        base_query = UserActivity.query.join(User)
+        if current_user.role == "admin":
+            # Restrict stats to normal users for admin role
+            base_query = base_query.filter(User.role == "user")
+
+        total_logins = base_query.filter_by(activity_type="login").count()
+        total_logouts = base_query.filter_by(activity_type="logout").count()
+        total_accesses = base_query.filter_by(activity_type="access").count()
+
+        # Unique users (apply same role filter for admins)
+        unique_users_query = db.session.query(UserActivity.user_id).join(User)
+        if current_user.role == "admin":
+            unique_users_query = unique_users_query.filter(User.role == "user")
+        unique_users = unique_users_query.distinct().count()
+
+        # Get active users (logged in last 24 hours)
+        from datetime import timedelta
+        last_24h = datetime.utcnow() - timedelta(hours=24)
+        active_query = db.session.query(UserActivity.user_id).join(User)
+        if current_user.role == "admin":
+            active_query = active_query.filter(User.role == "user")
+        active_users = active_query.filter(
+            UserActivity.timestamp >= last_24h
+        ).distinct().count()
+
+        return jsonify({
+            "total_logins": total_logins,
+            "total_logouts": total_logouts,
+            "total_accesses": total_accesses,
+            "unique_users": unique_users,
+            "active_users_24h": active_users
+        }), 200
+    except Exception as e:
+        print(f"Error fetching log stats: {e}")
+        return jsonify({"error": "Failed to fetch statistics"}), 500
+
+
+@api_bp.route("/logs/clear", methods=["POST"])
+@require_role("super_admin")
+def clear_logs(current_user):
+    """Super admin endpoint to clear all logs"""
+    try:
+        UserActivity.query.delete()
+        db.session.commit()
+        return jsonify({"message": "All logs cleared successfully"}), 200
+    except Exception as e:
+        print(f"Error clearing logs: {e}")
+        db.session.rollback()
+        return jsonify({"error": "Failed to clear logs"}), 500
+
+
+@api_bp.route("/logs/log-access", methods=["POST"])
+@require_role("user")
+def log_page_access(current_user):
+    """Log user accessing a page/route"""
+    try:
+        data = request.json
+        page_or_route = data.get("page", None)
+        tab_id = request.headers.get("X-Tab-ID", "default")
+        
+        log_activity(current_user, "access", page_or_route=page_or_route, tab_id=tab_id)
+        
+        return jsonify({"message": "Activity logged"}), 200
+    except Exception as e:
+        print(f"Error logging page access: {e}")
+        return jsonify({"error": "Failed to log activity"}), 500
+
+
+@api_bp.route("/logs/log-verification", methods=["POST"])
+@require_role("user")
+def log_verification_activity(current_user):
+    """Log verification activity (METAR processing, upper air, etc.)"""
+    try:
+        data = request.json
+        verification_type = data.get("verification_type", "unknown")
+        details = data.get("details", None)
+        tab_id = request.headers.get("X-Tab-ID", "default")
+        
+        # Create detailed log message
+        log_details = f"Verification Type: {verification_type}"
+        if details:
+            log_details += f" | Details: {details}"
+        
+        log_activity(current_user, "verification", page_or_route="/api/process_verification", 
+                    tab_id=tab_id, details=log_details)
+        
+        return jsonify({"message": "Verification logged"}), 200
+    except Exception as e:
+        print(f"Error logging verification: {e}")
+        return jsonify({"error": "Failed to log verification"}), 500
+
+
+@api_bp.route("/logs/users-list", methods=["GET"])
+@require_role("super_admin")
+def get_users_list(current_user):
+    """Super admin endpoint to get list of all users for filtering"""
+    try:
+        users = User.query.filter_by(role="user").all()
+        return jsonify({
+            "users": [
+                {
+                    "id": u.id,
+                    "username": u.username,
+                    "station": u.station_code
+                }
+                for u in users
+            ]
+        }), 200
+    except Exception as e:
+        print(f"Error fetching users list: {e}")
+        return jsonify({"error": "Failed to fetch users"}), 500
+
+
+from app.backend.models import db

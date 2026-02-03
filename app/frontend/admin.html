@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Admin Dashboard</title>
+  <script src="/js/tailwind.js"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+  <script src="/js/auth.js"></script>
+  <script src="/js/admin.js" defer></script>
+</head>
+
+<body class="bg-gray-100 min-h-screen">
+
+<header class="bg-white shadow p-4 flex justify-between items-center">
+  <div>
+    <h1 class="text-2xl font-bold text-gray-800">Admin Dashboard</h1>
+    <p class="text-sm text-gray-500">Manage users and monitor forecasts</p>
+  </div>
+  
+  <div class="flex items-center gap-4">
+    <!-- Profile Menu -->
+    <div class="relative">
+      <button id="profileToggle" class="flex items-center gap-2 bg-transparent border-none cursor-pointer hover:opacity-80">
+        <div id="userAvatar" class="w-9 h-9 rounded-full bg-blue-600 text-white flex items-center justify-center font-semibold"></div>
+        <span id="userInfo" style="display:none;" class="text-gray-700 font-medium text-sm"></span>
+        <i class="fas fa-caret-down text-gray-500"></i>
+      </button>
+
+      <div id="profileDropdown" class="hidden absolute right-0 mt-2 w-48 bg-white border rounded shadow-md py-2 z-50">
+        <div class="px-3 py-2 text-sm text-gray-700 border-b">
+          <div><strong id="userInfoDropdown">Admin</strong></div>
+          <div class="text-xs text-gray-500">Admin Account</div>
+        </div>
+        <button id="profileChangePassword" class="w-full text-left px-3 py-2 hover:bg-gray-100 text-gray-700 font-medium text-sm">Change Password</button>
+        <button id="profileLogout" class="w-full text-left px-3 py-2 hover:bg-gray-100 text-red-600 font-medium text-sm">Logout</button>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main class="p-6 max-w-7xl mx-auto">
+  <!-- Users Section -->
+  <div class="bg-white rounded-lg shadow-md p-6">
+    <div class="flex justify-between items-center mb-4">
+      <h2 class="text-xl font-semibold text-gray-800">Users Management</h2>
+      <div class="flex gap-3">
+        <a href="/admin_logs.html" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-md text-sm font-medium flex items-center gap-2">
+          <i class="fas fa-clipboard-list"></i>View Logs
+        </a>
+        <button id="addUserBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium flex items-center gap-2">
+          <i class="fas fa-plus"></i>Add User
+        </button>
+      </div>
+    </div>
+    
+    <div id="userList" class="space-y-3">
+      <div class="flex items-center justify-center py-8">
+        <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mr-2"></div>
+        <p class="text-gray-500">Loading users...</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add/Edit User Modal -->
+  <div id="addUserModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-lg p-6 max-w-md w-full shadow-xl">
+      <h3 class="text-lg font-bold mb-4">Add New User</h3>
+      <form id="addUserForm" class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Username</label>
+          <input type="text" id="newUsername" placeholder="Username" class="w-full border border-gray-300 px-3 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Station Code (optional)</label>
+          <input type="text" id="newStation" placeholder="Station code (e.g. VABB)" class="w-full border border-gray-300 px-3 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 uppercase">
+        </div>
+        <div class="flex gap-2 justify-end pt-2">
+          <button type="button" id="closeAddUserModal" class="px-4 py-2 text-gray-700 border border-gray-300 rounded-md hover:bg-gray-100 font-medium">Cancel</button>
+          <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-medium">Create</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Alert Messages -->
+  <div id="alertBox" class="hidden fixed top-4 right-4 p-4 rounded-md shadow-md text-white max-w-sm z-40" style="animation: slideIn 0.3s ease-in-out;"></div>
+</main>
+
+<script>
+  // Defer admin page initialization until authManager.ready completes
+  if (window.authManager && window.authManager.ready) {
+    window.authManager.ready.then(() => {
+      authManager.requireRole('admin');
+
+      // Populate profile UI
+      if (authManager.user) {
+        document.getElementById('userAvatar').textContent = authManager.user.username.charAt(0).toUpperCase();
+        document.getElementById('userInfo').textContent = authManager.user.username;
+        document.getElementById('userInfoDropdown').textContent = authManager.user.username;
+        document.getElementById('userInfo').style.display = 'inline';
+      }
+
+      // Profile menu toggle
+      document.getElementById('profileToggle')?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const dd = document.getElementById('profileDropdown');
+        dd.classList.toggle('hidden');
+      });
+
+      document.addEventListener('click', () => {
+        const dd = document.getElementById('profileDropdown');
+        if (dd && !dd.classList.contains('hidden')) dd.classList.add('hidden');
+      });
+
+      document.getElementById('profileChangePassword')?.addEventListener('click', async () => {
+        const current = prompt('Enter current password');
+        if (!current) return;
+        const nw = prompt('Enter new password (min 6 chars)');
+        if (!nw) return;
+        try {
+          const res = await fetch('/auth/change-password', {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ current_password: current, new_password: nw })
+          });
+          const data = await res.json();
+          if (res.ok) showAlert('Password changed successfully', 'success');
+          else showAlert(data.error || 'Failed to change password', 'error');
+        } catch (err) {
+          showAlert('Network error', 'error');
+        }
+      });
+
+      document.getElementById('profileLogout')?.addEventListener('click', async () => {
+        await authManager.logout();
+      });
+
+      // Modal controls
+      document.getElementById('addUserBtn')?.addEventListener('click', () => {
+        document.getElementById('addUserModal').classList.remove('hidden');
+        document.getElementById('addUserForm')?.reset();
+      });
+
+      document.getElementById('closeAddUserModal')?.addEventListener('click', () => {
+        document.getElementById('addUserModal').classList.add('hidden');
+      });
+
+      // Handle form submission (calls /auth/signup as user)
+      document.getElementById('addUserForm')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const username = document.getElementById('newUsername').value.trim();
+        const station = (document.getElementById('newStation').value || '').trim().toUpperCase();
+
+        try {
+          const res = await fetch('/auth/create-user', {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, station_code: station })
+          });
+
+          const data = await res.json();
+          if (res.ok) {
+            showAlert('User created successfully! Default password: ' + (data.default_password || 'username@123'), 'success');
+            document.getElementById('addUserModal').classList.add('hidden');
+            if (window.loadUsers) loadUsers();
+          } else {
+            showAlert(data.error || 'Failed to create user', 'error');
+          }
+        } catch (err) {
+          showAlert('Network error', 'error');
+        }
+      });
+
+    }).catch(() => {
+      // authManager handled redirects already
+    });
+  } else {
+    // fallback: try to enforce role immediately
+    try { authManager.requireRole('admin'); } catch {}
+  }
+
+  // Helper alert function (kept minimal)
+  function showAlert(message, type) {
+    const alertBox = document.getElementById('alertBox');
+    if (alertBox) {
+      alertBox.textContent = message;
+      alertBox.className = `${type === 'success' ? 'bg-green-500' : 'bg-red-500'} fixed top-4 right-4 p-4 rounded-md shadow-md text-white max-w-sm z-40`;
+      alertBox.classList.remove('hidden');
+      setTimeout(() => alertBox.classList.add('hidden'), 3000);
+    }
+  }
+</script>
+</body>
+</html>
