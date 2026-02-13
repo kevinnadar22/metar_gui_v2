@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - METAR Dashboard</title>
+    <script src="/js/tailwind.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .login-container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+            max-width: 450px;
+            width: 100%;
+        }
+        .login-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px 30px;
+            text-align: center;
+        }
+        .login-body {
+            padding: 40px 30px;
+        }
+        .form-group {
+            margin-bottom: 25px;
+        }
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        .form-input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: all 0.3s;
+            box-sizing: border-box;
+        }
+        .form-input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        .btn-primary {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 10px;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+        .btn-primary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .alert {
+            padding: 12px 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: none;
+        }
+        .alert-error {
+            background: #fee;
+            color: #c33;
+            border: 1px solid #fcc;
+        }
+        .alert-success {
+            background: #efe;
+            color: #3c3;
+            border: 1px solid #cfc;
+        }
+        .link-text {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .link-text:hover {
+            text-decoration: underline;
+        }
+        .input-icon {
+            position: relative;
+        }
+        .input-icon i {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #999;
+        }
+        .input-icon .form-input {
+            padding-left: 45px;
+        }
+        @media (max-width: 480px) {
+            .login-container {
+                border-radius: 15px;
+            }
+            .login-header {
+                padding: 30px 20px;
+            }
+            .login-body {
+                padding: 30px 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-header">
+            <img src="https://mausam.imd.gov.in/responsive/img/logo/imd_logo_a.png" alt="IMD Logo" style="height: 60px; margin-bottom: 15px;">
+            <h1 style="font-size: 24px; margin: 0;">METAR Dashboard</h1>
+            <p style="margin: 10px 0 0 0; opacity: 0.9;">Sign in to your account</p>
+        </div>
+        <div class="login-body">
+            <div id="alertMessage" class="alert"></div>
+            
+            <form id="loginForm">
+                <div class="form-group">
+                    <label class="form-label" for="username">Username or Email</label>
+                    <div class="input-icon">
+                        <i class="fas fa-user"></i>
+                        <input 
+                            type="text" 
+                            id="username" 
+                            class="form-input" 
+                            placeholder="Enter your username or email"
+                            required
+                            autocomplete="username"
+                        >
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="password">Password</label>
+                    <div class="input-icon">
+                        <i class="fas fa-lock"></i>
+                        <input 
+                            type="password" 
+                            id="password" 
+                            class="form-input" 
+                            placeholder="Enter your password"
+                            required
+                            autocomplete="current-password"
+                        >
+                    </div>
+                </div>
+                
+                <button type="submit" class="btn-primary" id="loginBtn">
+                    <span id="loginBtnText">Sign In</span>
+                    <span id="loginBtnSpinner" style="display: none;">
+                        <i class="fas fa-spinner fa-spin"></i> Signing in...
+                    </span>
+                </button>
+            </form>
+            
+            <div style="text-align: center; margin-top: 25px; padding-top: 25px; border-top: 1px solid #e0e0e0;">
+                <p style="color: #666; margin: 0;">
+                    Don't have an account? 
+                    <a href="/signup" class="link-text">Sign up here</a>
+                </p>
+            </div>
+        </div>
+    </div>
+
+<script src="/js/auth.js"></script>
+<script>
+document.getElementById('loginForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    const username = document.getElementById('username').value.trim();
+    const password = document.getElementById('password').value;
+    const loginBtn = document.getElementById('loginBtn');
+    const loginBtnText = document.getElementById('loginBtnText');
+    const loginBtnSpinner = document.getElementById('loginBtnSpinner');
+
+    if (!username || !password) {
+        showAlert('Please fill in all fields', 'error');
+        return;
+    }
+
+    loginBtn.disabled = true;
+    loginBtnText.style.display = 'none';
+    loginBtnSpinner.style.display = 'inline';
+    hideAlert();
+
+    try {
+        const response = await fetch('/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ username, password })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.error || 'Login failed');
+        }
+
+        showAlert('Login successful! Redirecting...', 'success');
+
+        // 🔐 Ask backend who the user is
+        setTimeout(async () => {
+        const me = await fetch('/auth/me', { credentials: 'include' });
+        const data = await me.json();
+
+        if (data.user.role === 'super_admin') {
+            window.location.href = '/superadmin';
+        } else if (data.user.role === 'admin') {
+            window.location.href = '/admin';
+        } else {
+            window.location.href = '/';
+        }
+    }, 500);
+
+
+    } catch (err) {
+        showAlert(err.message, 'error');
+        loginBtn.disabled = false;
+        loginBtnText.style.display = 'inline';
+        loginBtnSpinner.style.display = 'none';
+    }
+});
+
+function showAlert(message, type) {
+    const alertMessage = document.getElementById('alertMessage');
+    alertMessage.textContent = message;
+    alertMessage.className = `alert alert-${type}`;
+    alertMessage.style.display = 'block';
+}
+
+function hideAlert() {
+    document.getElementById('alertMessage').style.display = 'none';
+}
+</script>
+
+</body>
+</html>
+

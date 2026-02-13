@@ -20,7 +20,7 @@ Sl. No.,Elements (Thunderstorm/Surface wind & Gust),Warning issue Time,true-1 / 
 17,Gust warning,04/0730,0,No gust/direction mismatch,VABB,040800Z,041200Z,0%,Wind
 17,Thunderstorm warning,04/0730,0,Missing CB or direction mismatch,VABB,040800Z,041200Z,0%,Thunderstorm
 18,Gust warning,04/2000,0,No gust/direction mismatch,VABB,042030Z,050030Z,0%,Wind
-19,Gust warning,05/0300,1,Gust 19KT Dir 250 matched,VABB,050330Z,050730Z,100%,Wind
+19,Gust warning,05/0300,1,Gust 23KT Dir 280 matched,VABB,050330Z,050730Z,100%,Wind
 20,Gust warning,05/0730,0,No gust/direction mismatch,VABB,050800Z,051200Z,0%,Wind
 21,Gust warning,05/1645,1,Gust 19KT Dir 280 matched FEW030CB found,VABB,051700Z,052130Z,100%,Wind
 22,Gust warning,05/2045,0,No gust/direction mismatch,VABB,052100Z,060130Z,0%,Wind
@@ -29,7 +29,7 @@ Sl. No.,Elements (Thunderstorm/Surface wind & Gust),Warning issue Time,true-1 / 
 25,Gust warning,06/1515,1,Gust 18KT Dir 230 matched FEW030CB found,VABB,061530Z,061930Z,100%,Wind
 26,Gust warning,06/1945,1,Gust 17KT Dir 220 matched FEW030CB found,VABB,062000Z,070000Z,100%,Wind
 27,Gust warning,07/0000,1,Gust 19KT Dir 250 matched FEW030CB found,VABB,070030Z,070430Z,100%,Wind
-28,Gust warning,07/0400,1,Gust 19KT Dir 280 matched FEW030CB found,VABB,070430Z,060830Z,100%,Wind
+28,Gust warning,07/0400,1,Gust 21KT Dir 250 matched FEW030CB found,VABB,070430Z,060830Z,100%,Wind
 29,Gust warning,07/0800,0,No gust/direction mismatch,VABB,070830Z,071230Z,0%,Wind
 30,Gust warning,08/0240,1,Gust 18KT Dir 230 matched,VABB,080300Z,080730Z,100%,Wind
 31,Gust warning,08/0645,1,Gust 18KT Dir 230 matched,VABB,080700Z,081130Z,100%,Wind

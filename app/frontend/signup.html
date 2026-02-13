@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign Up - METAR Dashboard</title>
+    <script src="/js/tailwind.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .signup-container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+            max-width: 500px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        .signup-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 35px 30px;
+            text-align: center;
+        }
+        .signup-body {
+            padding: 35px 30px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        .form-input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: all 0.3s;
+            box-sizing: border-box;
+        }
+        .form-input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        .form-input.error {
+            border-color: #c33;
+        }
+        .form-help {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
+        .password-requirements {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+            padding-left: 5px;
+        }
+        .password-requirements ul {
+            margin: 5px 0;
+            padding-left: 20px;
+        }
+        .password-requirements li {
+            margin: 3px 0;
+        }
+        .password-requirements li.valid {
+            color: #3c3;
+        }
+        .btn-primary {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 10px;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+        .btn-primary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .alert {
+            padding: 12px 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: none;
+        }
+        .alert-error {
+            background: #fee;
+            color: #c33;
+            border: 1px solid #fcc;
+        }
+        .alert-success {
+            background: #efe;
+            color: #3c3;
+            border: 1px solid #cfc;
+        }
+        .link-text {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .link-text:hover {
+            text-decoration: underline;
+        }
+        .input-icon {
+            position: relative;
+        }
+        .input-icon i {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #999;
+        }
+        .input-icon .form-input {
+            padding-left: 45px;
+        }
+        @media (max-width: 480px) {
+            .signup-container {
+                border-radius: 15px;
+            }
+            .signup-header {
+                padding: 25px 20px;
+            }
+            .signup-body {
+                padding: 25px 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="signup-container">
+        <div class="signup-header">
+            <img src="https://mausam.imd.gov.in/responsive/img/logo/imd_logo_a.png" alt="IMD Logo" style="height: 50px; margin-bottom: 10px;">
+            <h1 style="font-size: 22px; margin: 0;">Create Account</h1>
+            <p style="margin: 8px 0 0 0; opacity: 0.9; font-size: 14px;">Join METAR Dashboard</p>
+        </div>
+        <div class="signup-body">
+            <div id="alertMessage" class="alert"></div>
+            
+            <form id="signupForm">
+                <div class="form-group">
+                    <label class="form-label" for="username">Username</label>
+                    <div class="input-icon">
+                        <i class="fas fa-user"></i>
+                        <input 
+                            type="text" 
+                            id="username" 
+                            class="form-input" 
+                            placeholder="Choose a username"
+                            required
+                            autocomplete="username"
+                            minlength="3"
+                            maxlength="50"
+                        >
+                    </div>
+                    <div class="form-help">3-50 characters, letters, numbers, and underscores only</div>
+                </div>
+                
+                
+                <div class="form-group">
+                    <label class="form-label" for="password">Password</label>
+                    <div class="input-icon">
+                        <i class="fas fa-lock"></i>
+                        <input 
+                            type="password" 
+                            id="password" 
+                            class="form-input" 
+                            placeholder="Create a password"
+                            required
+                            autocomplete="new-password"
+                            minlength="8"
+                        >
+                    </div>
+                    <div class="password-requirements">
+                        <strong>Password must contain:</strong>
+                        <ul id="passwordRequirements">
+                            <li id="req-length">At least 8 characters</li>
+                            <li id="req-upper">One uppercase letter</li>
+                            <li id="req-lower">One lowercase letter</li>
+                            <li id="req-number">One number</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="confirmPassword">Confirm Password</label>
+                    <div class="input-icon">
+                        <i class="fas fa-lock"></i>
+                        <input 
+                            type="password" 
+                            id="confirmPassword" 
+                            class="form-input" 
+                            placeholder="Confirm your password"
+                            required
+                            autocomplete="new-password"
+                        >
+                    </div>
+                    <div id="passwordMatch" class="form-help" style="display: none;"></div>
+                </div>
+                
+                <button type="submit" class="btn-primary" id="signupBtn">
+                    <span id="signupBtnText">Create Account</span>
+                    <span id="signupBtnSpinner" style="display: none;">
+                        <i class="fas fa-spinner fa-spin"></i> Creating account...
+                    </span>
+                </button>
+            </form>
+            
+            <div style="text-align: center; margin-top: 25px; padding-top: 25px; border-top: 1px solid #e0e0e0;">
+                <p style="color: #666; margin: 0;">
+                    Already have an account? 
+                    <a href="/login" class="link-text">Sign in here</a>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const passwordInput = document.getElementById('password');
+        const confirmPasswordInput = document.getElementById('confirmPassword');
+        const passwordMatch = document.getElementById('passwordMatch');
+        
+        // Password validation
+        passwordInput.addEventListener('input', function() {
+            const password = this.value;
+            const requirements = {
+                length: password.length >= 8,
+                upper: /[A-Z]/.test(password),
+                lower: /[a-z]/.test(password),
+                number: /\d/.test(password)
+            };
+            
+            document.getElementById('req-length').classList.toggle('valid', requirements.length);
+            document.getElementById('req-upper').classList.toggle('valid', requirements.upper);
+            document.getElementById('req-lower').classList.toggle('valid', requirements.lower);
+            document.getElementById('req-number').classList.toggle('valid', requirements.number);
+        });
+        
+        // Password match validation
+        confirmPasswordInput.addEventListener('input', function() {
+            if (this.value) {
+                if (this.value === passwordInput.value) {
+                    this.classList.remove('error');
+                    passwordMatch.textContent = '✓ Passwords match';
+                    passwordMatch.style.color = '#3c3';
+                    passwordMatch.style.display = 'block';
+                } else {
+                    this.classList.add('error');
+                    passwordMatch.textContent = '✗ Passwords do not match';
+                    passwordMatch.style.color = '#c33';
+                    passwordMatch.style.display = 'block';
+                }
+            } else {
+                passwordMatch.style.display = 'none';
+            }
+        });
+        
+        document.getElementById('signupForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            const signupBtn = document.getElementById('signupBtn');
+            const signupBtnText = document.getElementById('signupBtnText');
+            const signupBtnSpinner = document.getElementById('signupBtnSpinner');
+            const alertMessage = document.getElementById('alertMessage');
+            
+            // Validation
+            if (!username || !password || !confirmPassword) {
+                showAlert('Please fill in all fields', 'error');
+                return;
+            }
+            
+            if (username.length < 3 || username.length > 50) {
+                showAlert('Username must be between 3 and 50 characters', 'error');
+                return;
+            }
+            
+            if (password !== confirmPassword) {
+                showAlert('Passwords do not match', 'error');
+                return;
+            }
+            
+            if (password.length < 8) {
+                showAlert('Password must be at least 8 characters long', 'error');
+                return;
+            }
+            
+            // Disable button and show loading
+            signupBtn.disabled = true;
+            signupBtnText.style.display = 'none';
+            signupBtnSpinner.style.display = 'inline';
+            hideAlert();
+
+            // const role = document.getElementById('role').value;
+            
+            try {
+                const response = await fetch('/auth/signup', {
+                method: 'POST',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password})
+            });
+
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showAlert('Account created successfully! Redirecting to login...', 'success');
+                    setTimeout(() => {
+                        window.location.href = '/login';
+                    }, 2000);
+                } else {
+                    showAlert(data.error || 'Registration failed. Please try again.', 'error');
+                    signupBtn.disabled = false;
+                    signupBtnText.style.display = 'inline';
+                    signupBtnSpinner.style.display = 'none';
+                }
+            } catch (error) {
+                showAlert('Network error. Please check your connection.', 'error');
+                signupBtn.disabled = false;
+                signupBtnText.style.display = 'inline';
+                signupBtnSpinner.style.display = 'none';
+            }
+        });
+        
+        function showAlert(message, type) {
+            const alertMessage = document.getElementById('alertMessage');
+            alertMessage.textContent = message;
+            alertMessage.className = `alert alert-${type}`;
+            alertMessage.style.display = 'block';
+        }
+        
+        function hideAlert() {
+            const alertMessage = document.getElementById('alertMessage');
+            alertMessage.style.display = 'none';
+        }
+        
+        // Check if already logged in
+        window.addEventListener('DOMContentLoaded', async function() {
+            try {
+                const me = await fetch('/auth/me', { credentials: 'include' });
+                const data = await me.json();
+
+                if (data.user.role === 'admin') {
+                    window.location.href = '/admin';
+                } else if (data.user.role === 'super_admin') {
+                    window.location.href = '/superadmin';
+                } else {
+                    window.location.href = '/';
+                }
+            } catch (error) {
+                // Not logged in, stay on signup page
+            }
+        });
+    </script>
+</body>
+</html>
+

@@ -174,6 +174,14 @@ def generate_warning_report(ad_warn_output_path, metar_features_path):
     # Save to a file in the same directory as the input file
     output_path = os.path.join(os.path.dirname(ad_warn_output_path), 'final_warning_report.csv')
     final_df.to_csv(output_path, index=False)
+    # Force-close file handles on Windows
+    try:
+        with open(output_path, 'r+', encoding='utf-8') as ff:
+            ff.flush()
+            os.fsync(ff.fileno())
+    except Exception as e:
+        print("[WARN] fsync failed:", e)
+
     print('Report saved as final_warning_report.csv')
 
     # Calculate percentage correct
